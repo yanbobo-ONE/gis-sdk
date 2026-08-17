@@ -1,7 +1,7 @@
 # Cesium SDK 文档体系参考研究
 
 - 查询日期：2026-08-17
-- 研究目的：为 HGD GIS 独立 SDK 的 PRD 提供文档信息架构、API 页面规范、版本策略和工具选型依据。
+- 研究目的：为独立 `gis-sdk` 的 PRD 提供文档信息架构、API 页面规范、版本策略和工具选型依据。
 - 资料范围：Mars3D、CesiumJS、TypeDoc、VitePress 的官方文档与官方源码。
 
 ## 1. 结论摘要
@@ -9,7 +9,7 @@
 1. Mars3D 最值得借鉴的不是某一个 API 页面，而是“开发指南 + 类型化 API + 可运行示例 + 项目模板 + 更新日志”的完整开发者路径。其开发者中心明确把 SDK、功能示例、项目模板和 API 文档作为配套交付物，并提供 400 多个功能示例。[Mars3D 开发者中心](https://mars3d.cn/docs/)、[平台整体介绍](https://mars3d.cn/docs/guide/)
 2. API 文档必须从 SDK 的 TypeScript 公共导出自动生成，源码中的局部函数、私有字段和内部实现不得进入用户 API。用户给出的 [`addAttribute`](http://mars3d.cn/api/cesium/global.html#addAttribute) 页面正好是反例：页面只有函数名和源码链接；对应 Cesium 1.142 源码表明它是 `VertexArray.js` 内部的局部辅助函数，并不是公共导出。[Cesium 1.142 `VertexArray.js`](https://github.com/CesiumGS/cesium/blob/1.142/packages/engine/Source/Renderer/VertexArray.js#L19)
 3. Mars3D 与 Cesium 不是平行的两套 API。Mars3D 在 Cesium 上提供一致化封装，同时保留 `mars3d.Cesium.*` 原生访问入口；它还使用经过修改的 `mars3d-cesium` 核心依赖。因此其文档同时链接 Mars3D API 和 Cesium API。[Mars3D 基础类说明](https://mars3d.cn/docs/basis/base/)、[`mars3d-cesium` 库介绍](https://mars3d.cn/docs/advanced/mars3d-cesium/)
-4. HGD SDK 可以借鉴这种“双层文档”，但不建议 fork 或修改 Cesium 源码作为默认架构。应将自有稳定接口作为主要文档，将 Cesium 原生对象作为明确标注的高级逃生口，并公布 SDK 与 Cesium 的兼容矩阵。
+4. `gis-sdk` 可以借鉴这种“双层文档”，但不建议 fork 或修改 Cesium 源码作为默认架构。应将自有稳定接口作为主要文档，将 Cesium 原生对象作为明确标注的高级逃生口，并公布 SDK 与 Cesium 的兼容矩阵。
 5. 文档工具建议采用“TypeDoc 生成 API + VitePress 承载指南、示例和版本文档”。TypeDoc 能从 TypeScript 导出生成类型、继承、源码链接、导航和版本信息，并可排除 internal/private/未文档化符号；VitePress 适合 Markdown 技术内容、交互式 Vue 示例、静态部署和全文导航。[TypeDoc 配置能力](https://typedoc.org/documents/Overview.html)、[VitePress 官方介绍](https://vitepress.dev/guide/what-is-vitepress)
 
 ## 2. 用户给出的 `addAttribute` 页面说明
@@ -96,7 +96,7 @@ Mars3D 将 `BaseClass` 作为多数 SDK 类的事件基类，公开 `on`、`off`
 - 类级 `EventType`。
 - 构造说明中的“支持的事件类型”链接。
 
-对 HGD SDK 的启示是：事件不应散落为不同类的任意字符串。应定义类型化事件映射，并在每个类页自动列出事件名、payload 类型、触发时机、是否冒泡、取消订阅方式和销毁行为。
+对 `gis-sdk` 的启示是：事件不应散落为不同类的任意字符串。应定义类型化事件映射，并在每个类页自动列出事件名、payload 类型、触发时机、是否冒泡、取消订阅方式和销毁行为。
 
 ### 3.5 示例体系
 
@@ -113,7 +113,7 @@ Mars3D 将 API 与功能示例分开：API 负责精确契约，示例负责可�
 
 [`MaterialType`](http://mars3d.cn/api/MaterialType.html) 将材质做成稳定枚举，并为每种材质列出参数属性、类型和示例。这种方式比让业务代码直接传任意 GLSL 字符串更适合团队复用。
 
-HGD SDK 文档应把材质分成三层：
+`gis-sdk` 文档应把材质分成三层：
 
 1. 内置材质目录：类型、效果预览、适用 Graphic/Primitive、参数、默认值和性能等级。
 2. 自定义材质扩展协议：注册、schema、uniform、生命周期、资源释放和兼容要求。
@@ -127,7 +127,7 @@ Mars3D API 在页面标题和页脚展示自身版本；当前查询结果为 `V
 
 [Mars3D 更新日志](https://mars3d.cn/docs/guide/change/) 按版本区分新增、优化、修复、弃用/API 重构，并记录底层 `mars3d-cesium` 的升级版本。这一点对 Cesium SDK 尤其重要，因为底层 Cesium 的异步工厂方法、事件和私有接口会随版本变化。
 
-HGD 文档应固定展示：
+`gis-sdk` 文档应固定展示：
 
 - SDK 版本。
 - 构建所针对的 Cesium 版本或兼容范围。
@@ -160,13 +160,13 @@ mars3d-cesium（经调整的 Cesium）
 WebGL / 浏览器
 ```
 
-给 HGD SDK 的建议：
+给 `gis-sdk` 的建议：
 
 - 主路径只依赖 SDK 的稳定接口，业务层不要直接依赖 Cesium 私有字段。
-- 通过 `map.native` 或独立 `@hgd-gis/cesium-adapter` 暴露原生对象，并标记为高级 API。
+- 通过 `map.native` 或未来独立的 `@yanbobo/gis-cesium` 暴露原生对象，并标记为高级 API。
 - 原生访问只保证“返回当前 Cesium 对象”，不承诺跨 Cesium 大版本保持行为一致。
 - 优先使用 Adapter 和公开扩展点，不修改 Cesium 源码；确需补丁时必须维护补丁清单、上游 issue、回归测试和退出计划。
-- API 文档中同时链接 HGD 抽象和对应 Cesium 官方类型，但不能把 Cesium 全量文档复制成 HGD 自有 API。
+- API 文档中同时链接 `gis-sdk` 抽象和对应 Cesium 官方类型，但不能把 Cesium 全量文档复制成自有 API。
 
 ## 5. Cesium 官方 API 文档可借鉴点
 
@@ -191,7 +191,7 @@ Cesium 官方文档规范要求：
 - 私有成员不生成公共文档；没有公共文档注释的标识符不应出现。
 - JSDoc 同时用于生成官方 TypeScript 类型定义。[Cesium Documentation Guide](https://github.com/CesiumGS/cesium/blob/1.142/Documentation/Contributors/DocumentationGuide/README.md)
 
-这些规则比用户给出的 `addAttribute` 镜像页更适合作为 HGD API 页面验收基准。
+这些规则比用户给出的 `addAttribute` 镜像页更适合作为 `gis-sdk` API 页面验收基准。
 
 ### 5.1 当前版本与 1.140-1.144 的升级信号
 
@@ -281,16 +281,16 @@ Cesium 官方 `CHANGES.md` 按版本列出 Breaking Changes、Deprecated、Addit
 SDK 的升级策略应包含：
 
 1. 只依赖 Cesium public API，禁止 `_root`、`_materialCache` 等私有字段进入稳定实现。
-2. `@hgd-gis/cesium-adapter` 单独承担版本差异，自有 core/contracts 不导入 Cesium 类型。
+2. 未来的 `@yanbobo/gis-cesium` 单独承担版本差异，自有 core/contracts 不导入 Cesium 类型。
 3. 每次升级逐版本阅读 `CHANGES.md`，扫描 deprecated/private 用法，运行类型、单元、浏览器、视觉和性能基准。
 4. Cesium 实验性能力必须被能力检测和 feature flag 隔离，文档同步显示风险。
-5. 对业务只发布 HGD SDK 的迁移指南，不要求每个项目分别处理 Cesium breaking changes。
+5. 对业务只发布 `gis-sdk` 的迁移指南，不要求每个项目分别处理 Cesium breaking changes。
 
 ### 5.8 包与类型基础
 
 CesiumJS 从 1.100 起同时发布 `cesium`、`@cesium/engine`、`@cesium/widgets`，使用 ES modules 并提供官方 TypeScript definitions；生产构建推荐从模块入口导入以便 tree shaking，而不是依赖全局 `Cesium`。[Cesium `CHANGES.md`](https://github.com/CesiumGS/cesium/blob/1.144/CHANGES.md)、[Cesium Build Guide](https://github.com/CesiumGS/cesium/blob/main/Documentation/Contributors/BuildGuide/README.md)
 
-这支持 HGD SDK 采用 TypeScript public contracts、按包拆分和 ESM-first 发行；如需兼容遗留项目，再额外发布受限的 UMD/IIFE compatibility bundle，而不是让全局变量成为核心架构。
+这支持 `gis-sdk` 采用 TypeScript public contracts、按包拆分和 ESM-first 发行；如需兼容遗留项目，再额外发布受限的 UMD/IIFE compatibility bundle，而不是让全局变量成为核心架构。
 
 ## 6. TypeDoc 与 VitePress 工具建议
 

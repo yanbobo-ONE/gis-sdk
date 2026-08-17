@@ -1,5 +1,5 @@
 {
-  "name": "@yanbobo-one/gis-sdk",
+  "name": "@yanbobo/gis-sdk",
   "version": "0.1.0-alpha.0",
   "description": "Framework-neutral GIS SDK with a Cesium adapter",
   "license": "UNLICENSED",

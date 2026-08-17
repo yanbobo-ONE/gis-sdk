@@ -1,8 +1,8 @@
-# HGD GIS SDK 2.0 产品需求文档（PRD）
+# gis-sdk 2.0 产品需求文档（PRD）
 
 > 文档状态：Draft v1.0
 > 编写日期：2026-08-17
-> 产品代号：HGD GIS SDK 2.0（下文简称 SDK，正式包名待立项确认）
+> 项目名称：gis-sdk；首个 npm 包名：`@yanbobo/gis-sdk`（下文简称 SDK）
 > 目标读者：产品负责人、GIS 架构师、前端负责人、仿真研发、测试、运维与文档维护者
 
 ## 1. 一页结论
@@ -24,7 +24,7 @@ HGD 当前 GIS 不应继续作为 `hgd-II-web` 内的一个大单例类原地扩
               │
        业务 Adapter（薄）
               │
-   HGD GIS SDK 稳定公开接口（小）
+   gis-sdk 稳定公开接口（小）
               │
   数据管线 + 图层运行时 + 渲染调度（深）
               │
@@ -219,7 +219,7 @@ flowchart TD
 建议建立独立 monorepo，不直接在 `hgd-II-web/src/components` 内开发新内核。
 
 ```text
-hgd-gis-sdk/
+gis-sdk/
   packages/
     core/              # 通用类型、生命周期、图层与数据管线接口
     cesium/            # Cesium Adapter 与具体渲染实现
@@ -245,12 +245,12 @@ hgd-gis-sdk/
 
 | 包 | 用途 | 依赖策略 |
 | --- | --- | --- |
-| `@hgd-gis/sdk` | 普通项目首选，开箱即用 | 固定安装经过验证的 Cesium 与标准插件 |
-| `@hgd-gis/core` | 高级集成、非 Cesium 契约和测试 | 不依赖框架、不暴露 Cesium 类型 |
-| `@hgd-gis/cesium` | 引擎 Adapter | 以精确兼容范围约束 `cesium`，防止重复实例 |
-| `@hgd-gis/vue` | Vue 3 组件和 composable | 仅依赖 SDK 公开接口 |
-| `@hgd-gis/legacy-hgd` | 旧 HGD 方法适配 | 只用于迁移，明确废弃周期 |
-| `@hgd-gis/devtools` | 开发环境诊断 | 生产可完全不打包 |
+| `@yanbobo/gis-sdk` | 普通项目首选，开箱即用 | 固定安装经过验证的 Cesium 与标准插件 |
+| `@yanbobo/gis-core` | 高级集成、非 Cesium 契约和测试 | 不依赖框架、不暴露 Cesium 类型 |
+| `@yanbobo/gis-cesium` | 引擎 Adapter | 以精确兼容范围约束 `cesium`，防止重复实例 |
+| `@yanbobo/gis-vue` | Vue 3 组件和 composable | 仅依赖 SDK 公开接口 |
+| `@yanbobo/gis-legacy-hgd` | 旧 HGD 方法适配 | 只用于迁移，明确废弃周期 |
+| `@yanbobo/gis-devtools` | 开发环境诊断 | 生产可完全不打包 |
 
 一期不建议把每个小能力都拆成 npm 包。包过多会增加版本、依赖和文档成本。只有确实存在按需安装、独立演进或两个实现的模块才拆包。
 
@@ -261,8 +261,8 @@ hgd-gis-sdk/
 ### 8.1 五分钟快速开始
 
 ```ts
-import { createMap } from '@hgd-gis/sdk'
-import '@hgd-gis/sdk/styles.css'
+import { createMap } from '@yanbobo/gis-sdk'
+import '@yanbobo/gis-sdk/styles.css'
 
 const map = await createMap({
   container: 'map',
@@ -302,7 +302,7 @@ await map.destroy()
 ### 8.2 顶层接口
 
 ```ts
-interface HgdMap {
+interface GisMap {
   readonly id: string
   readonly ready: Promise<void>
   readonly layers: LayerManager
@@ -816,7 +816,7 @@ interface GisPlugin {
 
 截至 2026-08-17，[Cesium 官方 Releases](https://github.com/CesiumGS/cesium/releases)将 [1.144](https://github.com/CesiumGS/cesium/releases/tag/1.144)（2026-08-03）列为最新稳定发布；HGD 当前实际静态运行库仍为 1.86。这不是普通小版本更新，而是跨越大量异步接口、构建要求和渲染能力变化的迁移。M0 应以 1.144 作为首个候选基线完成 PoC，最终版本以 PoC 结论精确锁定，不在业务项目中使用浮动的 `latest`。
 
-- `@hgd-gis/sdk` 使用单一、精确、经过测试的 Cesium 版本，不使用无人负责的宽泛 `^` 自动升级；
+- `@yanbobo/gis-sdk` 使用单一、精确、经过测试的 Cesium 版本，不使用无人负责的宽泛 `^` 自动升级；
 - SDK 发布说明明确 Cesium 版本；
 - 每次 Cesium 升级运行接口扫描、类型检查、单测、视觉回归和性能基准；
 - SDK 公共数据类型不暴露 Cesium 类型，避免所有业务跟随升级；
@@ -857,7 +857,7 @@ React 不应进入 core。可提供官方示例或后续 Adapter。Vue 2 项目�
 ### 16.4 两种交付形态
 
 1. npm ESM：推荐方式，支持类型、Tree Shaking 和现代构建；
-2. 离线完整包：`hgd-gis.global.js`、CSS、Workers、Assets 和版本清单，面向无法使用 npm 的旧项目。
+2. 离线完整包：`gis-sdk.global.js`、CSS、Workers、Assets 和版本清单，面向无法使用 npm 的旧项目。
 
 两者必须由同一源码构建并通过同一接口契约测试，禁止形成两套实现。
 
@@ -1060,7 +1060,7 @@ const snapshot = map.diagnostics.snapshot()
 ### 19.3 兼容层示例
 
 ```ts
-import { createLegacyGisApi } from '@hgd-gis/legacy-hgd'
+import { createLegacyGisApi } from '@yanbobo/gis-legacy-hgd'
 
 const legacy = await createLegacyGisApi({
   map,

@@ -4,7 +4,7 @@
 
 **Goal:** Create the first independently buildable, testable, packable `gis-sdk` project with a small TypeScript interface, a Cesium 1.144 adapter, documentation, and guarded npm publishing configuration.
 
-**Architecture:** Start with one publishable package named `@yanbobo-one/gis-sdk` inside the standalone `gis-sdk` repository. Keep framework-neutral contracts and runtime in `src/core`, place all Cesium imports in `src/cesium`, and expose one `createMap()` factory plus instance methods. Do not split empty npm packages yet; the internal seam allows `core` and `cesium` to become separate packages after a second real adapter or independent release need exists.
+**Architecture:** Start with one publishable package named `@yanbobo/gis-sdk` inside the standalone `gis-sdk` repository. Keep framework-neutral contracts and runtime in `src/core`, place all Cesium imports in `src/cesium`, and expose one `createMap()` factory plus instance methods. Do not split empty npm packages yet; the internal seam allows `core` and `cesium` to become separate packages after a second real adapter or independent release need exists.
 
 **Tech Stack:** Node.js 22, pnpm 11, TypeScript 6, CesiumJS 1.144, tsup, Vitest, ESLint 10, typescript-eslint, Prettier, TypeDoc, VitePress, Changesets, publint.
 
@@ -76,7 +76,7 @@ gis-sdk/
 
 - [ ] **Step 1: Create the package manifest**
 
-Use `@yanbobo-one/gis-sdk` because the unscoped npm name `gis-sdk` is owned by another account. Set version `0.1.0-alpha.0`, `type: module`, `engines.node: >=22.0.0`, `packageManager: pnpm@11.19.0`, `cesium: 1.144.0`, ESM/CJS/type exports, `./styles.css`, and `publishConfig.registry: https://registry.npmjs.org/`. Keep `license: UNLICENSED` until the repository owner makes an explicit license decision.
+Use `@yanbobo/gis-sdk` because the unscoped npm name `gis-sdk` is owned by another account and the authenticated npm account owns the `yanbobo` scope. Set version `0.1.0-alpha.0`, `type: module`, `engines.node: >=22.0.0`, `packageManager: pnpm@11.19.0`, `cesium: 1.144.0`, ESM/CJS/type exports, `./styles.css`, and `publishConfig.registry: https://registry.npmjs.org/`. Keep `license: UNLICENSED` until the repository owner makes an explicit license decision.
 
 Required scripts:
 
@@ -397,7 +397,7 @@ git commit -m "[feat]: 添加Cesium地图适配器与创建入口"
 
 - [ ] **Step 1: Write the repository README**
 
-README must lead with the `gis-sdk` name, status `0.1.0-alpha.0`, Node 22/pnpm requirements, installation using `@yanbobo-one/gis-sdk`, import of `@yanbobo-one/gis-sdk/styles.css`, `createMap()` example, explicit destroy example, and links to the PRD and publishing guide. State clearly that the package is pre-alpha and not yet published.
+README must lead with the `gis-sdk` name, status `0.1.0-alpha.0`, Node 22/pnpm requirements, installation using `@yanbobo/gis-sdk`, import of `@yanbobo/gis-sdk/styles.css`, `createMap()` example, explicit destroy example, and links to the PRD and publishing guide. State clearly that the package is pre-alpha and not yet published.
 
 - [ ] **Step 2: Document Cesium assets and npm publishing**
 
@@ -406,7 +406,7 @@ README must lead with the `gis-sdk` name, status `0.1.0-alpha.0`, Node 22/pnpm r
 ```text
 npm registry: https://registry.npmjs.org/
 unscoped gis-sdk owner: njueyupeng (not this project)
-provisional package: @yanbobo-one/gis-sdk
+package: @yanbobo/gis-sdk
 required before publish: npm login, npm whoami, npm access ls-packages
 ```
 
@@ -461,6 +461,6 @@ git commit -m "[docs]: 添加SDK接入发布文档与持续集成"
 - [ ] Run `git status --short` and confirm only intended changes remain.
 - [ ] Run `git log --oneline --decorate -5` and confirm logical commits are separated.
 - [ ] Run the complete quality gate again from a clean worktree.
-- [ ] Run `npm pack --dry-run` and confirm the package name is `@yanbobo-one/gis-sdk@0.1.0-alpha.0`.
+- [ ] Run `npm pack --dry-run` and confirm the package name is `@yanbobo/gis-sdk@0.1.0-alpha.0`.
 - [ ] Confirm `npm whoami` is still treated as a publish prerequisite; do not publish while unauthenticated.
 - [ ] Merge the implementation branch to `main`, rerun verification, and push only after the remote commit can be proven with GitHub API or Git fetch.
