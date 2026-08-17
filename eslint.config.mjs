@@ -1,5 +1,8 @@
+import js from '@eslint/js';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+const javaScriptFiles = ['**/*.{js,mjs,cjs}'];
 const typeCheckedFiles = ['**/*.{ts,mts,cts}'];
 const typeCheckedConfigs = [
   ...tseslint.configs.strictTypeChecked,
@@ -15,6 +18,13 @@ export default tseslint.config(
       'docs/.vitepress/cache/**',
       'docs/.vitepress/dist/**',
     ],
+  },
+  {
+    ...js.configs.recommended,
+    files: javaScriptFiles,
+    languageOptions: {
+      globals: globals.node,
+    },
   },
   ...typeCheckedConfigs,
   {
