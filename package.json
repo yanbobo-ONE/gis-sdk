@@ -1,0 +1,65 @@
+{
+  "name": "@yanbobo-one/gis-sdk",
+  "version": "0.1.0-alpha.0",
+  "description": "Framework-neutral GIS SDK with a Cesium adapter",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@11.19.0",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "rm -rf dist coverage",
+    "build": "pnpm clean && tsup && node scripts/copy-static.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "docs:dev": "vitepress docs",
+    "docs:build": "typedoc --options typedoc.json && vitepress build docs",
+    "pack:check": "pnpm build && publint && attw --pack && npm pack --dry-run",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
+  },
+  "dependencies": {
+    "cesium": "1.144.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@changesets/cli": "3.0.0",
+    "@types/node": "22.20.1",
+    "eslint": "10.8.1",
+    "prettier": "3.9.6",
+    "publint": "0.3.23",
+    "tsup": "8.5.1",
+    "typedoc": "0.28.20",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitepress": "1.6.4",
+    "vitest": "4.1.10"
+  }
+}

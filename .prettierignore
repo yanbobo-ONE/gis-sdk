@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+docs/api
+docs/.vitepress/cache
+docs/.vitepress/dist
+docs/cesium-sdk-prd.md
+docs/research/cesium-sdk-reference-research.md
+docs/superpowers/plans/2026-08-17-initial-sdk-scaffold.md
+pnpm-lock.yaml
