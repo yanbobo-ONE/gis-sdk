@@ -1,0 +1,12 @@
+.DS_Store
+.idea/
+.vscode/
+.worktrees/
+node_modules/
+dist/
+coverage/
+.vitepress/cache/
+.vitepress/dist/
+*.log
+*.tgz
+
