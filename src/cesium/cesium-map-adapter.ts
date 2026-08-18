@@ -95,6 +95,13 @@ function rollbackCesiumBaseUrl(reservation: BaseUrlReservation | undefined): voi
     return;
   }
 
+  if (reservation.state.configuredBaseUrl && !reservation.previousBaseUrl) {
+    // Cesium accepted the new value but exposed no restorable previous value.
+    reservation.state.phase = 'locked';
+    reservation.state.reservationToken = undefined;
+    return;
+  }
+
   try {
     if (reservation.previousBaseUrl) {
       moduleUrl.setBaseUrl(reservation.previousBaseUrl);
