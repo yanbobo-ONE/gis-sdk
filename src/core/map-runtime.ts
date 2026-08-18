@@ -1,6 +1,7 @@
 import type { GisMap, MapEngineAdapter, MapEventMap, MapState } from './contracts.js';
 import { GisError } from './errors.js';
 import { EventHub } from './event-hub.js';
+import type { LayerManager } from '../layers/contracts.js';
 
 export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly events = new EventHub<MapEventMap>();
@@ -19,6 +20,10 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
 
   get raw(): Readonly<TRaw> {
     return this.adapter.raw;
+  }
+
+  get layers(): LayerManager {
+    return this.adapter.layers;
   }
 
   resize(): void {

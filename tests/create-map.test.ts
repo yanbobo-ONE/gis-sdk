@@ -8,12 +8,14 @@ import {
   type MapAdapterFactory,
   type NormalizedCreateMapOptions,
 } from '../src/cesium/create-map.js';
+import type { LayerManager } from '../src/layers/contracts.js';
 
 interface FakeRawContext {
   readonly viewer: { readonly kind: 'fake' };
 }
 
 interface FakeAdapter extends MapEngineAdapter<FakeRawContext> {
+  readonly layers: LayerManager;
   resize: Mock<() => void>;
   destroy: Mock<() => void | Promise<void>>;
 }
@@ -22,6 +24,7 @@ function createFactory() {
   let receivedOptions: NormalizedCreateMapOptions | undefined;
   const adapter: FakeAdapter = {
     raw: { viewer: { kind: 'fake' } },
+    layers: {} as LayerManager,
     resize: vi.fn(),
     destroy: vi.fn(),
   };

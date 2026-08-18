@@ -94,7 +94,7 @@ describe('CesiumMapAdapter', () => {
     const third = new CesiumMapAdapter(createOptions('map-3', 'https://a.example/cesium/'));
 
     first.resize();
-    first.destroy();
+    await first.destroy();
 
     expect(cesium.setBaseUrl).toHaveBeenCalledOnce();
     expect(cesium.setBaseUrl).toHaveBeenCalledWith('https://a.example/cesium/');
@@ -226,5 +226,44 @@ describe('CesiumMapAdapter', () => {
       }),
     );
     expect(cesium.Viewer.instances).toHaveLength(1);
+  });
+
+  it('exposes one layer manager and destroys it before the Viewer', async () => {
+    const order: string[] = [];
+    const layerModule = await import('../src/layers/layer-runtime.js');
+    const destroyLayers = vi
+      .spyOn(layerModule.LayerRuntime.prototype, 'destroy')
+      .mockImplementationOnce(() => {
+        order.push('layers');
+        return Promise.resolve();
+      });
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const adapter = new CesiumMapAdapter(createOptions('map-1'));
+    cesium.Viewer.instances[0]?.destroy.mockImplementationOnce(() => {
+      order.push('viewer');
+    });
+
+    expect(adapter.layers).toBe(adapter.layers);
+    await adapter.destroy();
+
+    expect(destroyLayers).toHaveBeenCalledOnce();
+    expect(order).toEqual(['layers', 'viewer']);
+  });
+
+  it('does not destroy the Viewer when layer cleanup fails and permits retry', async () => {
+    const layerModule = await import('../src/layers/layer-runtime.js');
+    const destroyLayers = vi
+      .spyOn(layerModule.LayerRuntime.prototype, 'destroy')
+      .mockRejectedValueOnce(new Error('layer cleanup failed'))
+      .mockResolvedValueOnce(undefined);
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const adapter = new CesiumMapAdapter(createOptions('map-1'));
+
+    await expect(adapter.destroy()).rejects.toThrow('layer cleanup failed');
+    expect(cesium.Viewer.instances[0]?.destroy).not.toHaveBeenCalled();
+
+    await expect(adapter.destroy()).resolves.toBeUndefined();
+    expect(destroyLayers).toHaveBeenCalledTimes(2);
+    expect(cesium.Viewer.instances[0]?.destroy).toHaveBeenCalledOnce();
   });
 });

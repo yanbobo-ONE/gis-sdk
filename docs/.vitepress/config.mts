@@ -18,7 +18,10 @@ export default defineConfig({
       '/guide/': [
         {
           text: '接入指南',
-          items: [{ text: '快速开始', link: '/guide/getting-started' }],
+          items: [
+            { text: '快速开始', link: '/guide/getting-started' },
+            { text: '图层管理', link: '/guide/layers' },
+          ],
         },
       ],
       '/': [
@@ -29,6 +32,7 @@ export default defineConfig({
             { text: '公开接口', link: '/api' },
             { text: '产品需求文档', link: '/cesium-sdk-prd' },
             { text: '参考调研', link: '/research/cesium-sdk-reference-research' },
+            { text: '12255230 案例评估', link: '/research/12255230-catalog' },
             { text: 'npm 发布', link: '/publishing' },
             { text: '变更日志', link: '/changelog' },
           ],

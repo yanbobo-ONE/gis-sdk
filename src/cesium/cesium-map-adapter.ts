@@ -2,7 +2,10 @@ import { buildModuleUrl, SceneMode, Viewer } from 'cesium';
 
 import type { MapEngineAdapter } from '../core/contracts.js';
 import { GisError } from '../core/errors.js';
+import type { LayerManager } from '../layers/contracts.js';
+import { LayerRuntime } from '../layers/layer-runtime.js';
 import type { NormalizedCreateMapOptions } from './create-map.js';
+import { createCesiumLayer } from './layers/create-cesium-layer.js';
 import type { CesiumRawContext } from './types.js';
 
 interface BuildModuleUrlWithBaseUrl {
@@ -121,6 +124,9 @@ function rollbackCesiumBaseUrl(reservation: BaseUrlReservation | undefined): voi
 
 export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   readonly raw: Readonly<CesiumRawContext>;
+  readonly layers: LayerManager;
+
+  private readonly layerRuntime: LayerRuntime;
 
   constructor(options: NormalizedCreateMapOptions) {
     const reservation = reserveCesiumBaseUrl(options.cesiumBaseUrl);
@@ -142,13 +148,18 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     commitCesiumBaseUrl(reservation);
 
     this.raw = Object.freeze({ viewer });
+    this.layerRuntime = new LayerRuntime((spec, context) => {
+      return createCesiumLayer(viewer, spec, context);
+    });
+    this.layers = this.layerRuntime;
   }
 
   resize(): void {
     this.raw.viewer.resize();
   }
 
-  destroy(): void {
+  async destroy(): Promise<void> {
+    await this.layerRuntime.destroy();
     this.raw.viewer.destroy();
   }
 }

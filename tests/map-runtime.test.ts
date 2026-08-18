@@ -4,12 +4,14 @@ import type { Mock } from 'vitest';
 import type { MapEngineAdapter, MapEventMap } from '../src/core/contracts.js';
 import { GisError } from '../src/core/errors.js';
 import { MapRuntime } from '../src/core/map-runtime.js';
+import type { LayerManager } from '../src/layers/contracts.js';
 
 interface RawContext {
   readonly name: string;
 }
 
 interface TestAdapter extends MapEngineAdapter<RawContext> {
+  readonly layers: LayerManager;
   resize: Mock<() => void>;
   destroy: Mock<() => void | Promise<void>>;
 }
@@ -17,6 +19,7 @@ interface TestAdapter extends MapEngineAdapter<RawContext> {
 function createAdapter(): TestAdapter {
   return {
     raw: { name: 'fake' },
+    layers: {} as LayerManager,
     resize: vi.fn(),
     destroy: vi.fn(),
   };
@@ -30,6 +33,7 @@ describe('MapRuntime', () => {
     expect(map.id).toBe('map-1');
     expect(map.state).toBe('ready');
     expect(map.raw).toBe(adapter.raw);
+    expect(map.layers).toBe(adapter.layers);
   });
 
   it('delegates resize while ready', () => {

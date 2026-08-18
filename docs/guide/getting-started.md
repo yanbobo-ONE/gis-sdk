@@ -2,7 +2,7 @@
 
 ## 安装
 
-`@yanbobo/gis-sdk` 当前为 `0.1.0-alpha.0`，首次发布完成后安装：
+安装当前 alpha 发布线：
 
 ```bash
 pnpm add @yanbobo/gis-sdk@alpha
@@ -69,7 +69,7 @@ const map = createMap({
 });
 ```
 
-SDK 默认设置 `baseLayer: false`，不会自动请求 Cesium ion 影像，因此创建空白地球不需要 ion token。业务项目可在 `map.raw.viewer` 上使用 Cesium 公共 API 添加自己的影像、地形、3D Tiles 或 Primitive。
+SDK 默认设置 `baseLayer: false`，不会自动请求 Cesium ion 影像，因此创建空白地球不需要 ion token。GeoJSON 和 WMS 使用 [`map.layers`](./layers.md) 管理；尚未覆盖的影像、地形、3D Tiles 或 Primitive 可以暂时通过 `map.raw.viewer` 使用 Cesium 公共接口。
 
 组件卸载、路由离开或场景切换时释放地图：
 

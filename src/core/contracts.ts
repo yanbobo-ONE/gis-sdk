@@ -1,5 +1,6 @@
 import type { GisError } from './errors.js';
 import type { EventHub } from './event-hub.js';
+import type { LayerManager } from '../layers/contracts.js';
 
 /** 地图实例的生命周期状态。 */
 export type MapState = 'ready' | 'destroying' | 'destroyed';
@@ -32,6 +33,8 @@ export interface GisMap<TRaw = unknown> {
   readonly state: MapState;
   /** 地图生命周期事件中心。 */
   readonly events: EventHub<MapEventMap>;
+  /** 当前地图拥有的类型化图层管理器。 */
+  readonly layers: LayerManager;
   /** 高级场景使用的引擎原生上下文。 */
   readonly raw: Readonly<TRaw>;
   /**
@@ -51,6 +54,7 @@ export interface GisMap<TRaw = unknown> {
 /** @internal */
 export interface MapEngineAdapter<TRaw> {
   readonly raw: Readonly<TRaw>;
+  readonly layers: LayerManager;
   resize(): void;
   destroy(): void | Promise<void>;
 }

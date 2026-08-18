@@ -1,6 +1,6 @@
 # gis-sdk
 
-基于 Cesium 1.144 的框架无关 GIS SDK。项目当前版本为 `0.1.0-alpha.0`，处于 pre-alpha 阶段，npm 包尚未正式发布。
+基于 Cesium 1.144 的框架无关 GIS SDK。项目当前处于 alpha 阶段，npm 包通过 `alpha` dist-tag 发布。
 
 当前首个可用切片提供：
 
@@ -8,6 +8,8 @@
 - ESM、CommonJS 和 TypeScript 声明；
 - 幂等地图销毁与类型化生命周期事件；
 - 受控的 Cesium 原生 `Viewer` 访问入口；
+- 类型化图层生命周期以及 GeoJSON、WMS 图层；
+- GeoServer 样式切换和类型化 CQL 过滤；
 - 默认关闭在线底图和可选控件，无需 Cesium ion token 即可启动空白地球。
 
 ## 环境要求
@@ -18,7 +20,7 @@
 
 ## 安装
 
-包发布后使用：
+安装 alpha 版本：
 
 ```bash
 pnpm add @yanbobo/gis-sdk@alpha
@@ -41,6 +43,13 @@ map.events.on('map:error', ({ error }) => {
   console.error(error.code, error);
 });
 
+const roads = await map.layers.add({
+  id: 'roads',
+  type: 'wms',
+  url: 'https://maps.example/geoserver/wms',
+  layers: 'city:roads',
+});
+
 // 高级需求可受控访问 Cesium 原生对象
 map.raw.viewer.scene.requestRender();
 ```
@@ -56,12 +65,13 @@ await map.destroy();
 ## 文档
 
 - [快速开始](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/getting-started.md)
+- [图层管理](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/layers.md)
 - [公开接口说明](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
 - [产品需求文档](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/cesium-sdk-prd.md)
 - [npm 发布流程](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/publishing.md)
 - [变更日志](https://github.com/yanbobo-ONE/gis-sdk/blob/main/CHANGELOG.md)
 
-完整架构目标包括图层、海量数据管线、Worker 计算、材质、分析、诊断和 HGD 兼容层；这些能力按 PRD 里程碑逐步交付，不在 `0.1.0-alpha.0` 中虚构实现。
+完整架构目标还包括海量数据管线、Worker 计算、材质、分析、诊断和 HGD 兼容层；这些能力按 PRD 里程碑逐步交付，不虚构尚未实现的能力。
 
 ## 本地开发
 

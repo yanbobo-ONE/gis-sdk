@@ -72,6 +72,7 @@
     "release": "changeset publish"
   },
   "dependencies": {
+    "@types/geojson": "7946.0.16",
     "cesium": "1.144.0"
   },
   "devDependencies": {

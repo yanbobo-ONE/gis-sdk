@@ -326,28 +326,35 @@ interface GisMap {
 
 ```ts
 interface LayerManager {
-  add(spec: LayerSpec, options?: OperationOptions): Promise<LayerHandle>
+  add<TSpec extends LayerSpec>(spec: TSpec, options?: OperationOptions): Promise<LayerHandleFor<TSpec>>
   get(id: string): LayerHandle | undefined
-  list(filter?: LayerFilter): readonly LayerInfo[]
-  remove(id: string, options?: OperationOptions): Promise<boolean>
-  clear(options?: LayerClearOptions): Promise<void>
+  list(): readonly LayerInfo[]
+  remove(id: string): Promise<boolean>
+  clear(): Promise<void>
 }
 
-interface LayerHandle<T extends GisFeature = GisFeature> {
+interface LayerHandle {
   readonly id: string
   readonly type: LayerType
   readonly state: LayerState
+  setVisible(visible: boolean): void
+  dispose(): Promise<void>
+}
 
+interface FeatureLayerHandle<T extends GisFeature = GisFeature> extends LayerHandle {
   setData(features: readonly T[], options?: SetDataOptions): Promise<UpdateResult>
   apply(changes: readonly FeatureChange<T>[], options?: ApplyOptions): Promise<UpdateResult>
   connect(source: StreamSource<T>, options?: StreamOptions): Promise<StreamHandle>
-  setVisible(visible: boolean): void
+  query(query: FeatureQuery): Promise<readonly T[]>
+}
+
+interface ImageryLayerHandle extends LayerHandle {
   setOpacity(opacity: number): void
   setZIndex(zIndex: number): void
-  query(query: FeatureQuery): Promise<readonly T[]>
-  dispose(): Promise<void>
 }
 ```
+
+通用句柄只包含所有图层都能稳定支持的操作。数据更新属于 Feature 图层，透明度和排序属于 Imagery 图层；具体 Adapter 可以继续提供 WMS 样式、过滤等类型专属能力，禁止用运行时“不支持”填充表面统一的接口。
 
 统一成 `setData`、`apply` 和 `connect` 三种数据入口：
 
