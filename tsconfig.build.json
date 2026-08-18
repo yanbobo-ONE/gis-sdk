@@ -2,11 +2,13 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "types": [],
+    "ignoreDeprecations": "6.0",
     "noEmit": false,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "rootDir": "src"
+    "rootDir": "src",
+    "outDir": "dist"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["tests", "dist", "coverage"]

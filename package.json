@@ -16,9 +16,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./styles.css": "./dist/styles.css"
   },
@@ -40,7 +45,7 @@
     "format:check": "prettier --check .",
     "docs:dev": "vitepress docs",
     "docs:build": "typedoc --options typedoc.json && vitepress build docs",
-    "pack:check": "pnpm build && publint && attw --pack && npm pack --dry-run",
+    "pack:check": "pnpm build && publint && attw --pack --exclude-entrypoints ./styles.css && npm pack --dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish"
