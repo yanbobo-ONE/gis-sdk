@@ -1,0 +1,25 @@
+# Changelog
+
+本项目遵循 [Semantic Versioning](https://semver.org/)。pre-alpha 阶段的公共接口仍可能调整。
+
+## 0.1.0-alpha.0 - 2026-08-18
+
+### Added
+
+- 建立独立 `gis-sdk` 仓库和 `@yanbobo/gis-sdk` npm 包结构。
+- 锁定 Cesium 1.144.0，提供 ESM、CommonJS、类型声明和样式入口。
+- 添加 `createMap()`、`GisMap`、`EventHub`、`GisError` 和类型化生命周期事件。
+- 提供 Cesium `Viewer` 适配器和 `raw.viewer` 高级访问入口。
+- 添加 VitePress 指南、TypeDoc API、发布护栏和持续集成。
+
+### Compatibility
+
+- Node.js 22 及以上。
+- pnpm 11.19.0。
+- 浏览器端需要 WebGL 和 `crypto.randomUUID()`。
+
+### Known Limitations
+
+- 尚未实现图层管理、海量数据管线、Worker、材质和空间分析模块。
+- 尚未执行 npm 首次发布。
+- 真实浏览器 WebGL 场景和 HGD 页面接入验证属于后续里程碑。

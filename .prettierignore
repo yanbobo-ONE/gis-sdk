@@ -2,6 +2,7 @@ node_modules
 dist
 coverage
 docs/api
+docs/public/api
 docs/.vitepress/cache
 docs/.vitepress/dist
 docs/cesium-sdk-prd.md

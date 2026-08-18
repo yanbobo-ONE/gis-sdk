@@ -16,6 +16,13 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "docs/**/*.ts", "docs/**/*.mts", "*.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "docs/**/*.ts",
+    "docs/**/*.mts",
+    "docs/.vitepress/**/*.mts",
+    "*.config.ts"
+  ],
   "exclude": ["dist", "coverage", "docs/api"]
 }

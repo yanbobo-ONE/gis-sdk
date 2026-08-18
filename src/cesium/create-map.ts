@@ -6,6 +6,7 @@ import type { CesiumMap, CesiumSceneMode, CesiumWidgetOptions, CreateMapOptions 
 
 type NormalizedWidgetOptions = Readonly<Required<CesiumWidgetOptions>>;
 
+/** @internal */
 export interface NormalizedCreateMapOptions {
   readonly container: string | HTMLElement;
   readonly id: string;
@@ -14,6 +15,7 @@ export interface NormalizedCreateMapOptions {
   readonly widgets: NormalizedWidgetOptions;
 }
 
+/** @internal */
 export type MapAdapterFactory<TRaw> = (
   options: NormalizedCreateMapOptions,
 ) => MapEngineAdapter<TRaw>;
@@ -75,6 +77,7 @@ function normalizeOptions(options: CreateMapOptions): NormalizedCreateMapOptions
   return Object.freeze(cesiumBaseUrl ? { ...normalizedOptions, cesiumBaseUrl } : normalizedOptions);
 }
 
+/** @internal */
 export function createMapWithFactory<TRaw>(
   options: CreateMapOptions,
   factory: MapAdapterFactory<TRaw>,
@@ -83,6 +86,24 @@ export function createMapWithFactory<TRaw>(
   return new MapRuntime(normalizedOptions.id, factory(normalizedOptions));
 }
 
+/**
+ * 创建一个可直接使用的 Cesium 地图实例。
+ *
+ * 默认不创建在线底图，也不启用 Cesium ion，因此无需 ion token 即可启动空白地球。
+ *
+ * @example
+ * ```ts
+ * const map = createMap({
+ *   container: 'map',
+ *   cesiumBaseUrl: '/cesium/',
+ * })
+ *
+ * map.resize()
+ * await map.destroy()
+ * ```
+ *
+ * @throws {@link GisError} 容器为空，或与已经锁定的 Cesium 静态资源地址冲突时抛出。
+ */
 export function createMap(options: CreateMapOptions): CesiumMap {
   return createMapWithFactory(options, (normalizedOptions) => {
     return new CesiumMapAdapter(normalizedOptions);

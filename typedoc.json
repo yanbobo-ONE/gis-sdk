@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "entryPointStrategy": "resolve",
+  "out": "docs/public/api",
+  "readme": "docs/api-readme.md",
+  "name": "gis-sdk API",
+  "includeVersion": true,
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "cleanOutputDir": true,
+  "githubPages": false,
+  "gitRevision": "main",
+  "searchInComments": true,
+  "validation": {
+    "invalidLink": true,
+    "notDocumented": true,
+    "notExported": true
+  },
+  "treatValidationWarningsAsErrors": true,
+  "externalSymbolLinkMappings": {
+    "cesium": {
+      "Viewer": "https://cesium.com/learn/cesiumjs/ref-doc/Viewer.html"
+    }
+  }
+}

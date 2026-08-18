@@ -3,13 +3,29 @@
   "version": "0.1.0-alpha.0",
   "description": "Framework-neutral GIS SDK with a Cesium adapter",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanbobo-ONE/gis-sdk.git"
+  },
+  "homepage": "https://github.com/yanbobo-ONE/gis-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/yanbobo-ONE/gis-sdk/issues"
+  },
+  "keywords": [
+    "cesium",
+    "gis",
+    "sdk",
+    "3d-map"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
   },
   "packageManager": "pnpm@11.19.0",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -36,6 +52,7 @@
   },
   "scripts": {
     "clean": "node scripts/clean.mjs",
+    "dev": "tsup --watch",
     "build": "pnpm clean && tsup && node scripts/copy-static.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
@@ -43,8 +60,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "docs:dev": "vitepress docs",
-    "docs:build": "typedoc --options typedoc.json && vitepress build docs",
+    "docs:api": "typedoc --options typedoc.json",
+    "docs:dev": "pnpm docs:api && vitepress docs",
+    "docs:build": "pnpm docs:api && vitepress build docs",
     "pack:check": "pnpm build && publint && attw --pack --exclude-entrypoints ./styles.css && npm pack --dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version",

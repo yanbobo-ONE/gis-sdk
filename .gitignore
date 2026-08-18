@@ -5,8 +5,8 @@
 node_modules/
 dist/
 coverage/
+docs/public/api/
 .vitepress/cache/
 .vitepress/dist/
 *.log
 *.tgz
-

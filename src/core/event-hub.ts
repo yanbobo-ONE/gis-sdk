@@ -1,13 +1,21 @@
-export type EventMap = object;
+/** 取消事件订阅的幂等函数。 */
 export type Unsubscribe = () => void;
 
-type EventListener<TEvent> = (event: TEvent) => void;
-type StoredListener = EventListener<never>;
+type StoredListener = (event: never) => void;
 
-export class EventHub<TEvents extends EventMap> {
+/**
+ * 使用事件映射约束事件名称和载荷的轻量事件中心。
+ *
+ * @typeParam TEvents - 事件名称到事件载荷的映射。
+ */
+export class EventHub<TEvents extends object> {
   private readonly listeners = new Map<keyof TEvents, Set<StoredListener>>();
 
-  on<TKey extends keyof TEvents>(type: TKey, listener: EventListener<TEvents[TKey]>): Unsubscribe {
+  /** 订阅事件并返回幂等取消函数。 */
+  on<TKey extends keyof TEvents>(
+    type: TKey,
+    listener: (event: TEvents[TKey]) => void,
+  ): Unsubscribe {
     const storedListener = listener as StoredListener;
     const listeners = this.listeners.get(type) ?? new Set<StoredListener>();
     listeners.add(storedListener);
@@ -29,9 +37,10 @@ export class EventHub<TEvents extends EventMap> {
     };
   }
 
+  /** 订阅只执行一次的事件监听器。 */
   once<TKey extends keyof TEvents>(
     type: TKey,
-    listener: EventListener<TEvents[TKey]>,
+    listener: (event: TEvents[TKey]) => void,
   ): Unsubscribe {
     let off: Unsubscribe = () => undefined;
     off = this.on(type, (event) => {
@@ -42,6 +51,12 @@ export class EventHub<TEvents extends EventMap> {
     return off;
   }
 
+  /**
+   * 向当前监听器快照发送事件。
+   *
+   * 所有监听器都会获得执行机会；一个监听器失败时抛出原错误，多个监听器失败时抛出
+   * `AggregateError`。
+   */
   emit<TKey extends keyof TEvents>(type: TKey, event: TEvents[TKey]): void {
     const listeners = this.listeners.get(type);
     if (!listeners) {
@@ -51,7 +66,7 @@ export class EventHub<TEvents extends EventMap> {
     const errors: unknown[] = [];
     for (const listener of [...listeners]) {
       try {
-        (listener as EventListener<TEvents[TKey]>)(event);
+        (listener as (event: TEvents[TKey]) => void)(event);
       } catch (error: unknown) {
         errors.push(error);
       }
@@ -67,6 +82,7 @@ export class EventHub<TEvents extends EventMap> {
     }
   }
 
+  /** 移除全部事件的全部监听器。 */
   clear(): void {
     this.listeners.clear();
   }

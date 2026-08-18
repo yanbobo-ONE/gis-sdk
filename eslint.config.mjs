@@ -15,6 +15,7 @@ export default tseslint.config(
       'dist/**',
       'coverage/**',
       'docs/api/**',
+      'docs/public/api/**',
       'docs/.vitepress/cache/**',
       'docs/.vitepress/dist/**',
     ],
