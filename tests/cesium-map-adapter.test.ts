@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const cesium = vi.hoisted(() => {
   class Viewer {
     static readonly instances: Viewer[] = [];
+    static constructionError: Error | undefined;
 
     readonly resize = vi.fn();
     readonly destroy = vi.fn();
@@ -11,18 +12,34 @@ const cesium = vi.hoisted(() => {
       readonly container: string | HTMLElement,
       readonly options: Record<string, unknown>,
     ) {
+      if (Viewer.constructionError) {
+        throw Viewer.constructionError;
+      }
       Viewer.instances.push(this);
     }
   }
 
+  let currentBaseUrl = 'https://auto.example/cesium/';
+  const setBaseUrl = vi.fn((value: string) => {
+    currentBaseUrl = value;
+  });
+  const buildModuleUrl = Object.assign(vi.fn(), {
+    getCesiumBaseUrl: vi.fn(() => ({ url: currentBaseUrl })),
+    setBaseUrl,
+  });
+
   return {
+    buildModuleUrl,
+    resetBaseUrl() {
+      currentBaseUrl = 'https://auto.example/cesium/';
+    },
     Viewer,
-    setBaseUrl: vi.fn(),
+    setBaseUrl,
   };
 });
 
 vi.mock('cesium', () => ({
-  buildModuleUrl: Object.assign(vi.fn(), { setBaseUrl: cesium.setBaseUrl }),
+  buildModuleUrl: cesium.buildModuleUrl,
   SceneMode: { SCENE2D: 2, SCENE3D: 3 },
   Viewer: cesium.Viewer,
 }));
@@ -60,8 +77,14 @@ function createOptions(
 describe('CesiumMapAdapter', () => {
   beforeEach(() => {
     vi.resetModules();
+    Reflect.deleteProperty(
+      cesium.buildModuleUrl,
+      Symbol.for('@yanbobo/gis-sdk/cesium-base-url-state/v1'),
+    );
+    cesium.resetBaseUrl();
     cesium.setBaseUrl.mockClear();
     cesium.Viewer.instances.splice(0);
+    cesium.Viewer.constructionError = undefined;
   });
 
   it('configures one global base URL, delegates Viewer lifecycle, and rejects conflicts', async () => {
@@ -109,6 +132,39 @@ describe('CesiumMapAdapter', () => {
       expect.objectContaining({
         code: 'CESIUM_BASE_URL_CONFLICT',
         operation: 'configureBaseUrl',
+      }),
+    );
+    expect(cesium.Viewer.instances).toHaveLength(1);
+  });
+
+  it('rolls back a reserved base URL when Viewer construction fails', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const failure = new Error('Viewer construction failed');
+    cesium.Viewer.constructionError = failure;
+
+    expect(() => {
+      new CesiumMapAdapter(createOptions('map-1', 'https://a.example/cesium/'));
+    }).toThrow(failure);
+    expect(cesium.setBaseUrl).toHaveBeenNthCalledWith(1, 'https://a.example/cesium/');
+    expect(cesium.setBaseUrl).toHaveBeenNthCalledWith(2, 'https://auto.example/cesium/');
+
+    cesium.Viewer.constructionError = undefined;
+    expect(
+      new CesiumMapAdapter(createOptions('map-2', 'https://b.example/cesium/')).raw.viewer,
+    ).toBe(cesium.Viewer.instances[0]);
+  });
+
+  it('shares the base URL lock across SDK module instances', async () => {
+    const firstModule = await import('../src/cesium/cesium-map-adapter.js');
+    new firstModule.CesiumMapAdapter(createOptions('map-1', 'https://a.example/cesium/'));
+
+    vi.resetModules();
+    const secondModule = await import('../src/cesium/cesium-map-adapter.js');
+    expect(() => {
+      new secondModule.CesiumMapAdapter(createOptions('map-2', 'https://b.example/cesium/'));
+    }).toThrow(
+      expect.objectContaining({
+        code: 'CESIUM_BASE_URL_CONFLICT',
       }),
     );
     expect(cesium.Viewer.instances).toHaveLength(1);
