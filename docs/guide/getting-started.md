@@ -5,18 +5,15 @@
 `@yanbobo/gis-sdk` 当前为 `0.1.0-alpha.0`，首次发布完成后安装：
 
 ```bash
-pnpm add @yanbobo/gis-sdk
+pnpm add @yanbobo/gis-sdk@alpha
 ```
 
 ## 准备 Cesium 静态资源
 
-Cesium 的 Worker、内置资源和控件图片必须由业务应用部署到同一个公共目录。将以下目录复制到应用的静态目录，例如 `public/cesium/`：
+Cesium 的 Worker、内置资源和控件图片必须由业务应用部署到同一个公共目录。SDK 提供跨平台复制命令，不依赖 npm、pnpm 或 yarn 的 `node_modules` 目录布局：
 
-```text
-node_modules/cesium/Build/Cesium/Workers
-node_modules/cesium/Build/Cesium/ThirdParty
-node_modules/cesium/Build/Cesium/Assets
-node_modules/cesium/Build/Cesium/Widgets
+```bash
+pnpm exec gis-sdk-copy-assets public/cesium
 ```
 
 最终部署结构应为：

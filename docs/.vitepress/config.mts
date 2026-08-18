@@ -4,6 +4,7 @@ export default defineConfig({
   lang: 'zh-CN',
   title: 'gis-sdk',
   description: '框架无关、可扩展的 Cesium GIS SDK',
+  srcExclude: ['superpowers/**', 'api-readme.md'],
   lastUpdated: true,
   themeConfig: {
     nav: [

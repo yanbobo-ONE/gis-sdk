@@ -21,7 +21,8 @@
 包发布后使用：
 
 ```bash
-pnpm add @yanbobo/gis-sdk
+pnpm add @yanbobo/gis-sdk@alpha
+pnpm exec gis-sdk-copy-assets public/cesium
 ```
 
 ## 创建地图
@@ -54,11 +55,11 @@ await map.destroy();
 
 ## 文档
 
-- [快速开始](docs/guide/getting-started.md)
-- [公开接口说明](docs/api.md)
-- [产品需求文档](docs/cesium-sdk-prd.md)
-- [npm 发布流程](docs/publishing.md)
-- [变更日志](CHANGELOG.md)
+- [快速开始](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/getting-started.md)
+- [公开接口说明](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
+- [产品需求文档](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/cesium-sdk-prd.md)
+- [npm 发布流程](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/publishing.md)
+- [变更日志](https://github.com/yanbobo-ONE/gis-sdk/blob/main/CHANGELOG.md)
 
 完整架构目标包括图层、海量数据管线、Worker 计算、材质、分析、诊断和 HGD 兼容层；这些能力按 PRD 里程碑逐步交付，不在 `0.1.0-alpha.0` 中虚构实现。
 

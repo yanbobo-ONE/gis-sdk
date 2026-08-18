@@ -33,7 +33,7 @@ pnpm pack:check
 发布是人工操作，不在 GitHub Actions 中自动执行：
 
 ```bash
-npm publish --access public
+npm publish --access public --tag alpha
 ```
 
 npm 若要求浏览器确认、双因素认证或 OTP，必须由账号持有人本人完成。发布后验证：
@@ -44,12 +44,14 @@ npm view @yanbobo/gis-sdk name version dist-tags --json
 
 ## 后续版本
 
-使用 Changesets 记录影响范围：
+alpha 阶段使用 Changesets prerelease 模式，并始终发布到 `alpha` tag：
 
 ```bash
+pnpm changeset pre enter alpha
 pnpm changeset
 pnpm version-packages
-pnpm release
+pnpm release:alpha
+npm view @yanbobo/gis-sdk dist-tags --json
 ```
 
-pre-alpha 阶段新增能力可继续使用 prerelease 版本。任何破坏性公共接口修改必须在 Changelog 中给出迁移说明，不得只修改代码不更新版本记录。
+结束 alpha 阶段时先执行 `pnpm changeset pre exit`，完成稳定版检查后再使用 `pnpm release` 更新 `latest`。任何破坏性公共接口修改必须在 Changelog 中给出迁移说明，不得只修改代码不更新版本记录。

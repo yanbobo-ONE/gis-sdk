@@ -30,6 +30,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "gis-sdk-copy-assets": "./dist/copy-cesium-assets.mjs"
+  },
   "exports": {
     ".": {
       "import": {
@@ -66,7 +69,8 @@
     "pack:check": "pnpm build && publint && attw --pack --exclude-entrypoints ./styles.css && npm pack --dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "release:alpha": "changeset publish --tag alpha"
   },
   "dependencies": {
     "cesium": "1.144.0"

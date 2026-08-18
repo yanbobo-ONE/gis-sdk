@@ -10,6 +10,7 @@
 - 锁定 Cesium 1.144.0，提供 ESM、CommonJS、类型声明和样式入口。
 - 添加 `createMap()`、`GisMap`、`EventHub`、`GisError` 和类型化生命周期事件。
 - 提供 Cesium `Viewer` 适配器和 `raw.viewer` 高级访问入口。
+- 提供 `gis-sdk-copy-assets` 跨平台 Cesium 静态资源复制命令。
 - 添加 VitePress 指南、TypeDoc API、发布护栏和持续集成。
 
 ### Compatibility

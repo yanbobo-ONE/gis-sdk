@@ -18,6 +18,8 @@ export default tseslint.config(
       'docs/public/api/**',
       'docs/.vitepress/cache/**',
       'docs/.vitepress/dist/**',
+      '.vitepress/cache/**',
+      '.vitepress/dist/**',
     ],
   },
   {
