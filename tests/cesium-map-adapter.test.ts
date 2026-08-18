@@ -67,7 +67,8 @@ describe('CesiumMapAdapter', () => {
   it('configures one global base URL, delegates Viewer lifecycle, and rejects conflicts', async () => {
     const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
     const first = new CesiumMapAdapter(createOptions('map-1', 'https://a.example/cesium/', '2d'));
-    const second = new CesiumMapAdapter(createOptions('map-2', 'https://a.example/cesium/'));
+    const second = new CesiumMapAdapter(createOptions('map-2'));
+    const third = new CesiumMapAdapter(createOptions('map-3', 'https://a.example/cesium/'));
 
     first.resize();
     first.destroy();
@@ -83,9 +84,10 @@ describe('CesiumMapAdapter', () => {
     expect(cesium.Viewer.instances[0]?.resize).toHaveBeenCalledOnce();
     expect(cesium.Viewer.instances[0]?.destroy).toHaveBeenCalledOnce();
     expect(second.raw.viewer).toBe(cesium.Viewer.instances[1]);
+    expect(third.raw.viewer).toBe(cesium.Viewer.instances[2]);
 
     expect(() => {
-      new CesiumMapAdapter(createOptions('map-3', 'https://b.example/cesium/'));
+      new CesiumMapAdapter(createOptions('map-4', 'https://b.example/cesium/'));
     }).toThrow(
       expect.objectContaining({
         code: 'CESIUM_BASE_URL_CONFLICT',
@@ -93,7 +95,7 @@ describe('CesiumMapAdapter', () => {
         operation: 'configureBaseUrl',
       }),
     );
-    expect(cesium.Viewer.instances).toHaveLength(2);
+    expect(cesium.Viewer.instances).toHaveLength(3);
   });
 
   it('locks automatic base URL resolution when the first Viewer is created', async () => {

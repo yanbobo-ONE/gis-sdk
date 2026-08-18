@@ -24,6 +24,10 @@ function configureCesiumBaseUrl(cesiumBaseUrl: string | undefined): void {
     return;
   }
 
+  if (!cesiumBaseUrl) {
+    return;
+  }
+
   if (configuredCesiumBaseUrl !== cesiumBaseUrl) {
     const existingConfiguration = configuredCesiumBaseUrl
       ? `"${configuredCesiumBaseUrl}"`
