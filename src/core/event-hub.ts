@@ -23,7 +23,7 @@ export class EventHub<TEvents extends EventMap> {
       subscribed = false;
       listeners.delete(storedListener);
 
-      if (listeners.size === 0) {
+      if (listeners.size === 0 && this.listeners.get(type) === listeners) {
         this.listeners.delete(type);
       }
     };
@@ -48,8 +48,22 @@ export class EventHub<TEvents extends EventMap> {
       return;
     }
 
+    const errors: unknown[] = [];
     for (const listener of [...listeners]) {
-      (listener as EventListener<TEvents[TKey]>)(event);
+      try {
+        (listener as EventListener<TEvents[TKey]>)(event);
+      } catch (error: unknown) {
+        errors.push(error);
+      }
+    }
+
+    if (errors.length === 1) {
+      const error = errors[0];
+      throw error instanceof Error ? error : new Error('Event listener failed.', { cause: error });
+    }
+
+    if (errors.length > 1) {
+      throw new AggregateError(errors, 'Multiple event listeners failed.');
     }
   }
 

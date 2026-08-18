@@ -58,4 +58,32 @@ describe('EventHub', () => {
     expect(readyListener).not.toHaveBeenCalled();
     expect(destroyedListener).not.toHaveBeenCalled();
   });
+
+  it('does not let an old unsubscribe remove listeners added after clear', () => {
+    const events = new EventHub<Events>();
+    const oldOff = events.on('ready', vi.fn());
+    const newListener = vi.fn();
+
+    events.clear();
+    events.on('ready', newListener);
+    oldOff();
+    events.emit('ready', { id: 'map-1' });
+
+    expect(newListener).toHaveBeenCalledOnce();
+  });
+
+  it('runs the remaining listeners before surfacing listener errors', () => {
+    const events = new EventHub<Events>();
+    const failure = new Error('listener failed');
+    const secondListener = vi.fn();
+    events.on('ready', () => {
+      throw failure;
+    });
+    events.on('ready', secondListener);
+
+    expect(() => {
+      events.emit('ready', { id: 'map-1' });
+    }).toThrow(failure);
+    expect(secondListener).toHaveBeenCalledOnce();
+  });
 });

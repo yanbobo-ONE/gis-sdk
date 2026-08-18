@@ -1,4 +1,9 @@
-export type GisErrorCode = 'INVALID_CONTAINER' | 'MAP_DISPOSED' | 'MAP_DESTROY_FAILED';
+export type GisErrorCode =
+  | 'CESIUM_BASE_URL_CONFLICT'
+  | 'EVENT_LISTENER_FAILED'
+  | 'INVALID_CONTAINER'
+  | 'MAP_DISPOSED'
+  | 'MAP_DESTROY_FAILED';
 
 interface GisErrorOptions {
   readonly code: GisErrorCode;

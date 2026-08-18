@@ -113,4 +113,41 @@ describe('MapRuntime', () => {
     expect(adapter.destroy).toHaveBeenCalledTimes(2);
     expect(map.state).toBe('destroyed');
   });
+
+  it('keeps a successful destroy resolved when a destroy listener throws', async () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+    const errorListener = vi.fn<(event: MapEventMap['map:error']) => void>();
+    map.events.on('map:destroy', () => {
+      throw new Error('consumer listener failed');
+    });
+    map.events.on('map:error', errorListener);
+
+    await expect(map.destroy()).resolves.toBeUndefined();
+
+    expect(map.state).toBe('destroyed');
+    expect(errorListener).toHaveBeenCalledOnce();
+    const errorEvent = errorListener.mock.calls[0]?.[0];
+    expect(errorEvent?.id).toBe('map-1');
+    expect(errorEvent?.error).toMatchObject({
+      code: 'EVENT_LISTENER_FAILED',
+      operation: 'map:destroy',
+    });
+  });
+
+  it('preserves the adapter error when a map:error listener throws', async () => {
+    const adapter = createAdapter();
+    const failure = new Error('adapter destroy failed');
+    adapter.destroy.mockRejectedValueOnce(failure);
+    const map = new MapRuntime('map-1', adapter);
+    map.events.on('map:error', () => {
+      throw new Error('consumer listener failed');
+    });
+
+    await expect(map.destroy()).rejects.toMatchObject({
+      code: 'MAP_DESTROY_FAILED',
+      cause: failure,
+    });
+    expect(map.state).toBe('ready');
+  });
 });
