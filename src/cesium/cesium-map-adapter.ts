@@ -22,7 +22,9 @@ interface BaseUrlState {
 interface BaseUrlReservation {
   readonly state: BaseUrlState;
   readonly token: symbol;
+  readonly configuredBaseUrl: string | undefined;
   readonly previousBaseUrl: string | undefined;
+  readonly didSetBaseUrl: boolean;
 }
 
 function getBaseUrlState(): BaseUrlState {
@@ -72,15 +74,24 @@ function reserveCesiumBaseUrl(cesiumBaseUrl: string | undefined): BaseUrlReserva
   }
 
   const token = Symbol();
-  const previousBaseUrl = cesiumBaseUrl ? tryGetCesiumBaseUrl() : undefined;
+  const previousBaseUrl = cesiumBaseUrl
+    ? (tryGetCesiumBaseUrl() ?? state.configuredBaseUrl)
+    : state.configuredBaseUrl;
+  const configuredBaseUrl = cesiumBaseUrl ?? state.configuredBaseUrl;
   if (cesiumBaseUrl) {
     moduleUrl.setBaseUrl(cesiumBaseUrl);
   }
 
   state.phase = 'configuring';
-  state.configuredBaseUrl = cesiumBaseUrl;
+  state.configuredBaseUrl = configuredBaseUrl;
   state.reservationToken = token;
-  return { state, token, previousBaseUrl };
+  return {
+    state,
+    token,
+    configuredBaseUrl,
+    previousBaseUrl,
+    didSetBaseUrl: Boolean(cesiumBaseUrl),
+  };
 }
 
 function commitCesiumBaseUrl(reservation: BaseUrlReservation | undefined): void {
@@ -95,20 +106,15 @@ function rollbackCesiumBaseUrl(reservation: BaseUrlReservation | undefined): voi
     return;
   }
 
-  if (reservation.state.configuredBaseUrl && !reservation.previousBaseUrl) {
-    // Cesium accepted the new value but exposed no restorable previous value.
-    reservation.state.phase = 'locked';
-    reservation.state.reservationToken = undefined;
-    return;
-  }
-
+  let residualBaseUrl = reservation.configuredBaseUrl;
   try {
-    if (reservation.previousBaseUrl) {
+    if (reservation.didSetBaseUrl && reservation.previousBaseUrl) {
       moduleUrl.setBaseUrl(reservation.previousBaseUrl);
+      residualBaseUrl = reservation.previousBaseUrl;
     }
   } finally {
     reservation.state.phase = 'unlocked';
-    reservation.state.configuredBaseUrl = undefined;
+    reservation.state.configuredBaseUrl = residualBaseUrl;
     reservation.state.reservationToken = undefined;
   }
 }

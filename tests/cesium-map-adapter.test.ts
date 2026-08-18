@@ -176,7 +176,7 @@ describe('CesiumMapAdapter', () => {
     expect(cesium.setBaseUrl).toHaveBeenCalledWith('https://sdk.example/cesium/');
   });
 
-  it('keeps the explicit lock when an unknown previous base cannot be restored', async () => {
+  it('allows a different explicit base after an unknown previous base cannot be restored', async () => {
     cesium.buildModuleUrl.mockImplementationOnce(() => {
       throw new Error('Unable to determine Cesium base URL automatically');
     });
@@ -188,16 +188,28 @@ describe('CesiumMapAdapter', () => {
     }).toThrow('Viewer construction failed');
 
     cesium.Viewer.constructionError = undefined;
+    expect(
+      new CesiumMapAdapter(createOptions('map-2', 'https://other.example/cesium/')).raw.viewer,
+    ).toBe(cesium.Viewer.instances[0]);
+    expect(cesium.setBaseUrl).toHaveBeenLastCalledWith('https://other.example/cesium/');
+  });
+
+  it('inherits a residual explicit base when a retry omits the option', async () => {
+    cesium.buildModuleUrl.mockImplementationOnce(() => {
+      throw new Error('Unable to determine Cesium base URL automatically');
+    });
+    cesium.Viewer.constructionError = new Error('Viewer construction failed');
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+
     expect(() => {
-      new CesiumMapAdapter(createOptions('map-2', 'https://other.example/cesium/'));
-    }).toThrow(
-      expect.objectContaining({
-        code: 'CESIUM_BASE_URL_CONFLICT',
-      }),
-    );
-    expect(new CesiumMapAdapter(createOptions('map-3')).raw.viewer).toBe(
+      new CesiumMapAdapter(createOptions('map-1', 'https://sdk.example/cesium/'));
+    }).toThrow('Viewer construction failed');
+
+    cesium.Viewer.constructionError = undefined;
+    expect(new CesiumMapAdapter(createOptions('map-2')).raw.viewer).toBe(
       cesium.Viewer.instances[0],
     );
+    expect(cesium.setBaseUrl).toHaveBeenCalledTimes(1);
   });
 
   it('shares the base URL lock across SDK module instances', async () => {
