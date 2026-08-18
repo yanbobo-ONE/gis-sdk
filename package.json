@@ -69,8 +69,7 @@
     "pack:check": "pnpm build && publint && attw --pack --exclude-entrypoints ./styles.css && npm pack --dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "changeset publish",
-    "release:alpha": "changeset publish --tag alpha"
+    "release": "changeset publish"
   },
   "dependencies": {
     "cesium": "1.144.0"

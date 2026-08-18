@@ -44,14 +44,26 @@ npm view @yanbobo/gis-sdk name version dist-tags --json
 
 ## 后续版本
 
-alpha 阶段使用 Changesets prerelease 模式，并始终发布到 `alpha` tag：
+alpha 阶段使用 Changesets prerelease 模式。`pre enter alpha` 只在进入该阶段时执行一次；已经存在 `.changeset/pre.json` 时不要重复执行：
 
 ```bash
 pnpm changeset pre enter alpha
 pnpm changeset
 pnpm version-packages
-pnpm release:alpha
+pnpm release
 npm view @yanbobo/gis-sdk dist-tags --json
 ```
 
-结束 alpha 阶段时先执行 `pnpm changeset pre exit`，完成稳定版检查后再使用 `pnpm release` 更新 `latest`。任何破坏性公共接口修改必须在 Changelog 中给出迁移说明，不得只修改代码不更新版本记录。
+pre 模式下不要向 `changeset publish` 额外传 `--tag`；`pnpm release` 会读取 `pre.json` 中的 `alpha` tag。
+
+结束 alpha 阶段并发布稳定版时，必须先退出 pre 模式并生成稳定版本：
+
+```bash
+pnpm changeset pre exit
+pnpm version-packages
+git diff
+# 审核并提交 package.json、CHANGELOG 和 Changesets 生成的版本变更
+pnpm release
+```
+
+稳定版发布后再检查 `dist-tags`，确认 `latest` 指向预期版本。任何破坏性公共接口修改必须在 Changelog 中给出迁移说明，不得只修改代码不更新版本记录。
