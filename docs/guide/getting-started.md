@@ -37,6 +37,8 @@ const map = createMap({
 
 该配置是 Cesium 进程级全局配置。首个 Viewer 创建后即锁定：后续地图可以省略或传入相同地址，但不能切换到另一个地址，否则 SDK 抛出 `CESIUM_BASE_URL_CONFLICT`。
 
+基址必须只有一个配置入口：推荐始终通过 SDK 的 `cesiumBaseUrl` 配置。若宿主项目已经直接调用 Cesium `buildModuleUrl.setBaseUrl()`，创建地图时必须省略 `cesiumBaseUrl`，SDK 会沿用宿主配置；不要同时使用这两种配置方式。
+
 ## 创建与销毁
 
 页面必须先准备一个有明确尺寸的容器：

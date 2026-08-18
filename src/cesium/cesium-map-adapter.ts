@@ -7,7 +7,6 @@ import type { CesiumRawContext } from './types.js';
 
 interface BuildModuleUrlWithBaseUrl {
   setBaseUrl(value: string): void;
-  getCesiumBaseUrl(): { readonly url: string };
   [key: symbol]: unknown;
 }
 
@@ -50,6 +49,14 @@ function baseUrlConflict(existingBaseUrl: string | undefined): GisError {
   });
 }
 
+function tryGetCesiumBaseUrl(): string | undefined {
+  try {
+    return buildModuleUrl('');
+  } catch {
+    return undefined;
+  }
+}
+
 function reserveCesiumBaseUrl(cesiumBaseUrl: string | undefined): BaseUrlReservation | undefined {
   const state = getBaseUrlState();
 
@@ -65,7 +72,7 @@ function reserveCesiumBaseUrl(cesiumBaseUrl: string | undefined): BaseUrlReserva
   }
 
   const token = Symbol();
-  const previousBaseUrl = cesiumBaseUrl ? moduleUrl.getCesiumBaseUrl().url : undefined;
+  const previousBaseUrl = cesiumBaseUrl ? tryGetCesiumBaseUrl() : undefined;
   if (cesiumBaseUrl) {
     moduleUrl.setBaseUrl(cesiumBaseUrl);
   }

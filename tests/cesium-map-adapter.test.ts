@@ -23,10 +23,10 @@ const cesium = vi.hoisted(() => {
   const setBaseUrl = vi.fn((value: string) => {
     currentBaseUrl = value;
   });
-  const buildModuleUrl = Object.assign(vi.fn(), {
-    getCesiumBaseUrl: vi.fn(() => ({ url: currentBaseUrl })),
-    setBaseUrl,
-  });
+  const buildModuleUrl = Object.assign(
+    vi.fn(() => currentBaseUrl),
+    { setBaseUrl },
+  );
 
   return {
     buildModuleUrl,
@@ -137,6 +137,16 @@ describe('CesiumMapAdapter', () => {
     expect(cesium.Viewer.instances).toHaveLength(1);
   });
 
+  it('preserves a host-configured base URL when the SDK option is omitted', async () => {
+    cesium.setBaseUrl('https://host.example/cesium/');
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+
+    new CesiumMapAdapter(createOptions('map-1'));
+
+    expect(cesium.setBaseUrl).toHaveBeenCalledTimes(1);
+    expect(cesium.setBaseUrl).toHaveBeenCalledWith('https://host.example/cesium/');
+  });
+
   it('rolls back a reserved base URL when Viewer construction fails', async () => {
     const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
     const failure = new Error('Viewer construction failed');
@@ -152,6 +162,18 @@ describe('CesiumMapAdapter', () => {
     expect(
       new CesiumMapAdapter(createOptions('map-2', 'https://b.example/cesium/')).raw.viewer,
     ).toBe(cesium.Viewer.instances[0]);
+  });
+
+  it('sets an explicit base URL when Cesium cannot resolve its previous base', async () => {
+    cesium.buildModuleUrl.mockImplementationOnce(() => {
+      throw new Error('Unable to determine Cesium base URL automatically');
+    });
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+
+    expect(
+      new CesiumMapAdapter(createOptions('map-1', 'https://sdk.example/cesium/')).raw.viewer,
+    ).toBe(cesium.Viewer.instances[0]);
+    expect(cesium.setBaseUrl).toHaveBeenCalledWith('https://sdk.example/cesium/');
   });
 
   it('shares the base URL lock across SDK module instances', async () => {

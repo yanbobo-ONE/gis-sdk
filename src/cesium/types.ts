@@ -39,6 +39,7 @@ export interface CreateMapOptions {
    * Cesium `Workers`、`Assets`、`ThirdParty` 和 `Widgets` 的公共根路径。
    *
    * 首个 Viewer 创建后全局锁定。后续实例可省略或传入相同值，不能改为其他路径。
+   * 不要与宿主直接调用 `buildModuleUrl.setBaseUrl()` 的配置方式混用。
    */
   readonly cesiumBaseUrl?: string;
   /** 初始场景配置，默认 3D。 */
