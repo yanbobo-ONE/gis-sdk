@@ -11,23 +11,28 @@ interface BuildModuleUrlWithBaseUrl {
 
 const moduleUrl = buildModuleUrl as typeof buildModuleUrl & BuildModuleUrlWithBaseUrl;
 let configuredCesiumBaseUrl: string | undefined;
+let cesiumBaseUrlLocked = false;
 
 function configureCesiumBaseUrl(cesiumBaseUrl: string | undefined): void {
-  if (!cesiumBaseUrl) {
+  if (!cesiumBaseUrlLocked) {
+    if (cesiumBaseUrl) {
+      moduleUrl.setBaseUrl(cesiumBaseUrl);
+      configuredCesiumBaseUrl = cesiumBaseUrl;
+    }
+
+    cesiumBaseUrlLocked = true;
     return;
   }
 
-  if (configuredCesiumBaseUrl && configuredCesiumBaseUrl !== cesiumBaseUrl) {
-    throw new GisError(`Cesium base URL is already configured as "${configuredCesiumBaseUrl}".`, {
+  if (configuredCesiumBaseUrl !== cesiumBaseUrl) {
+    const existingConfiguration = configuredCesiumBaseUrl
+      ? `"${configuredCesiumBaseUrl}"`
+      : 'automatic resolution';
+    throw new GisError(`Cesium base URL is already locked to ${existingConfiguration}.`, {
       code: 'CESIUM_BASE_URL_CONFLICT',
       module: 'cesium',
       operation: 'configureBaseUrl',
     });
-  }
-
-  if (!configuredCesiumBaseUrl) {
-    moduleUrl.setBaseUrl(cesiumBaseUrl);
-    configuredCesiumBaseUrl = cesiumBaseUrl;
   }
 }
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const cesium = vi.hoisted(() => {
   class Viewer {
@@ -27,7 +27,6 @@ vi.mock('cesium', () => ({
   Viewer: cesium.Viewer,
 }));
 
-import { CesiumMapAdapter } from '../src/cesium/cesium-map-adapter.js';
 import type { NormalizedCreateMapOptions } from '../src/cesium/create-map.js';
 
 const widgets = Object.freeze({
@@ -59,7 +58,14 @@ function createOptions(
 }
 
 describe('CesiumMapAdapter', () => {
-  it('configures one global base URL, delegates Viewer lifecycle, and rejects conflicts', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    cesium.setBaseUrl.mockClear();
+    cesium.Viewer.instances.splice(0);
+  });
+
+  it('configures one global base URL, delegates Viewer lifecycle, and rejects conflicts', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
     const first = new CesiumMapAdapter(createOptions('map-1', 'https://a.example/cesium/', '2d'));
     const second = new CesiumMapAdapter(createOptions('map-2', 'https://a.example/cesium/'));
 
@@ -88,5 +94,21 @@ describe('CesiumMapAdapter', () => {
       }),
     );
     expect(cesium.Viewer.instances).toHaveLength(2);
+  });
+
+  it('locks automatic base URL resolution when the first Viewer is created', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    new CesiumMapAdapter(createOptions('map-1'));
+
+    expect(cesium.setBaseUrl).not.toHaveBeenCalled();
+    expect(() => {
+      new CesiumMapAdapter(createOptions('map-2', 'https://a.example/cesium/'));
+    }).toThrow(
+      expect.objectContaining({
+        code: 'CESIUM_BASE_URL_CONFLICT',
+        operation: 'configureBaseUrl',
+      }),
+    );
+    expect(cesium.Viewer.instances).toHaveLength(1);
   });
 });
