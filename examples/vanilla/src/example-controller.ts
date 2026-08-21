@@ -1,3 +1,5 @@
+import type { GeoJsonLayerSpec, WmsLayerSpec } from '@yanbobo/gis-sdk/layers';
+
 type ExampleState = 'idle' | 'starting' | 'ready' | 'destroying' | 'error';
 
 interface LayerInfoLike {
@@ -28,10 +30,16 @@ interface WmsHandleLike {
   reload(): Promise<void>;
 }
 
+interface LayerHandleLike extends LayerInfoLike {
+  setVisible(visible: boolean): void;
+}
+
+type ExampleLayerSpec = GeoJsonLayerSpec | WmsLayerSpec;
+
 interface ExampleMapLike {
   readonly state: string;
   readonly layers: {
-    add(spec: unknown): Promise<GeoJsonHandleLike | WmsHandleLike>;
+    add(spec: ExampleLayerSpec): Promise<LayerHandleLike>;
     list(): readonly LayerInfoLike[];
   };
   readonly raw: {
@@ -101,6 +109,20 @@ const replacementGeoJson = {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isGeoJsonHandle(handle: LayerHandleLike): handle is GeoJsonHandleLike {
+  return handle.type === 'geojson' && 'setData' in handle;
+}
+
+function isWmsHandle(handle: LayerHandleLike): handle is WmsHandleLike {
+  return (
+    handle.type === 'wms' &&
+    'opacity' in handle &&
+    'setOpacity' in handle &&
+    'setFilter' in handle &&
+    'reload' in handle
+  );
 }
 
 export function createVanillaExampleController(
@@ -180,7 +202,7 @@ export function createVanillaExampleController(
         parameters: { format: 'image/png', transparent: true },
       });
 
-      if (nextGeoJson.type !== 'geojson' || nextWms.type !== 'wms') {
+      if (!isGeoJsonHandle(nextGeoJson) || !isWmsHandle(nextWms)) {
         throw new Error('The example received unexpected layer handles.');
       }
 

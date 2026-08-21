@@ -14,6 +14,7 @@ export type {
   LayerState,
   LayerType,
   OperationOptions,
+  Tiles3dLayerSpec,
   WmsComparisonOperator,
   WmsFilter,
   WmsLayerHandle,

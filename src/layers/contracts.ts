@@ -2,8 +2,8 @@ import type { GeoJSON } from 'geojson';
 
 import type { EventHub } from '../core/event-hub.js';
 
-/** 首期稳定支持的图层类型。 */
-export type LayerType = 'geojson' | 'wms';
+/** 当前稳定支持的图层类型。 */
+export type LayerType = 'geojson' | 'wms' | '3d-tiles';
 
 /** 图层句柄的生命周期状态。 */
 export type LayerState = 'loading' | 'ready' | 'hidden' | 'disposing' | 'disposed' | 'error';
@@ -111,8 +111,20 @@ export interface WmsLayerSpec extends BaseLayerSpec {
   readonly parameters?: Readonly<Record<string, WmsParameterValue>>;
 }
 
-/** 首期图层配置的判别联合。 */
-export type LayerSpec = GeoJsonLayerSpec | WmsLayerSpec;
+/** Cesium 3D Tiles 图层配置。 */
+export interface Tiles3dLayerSpec extends BaseLayerSpec {
+  /** 判别 3D Tiles 图层。 */
+  readonly type: '3d-tiles';
+  /** `tileset.json` 或兼容 3D Tiles 服务地址。 */
+  readonly url: string;
+  /** 最大屏幕空间误差，单位为像素；较小值提高细节与资源消耗。 */
+  readonly maximumScreenSpaceError?: number;
+  /** 是否启用 Cesium 的层级跳跃加载优化。 */
+  readonly skipLevelOfDetail?: boolean;
+}
+
+/** 图层配置的判别联合。 */
+export type LayerSpec = GeoJsonLayerSpec | WmsLayerSpec | Tiles3dLayerSpec;
 
 /** 图层自身可订阅的生命周期事件。 */
 export interface LayerEventMap {
@@ -186,7 +198,9 @@ export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayer
   ? GeoJsonLayerHandle
   : TSpec extends WmsLayerSpec
     ? WmsLayerHandle
-    : LayerHandle;
+    : TSpec extends Tiles3dLayerSpec
+      ? LayerHandle
+      : LayerHandle;
 
 /** 地图实例拥有的图层管理接口。 */
 export interface LayerManager {

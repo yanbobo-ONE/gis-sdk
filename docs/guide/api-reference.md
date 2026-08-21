@@ -76,11 +76,11 @@ async function disposeMap() {
 | 范围                                                        | 状态                        | 应使用的入口                                                         |
 | ----------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------- |
 | 地图生命周期与事件                                          | 可用                        | `createMap`、`map.resize`、`map.destroy`、`map.events`               |
-| GeoJSON 与 WMS 图层                                         | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter`    |
+| GeoJSON、WMS 与 3D Tiles 图层                               | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter`    |
 | Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                     |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形                  | 可用                        | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain` |
 | 数据管线核心                                                | 可用                        | `DataPipeline`（从 `/core` 或包根导入）                              |
-| TMS/WMTS、3D Tiles、模型、动态实体                          | 未发布                      | 没有对应 SDK 方法                                                    |
+| TMS/WMTS、模型、动态实体                                    | 未发布                      | 没有对应 SDK 方法                                                    |
 | Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                    |
 
 不要根据规划名称猜测调用方式。后续版本完成能力后，会在本页新增真实导出、参数表、运行效果和最小示例，同时在[功能状态与路线图](/guide/capability-status)记录版本。
@@ -195,12 +195,12 @@ const layer = await map.layers.add(
 );
 ```
 
-| 参数             | 类型                               | 必填 | 说明                         |
-| ---------------- | ---------------------------------- | ---- | ---------------------------- |
-| `spec`           | `GeoJsonLayerSpec \| WmsLayerSpec` | 是   | 带 `type` 判别字段的图层配置 |
-| `options.signal` | `AbortSignal`                      | 否   | 取消尚未完成的加载           |
+| 参数             | 类型                                                   | 必填 | 说明                         |
+| ---------------- | ------------------------------------------------------ | ---- | ---------------------------- |
+| `spec`           | `GeoJsonLayerSpec \| WmsLayerSpec \| Tiles3dLayerSpec` | 是   | 带 `type` 判别字段的图层配置 |
+| `options.signal` | `AbortSignal`                                          | 否   | 取消尚未完成的加载           |
 
-**返回值：** `Promise<GeoJsonLayerHandle | WmsLayerHandle>`。TypeScript 会根据 `type` 自动推导具体句柄。
+**返回值：** `Promise<LayerHandle>`，TypeScript 会根据 `type` 自动推导具体句柄：GeoJSON 返回 `GeoJsonLayerHandle`，WMS 返回 `WmsLayerHandle`，3D Tiles 返回通用 `LayerHandle`。
 
 **运行效果：** ID 在加载开始前即被预留，避免两个并发请求创建同名图层。Promise 完成后图层才会被 `get()` 和 `list()` 看见。
 
@@ -238,15 +238,15 @@ const snapshot = map.layers.list();
 
 每种图层句柄都有以下字段和方法：
 
-| 成员                  | 类型                      | 效果                                                             |
-| --------------------- | ------------------------- | ---------------------------------------------------------------- |
-| `id`                  | `string`                  | 地图实例内唯一 ID                                                |
-| `type`                | `'geojson' \| 'wms'`      | 图层判别字段                                                     |
-| `state`               | `LayerState`              | `loading`、`ready`、`hidden`、`disposing`、`disposed` 或 `error` |
-| `visible`             | `boolean`                 | 当前显隐状态                                                     |
-| `events`              | `EventHub<LayerEventMap>` | 订阅 `state:changed`                                             |
-| `setVisible(visible)` | `void`                    | 修改底层对象显隐，不重建数据源或 Provider                        |
-| `dispose()`           | `Promise<void>`           | 幂等释放并从所属管理器移除                                       |
+| 成员                  | 类型                               | 效果                                                             |
+| --------------------- | ---------------------------------- | ---------------------------------------------------------------- |
+| `id`                  | `string`                           | 地图实例内唯一 ID                                                |
+| `type`                | `'geojson' \| 'wms' \| '3d-tiles'` | 图层判别字段                                                     |
+| `state`               | `LayerState`                       | `loading`、`ready`、`hidden`、`disposing`、`disposed` 或 `error` |
+| `visible`             | `boolean`                          | 当前显隐状态                                                     |
+| `events`              | `EventHub<LayerEventMap>`          | 订阅 `state:changed`                                             |
+| `setVisible(visible)` | `void`                             | 修改底层对象显隐，不重建数据源或 Provider                        |
+| `dispose()`           | `Promise<void>`                    | 幂等释放并从所属管理器移除                                       |
 
 图层已释放后调用修改方法会抛出 `LAYER_DISPOSED`。
 
@@ -347,6 +347,40 @@ const roads = await map.layers.add({
 ### roads.reload()
 
 无参数，返回 `Promise<void>`。用当前 URL、样式、过滤和参数重新创建 Provider，适用于服务端数据更新后主动刷新。它不会改变 ID、顺序、显隐或透明度。
+
+## 3D Tiles
+
+### 添加 3D Tiles
+
+```ts
+const city = await map.layers.add({
+  id: 'city',
+  type: '3d-tiles',
+  url: '/tiles/city/tileset.json',
+  maximumScreenSpaceError: 8,
+  skipLevelOfDetail: true,
+});
+
+city.setVisible(false);
+```
+
+| 字段                      | 类型         | 必填 | 默认值/说明                                                      |
+| ------------------------- | ------------ | ---- | ---------------------------------------------------------------- |
+| `id`                      | `string`     | 是   | 地图内唯一 ID                                                    |
+| `type`                    | `'3d-tiles'` | 是   | 固定值                                                           |
+| `url`                     | `string`     | 是   | 非空 `tileset.json` 或兼容服务地址                               |
+| `visible`                 | `boolean`    | 否   | 默认 `true`；控制 Tileset 的显示状态                             |
+| `maximumScreenSpaceError` | `number`     | 否   | Cesium 默认 `16`；必须为正有限像素值，越小细节越高、资源消耗越大 |
+| `skipLevelOfDetail`       | `boolean`    | 否   | Cesium 默认 `false`；是否启用 Cesium 层级跳跃遍历优化            |
+
+**返回值：** `Promise<LayerHandle>`。成功时 Tileset 已加入 `viewer.scene.primitives`；
+`setVisible()` 不会重新加载 Tileset，`dispose()` 会从场景移除并释放 SDK 拥有的资源。
+
+**可能异常：** `INVALID_LAYER_CONFIG`、`LAYER_OPERATION_ABORTED`、`LAYER_LOAD_FAILED`、
+`DUPLICATE_LAYER_ID`。使用 `options.signal` 取消加载后，延迟完成的 Tileset 不会加入场景。
+
+**未包含：** 变换、样式、裁剪、分类、拾取策略、缓存预算、更多 LOD 控制、glTF / 模型、
+CZML 和动态实体。它们不是当前 SDK 的稳定接口。
 
 ## wmsFilter
 

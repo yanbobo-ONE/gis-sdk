@@ -8,7 +8,7 @@
 - ESM、CommonJS 和 TypeScript 声明；
 - 幂等地图销毁与类型化生命周期事件；
 - 受控的 Cesium 原生 `Viewer` 访问入口；
-- 类型化图层生命周期以及 GeoJSON、WMS 图层；
+- 类型化图层生命周期以及 GeoJSON、WMS、3D Tiles 图层；
 - GeoServer 样式切换和类型化 CQL 过滤；
 - 有界动态更新管线，支持同键最新值合并、溢出策略、批量读取和统计；
 - 默认关闭在线底图和可选控件，无需 Cesium ion token 即可启动空白地球。
@@ -112,10 +112,11 @@ async function disposeMap() {
 | 地图创建、尺寸更新、事件与销毁             | 可用                   | `createMap()`、`map.resize()`、`map.events`、`map.destroy()`                                           |
 | GeoJSON                                    | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                            |
 | WMS / GeoServer                            | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()` |
+| 3D Tiles                                   | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                |
 | Cesium 公共原生能力                        | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                       |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形 | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                   |
 | 数据管线核心                               | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                         |
-| TMS/WMTS、3D Tiles、模型                   | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
+| TMS/WMTS、模型                             | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
 | Worker、动态流输入和 Primitive 大数据渲染  | 未完成                 | 当前没有 Worker、输入 Adapter、吞吐量、数据规模或性能承诺                                              |
 | 绘制编辑、自定义材质、空间分析、插件与诊断 | 未完成                 | 当前没有稳定公开 API                                                                                   |
 

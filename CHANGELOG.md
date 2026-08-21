@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.5
+
+### Minor Changes
+
+- 增加受生命周期管理的 3D Tiles 图层，支持加载、显隐、基础 LOD 配置和资源释放。
+
 ## 0.1.0-alpha.4
 
 ### Minor Changes

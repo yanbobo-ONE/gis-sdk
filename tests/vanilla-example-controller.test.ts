@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createVanillaExampleController } from '../examples/vanilla/src/example-controller.js';
+import type { GeoJsonLayerSpec, WmsLayerSpec } from '../src/entries/layers.js';
 
 function createHarness() {
   const geoJson = {
@@ -22,12 +23,13 @@ function createHarness() {
     setFilter: vi.fn(() => Promise.resolve()),
     reload: vi.fn(() => Promise.resolve()),
   };
+  const add = vi.fn((spec: GeoJsonLayerSpec | WmsLayerSpec) =>
+    Promise.resolve(spec.type === 'geojson' ? geoJson : wms),
+  );
   const map = {
     state: 'ready' as const,
     layers: {
-      add: vi.fn((spec: { type: string }) =>
-        Promise.resolve(spec.type === 'geojson' ? geoJson : wms),
-      ),
+      add,
       list: vi.fn(() => [
         { id: geoJson.id, type: geoJson.type, state: geoJson.state, visible: geoJson.visible },
         { id: wms.id, type: wms.type, state: wms.state, visible: wms.visible },

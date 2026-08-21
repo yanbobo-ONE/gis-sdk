@@ -3,14 +3,14 @@
 <p class="doc-lead">面向业务项目的类型化 Cesium SDK。用稳定接口管理地图、相机、底图、地形和图层，同时保留访问 Cesium 公共 API 的能力。</p>
 
 <div class="status-line">
-  <span>alpha · 0.1.0-alpha.3</span>
+  <span>alpha · 0.1.0-alpha.5</span>
   <span>Cesium 1.144</span>
   <span>ESM + CommonJS</span>
   <span>TypeScript</span>
 </div>
 
 ::: tip 当前可用范围
-当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形、GeoJSON、WMS/GeoServer、类型化 CQL 过滤、图层资源清理，以及有界数据缓冲与批处理。Worker 执行、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
+当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形、GeoJSON、WMS/GeoServer、3D Tiles、类型化 CQL 过滤、图层资源清理，以及有界数据缓冲与批处理。Worker 执行、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
 :::
 
 ## 为什么使用 gis-sdk
@@ -30,7 +30,7 @@
   </div>
   <div>
     <strong>类型化能力句柄</strong>
-    <p>GeoJSON 只暴露数据替换，WMS 只暴露透明度、样式与过滤，IDE 能直接提示正确方法。</p>
+    <p>GeoJSON 和 WMS 只暴露各自能稳定承诺的方法，3D Tiles 复用最小图层生命周期，IDE 能直接提示正确方法。</p>
   </div>
   <div>
     <strong>有界动态数据</strong>
@@ -84,10 +84,11 @@ await map.destroy();
 | 地图运行时        | 可用     | 创建、尺寸更新、事件、并发幂等销毁         |
 | GeoJSON           | 可用     | 对象/URL、基础样式、取消、原子数据替换     |
 | WMS               | 可用     | 透明度、样式、类型化过滤、Provider 重载    |
+| 3D Tiles          | 可用     | 加载、显隐、基础 LOD 配置与资源释放        |
 | 原生出口          | 可用     | `map.raw.viewer`，仅承诺 Cesium 公共接口   |
 | 相机/XYZ/地形     | 可用     | `map.camera`、`map.basemap`、`map.terrain` |
 | 数据管线核心      | 可用     | 有界更新、最新值合并、批量读取和统计       |
-| TMS/WMTS/3D Tiles | 规划中   | 当前可通过原生出口接入                     |
+| TMS/WMTS          | 规划中   | 当前可通过原生出口接入                     |
 | Worker/大数据渲染 | 规划中   | 尚无 Worker、渲染策略或性能承诺            |
 | 材质/空间分析     | 规划中   | 尚未提供稳定 SDK 接口                      |
 

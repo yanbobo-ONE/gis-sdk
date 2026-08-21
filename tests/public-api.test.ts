@@ -7,6 +7,7 @@ import type {
   GeoJsonLayerHandle,
   GeoJsonLayerSpec,
   LayerManager,
+  Tiles3dLayerSpec,
   WmsLayerHandle,
   WmsLayerSpec,
 } from '../src/index.js';
@@ -25,6 +26,7 @@ describe('package public layer interface', () => {
   it('keeps capability-specific handles assignable to the common manager surface', () => {
     interface PublicLayerTypes {
       readonly manager: LayerManager;
+      readonly tilesetSpec: Tiles3dLayerSpec;
       readonly geoJsonSpec: GeoJsonLayerSpec;
       readonly geoJsonHandle: GeoJsonLayerHandle;
       readonly wmsSpec: WmsLayerSpec;
