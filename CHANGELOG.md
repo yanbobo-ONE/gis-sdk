@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.1
+
+### Minor Changes
+
+- 4ab21ec: 增加类型化 Layer Runtime、Cesium GeoJSON/WMS 图层适配器，以及 `core`、`cesium`、`layers` 按需导入入口；同步提供面向使用者的完整 API 文档。
+
 本项目遵循 [Semantic Versioning](https://semver.org/)。pre-alpha 阶段的公共接口仍可能调整。
 
 ## 0.1.0-alpha.0 - 2026-08-18

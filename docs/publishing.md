@@ -5,9 +5,8 @@
 - npm registry：`https://registry.npmjs.org/`
 - npm 登录账号：`yanbobo`
 - 包名：`@yanbobo/gis-sdk`
-- 当前版本：`0.1.0-alpha.0`
+- 当前发布版本与 dist-tag 以 `npm view @yanbobo/gis-sdk name version dist-tags --json` 为准。
 - 未限定 scope 的 `gis-sdk` 已由 npm 账号 `njueyupeng` 持有，不属于本项目。
-- `@yanbobo/gis-sdk` 截至 2026-08-18 尚未发布。
 
 项目 `.npmrc` 只包含非敏感行为配置。不得提交 `_authToken`、密码、OTP 或用户级 npm 配置。
 
