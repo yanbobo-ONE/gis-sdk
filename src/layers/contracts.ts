@@ -3,7 +3,7 @@ import type { GeoJSON } from 'geojson';
 import type { EventHub } from '../core/event-hub.js';
 
 /** 当前稳定支持的图层类型。 */
-export type LayerType = 'geojson' | 'wms' | '3d-tiles';
+export type LayerType = 'geojson' | 'wms' | 'tms' | 'wmts' | '3d-tiles';
 
 /** 图层句柄的生命周期状态。 */
 export type LayerState = 'loading' | 'ready' | 'hidden' | 'disposing' | 'disposed' | 'error';
@@ -111,6 +111,56 @@ export interface WmsLayerSpec extends BaseLayerSpec {
   readonly parameters?: Readonly<Record<string, WmsParameterValue>>;
 }
 
+/** TMS 瓦片影像图层配置。 */
+export interface TmsLayerSpec extends BaseLayerSpec {
+  /** 判别 TMS 图层。 */
+  readonly type: 'tms';
+  /** TMS 瓦片目录或 `tilemapresource.xml` 所在地址。 */
+  readonly url: string;
+  /** 初始透明度，取值范围为 0 到 1，默认 1。 */
+  readonly opacity?: number;
+  /** 瓦片图片扩展名，默认由 Cesium 使用 `png`。 */
+  readonly fileExtension?: string;
+  /** 最小层级，默认 0。 */
+  readonly minimumLevel?: number;
+  /** 最大层级；省略表示不限制。 */
+  readonly maximumLevel?: number;
+  /** 瓦片像素宽度，默认 256。 */
+  readonly tileWidth?: number;
+  /** 瓦片像素高度，默认 256。 */
+  readonly tileHeight?: number;
+  /** 是否兼容旧版 gdal2tiles 的 X/Y 翻转。 */
+  readonly flipXY?: boolean;
+}
+
+/** WMTS 瓦片影像图层配置。 */
+export interface WmtsLayerSpec extends BaseLayerSpec {
+  /** 判别 WMTS 图层。 */
+  readonly type: 'wmts';
+  /** WMTS GetTile 地址或 REST 模板。 */
+  readonly url: string;
+  /** 初始透明度，取值范围为 0 到 1，默认 1。 */
+  readonly opacity?: number;
+  /** WMTS 图层标识。 */
+  readonly layer: string;
+  /** WMTS 样式标识。 */
+  readonly style: string;
+  /** WMTS TileMatrixSet 标识。 */
+  readonly tileMatrixSetID: string;
+  /** 返回瓦片的 MIME 类型，默认由 Cesium 使用 `image/jpeg`。 */
+  readonly format?: string;
+  /** 是否启用 GetFeatureInfo 拾取，省略时由 Cesium 决定。 */
+  readonly enablePickFeatures?: boolean;
+  /** 最小层级，默认 0。 */
+  readonly minimumLevel?: number;
+  /** 最大层级；省略表示不限制。 */
+  readonly maximumLevel?: number;
+  /** 每个层级对应的 TileMatrix 标识。 */
+  readonly tileMatrixLabels?: readonly string[];
+  /** REST 模板中的子域名集合。 */
+  readonly subdomains?: string | readonly string[];
+}
+
 /** Cesium 3D Tiles 图层配置。 */
 export interface Tiles3dLayerSpec extends BaseLayerSpec {
   /** 判别 3D Tiles 图层。 */
@@ -124,7 +174,8 @@ export interface Tiles3dLayerSpec extends BaseLayerSpec {
 }
 
 /** 图层配置的判别联合。 */
-export type LayerSpec = GeoJsonLayerSpec | WmsLayerSpec | Tiles3dLayerSpec;
+export type LayerSpec =
+  GeoJsonLayerSpec | WmsLayerSpec | TmsLayerSpec | WmtsLayerSpec | Tiles3dLayerSpec;
 
 /** 图层自身可订阅的生命周期事件。 */
 export interface LayerEventMap {
@@ -166,7 +217,7 @@ export interface GeoJsonLayerHandle extends LayerHandle {
 }
 
 /** 支持影像透明度、样式和服务端过滤的 WMS 图层句柄。 */
-export interface WmsLayerHandle extends LayerHandle {
+export interface WmsLayerHandle extends ImageryLayerHandle {
   /** 判别 WMS 句柄。 */
   readonly type: 'wms';
   /** 当前透明度。 */
@@ -179,6 +230,14 @@ export interface WmsLayerHandle extends LayerHandle {
   setStyle(style?: string): Promise<void>;
   /** 使用当前样式和过滤条件重新创建 WMS Provider。 */
   reload(): Promise<void>;
+}
+
+/** 影像图层共享的透明度句柄能力。 */
+export interface ImageryLayerHandle extends LayerHandle {
+  /** 当前透明度。 */
+  readonly opacity: number;
+  /** 设置 0 到 1 之间的透明度。 */
+  setOpacity(opacity: number): void;
 }
 
 /** 图层管理器返回的只读图层快照。 */
@@ -198,9 +257,11 @@ export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayer
   ? GeoJsonLayerHandle
   : TSpec extends WmsLayerSpec
     ? WmsLayerHandle
-    : TSpec extends Tiles3dLayerSpec
-      ? LayerHandle
-      : LayerHandle;
+    : TSpec extends TmsLayerSpec | WmtsLayerSpec
+      ? ImageryLayerHandle
+      : TSpec extends Tiles3dLayerSpec
+        ? LayerHandle
+        : LayerHandle;
 
 /** 地图实例拥有的图层管理接口。 */
 export interface LayerManager {

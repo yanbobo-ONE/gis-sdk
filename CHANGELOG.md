@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.8
+
+### Minor Changes
+
+- 增加类型化 TMS 和 WMTS 影像图层，支持显隐、透明度、取消加载和统一资源释放。
+
 ## 0.1.0-alpha.7
 
 ### Minor Changes

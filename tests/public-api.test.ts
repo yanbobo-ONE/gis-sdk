@@ -13,8 +13,11 @@ import type {
   DataPipelineStats,
   GeoJsonLayerHandle,
   GeoJsonLayerSpec,
+  ImageryLayerHandle,
   LayerManager,
   Tiles3dLayerSpec,
+  TmsLayerSpec,
+  WmtsLayerSpec,
   WmsLayerHandle,
   WmsLayerSpec,
 } from '../src/index.js';
@@ -38,6 +41,9 @@ describe('package public layer interface', () => {
       readonly geoJsonHandle: GeoJsonLayerHandle;
       readonly wmsSpec: WmsLayerSpec;
       readonly wmsHandle: WmsLayerHandle;
+      readonly tmsSpec: TmsLayerSpec;
+      readonly wmtsSpec: WmtsLayerSpec;
+      readonly imageryHandle: ImageryLayerHandle;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
       readonly frameSchedulerOptions: DataPipelineFrameSchedulerOptions<{ readonly id: string }>;
       readonly messageAdapterOptions: DataPipelineMessageAdapterOptions<{ readonly id: string }>;

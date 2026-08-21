@@ -18,7 +18,14 @@ import type {
 import { wmsFilter } from '../src/entries/layers.js';
 import type { CreateMapOptions } from '../src/entries/cesium.js';
 import type { GisMap } from '../src/entries/core.js';
-import type { LayerManager, Tiles3dLayerSpec, WmsLayerSpec } from '../src/entries/layers.js';
+import type {
+  ImageryLayerHandle,
+  LayerManager,
+  Tiles3dLayerSpec,
+  TmsLayerSpec,
+  WmsLayerSpec,
+  WmtsLayerSpec,
+} from '../src/entries/layers.js';
 
 describe('package subpath entrypoints', () => {
   it('exposes independent core, Cesium, and layer entrypoints', () => {
@@ -28,6 +35,9 @@ describe('package subpath entrypoints', () => {
       readonly layers: LayerManager;
       readonly tileset: Tiles3dLayerSpec;
       readonly wms: WmsLayerSpec;
+      readonly tms: TmsLayerSpec;
+      readonly wmts: WmtsLayerSpec;
+      readonly imagery: ImageryLayerHandle;
       readonly pipeline: DataPipeline<{ readonly id: string }>;
       readonly messageAdapter: DataPipelineMessageAdapter<{ readonly id: string }>;
       readonly messageAdapterOptions: DataPipelineMessageAdapterOptions<{ readonly id: string }>;

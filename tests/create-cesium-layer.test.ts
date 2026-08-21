@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 const adapters = vi.hoisted(() => ({
   geojson: vi.fn(() => Promise.resolve({ id: 'geojson-handle' })),
   tiles3d: vi.fn(() => Promise.resolve({ id: 'tileset-handle' })),
+  tms: vi.fn(() => Promise.resolve({ id: 'tms-handle' })),
+  wmts: vi.fn(() => Promise.resolve({ id: 'wmts-handle' })),
   wms: vi.fn(() => Promise.resolve({ id: 'wms-handle' })),
 }));
 
@@ -16,6 +18,11 @@ vi.mock('../src/cesium/layers/wms-layer.js', () => ({
 
 vi.mock('../src/cesium/layers/tileset-layer.js', () => ({
   createTiles3dLayer: adapters.tiles3d,
+}));
+
+vi.mock('../src/cesium/layers/tiled-imagery-layer.js', () => ({
+  createTmsLayer: adapters.tms,
+  createWmtsLayer: adapters.wmts,
 }));
 
 import { createCesiumLayer } from '../src/cesium/layers/create-cesium-layer.js';
@@ -45,6 +52,19 @@ describe('createCesiumLayer', () => {
       type: '3d-tiles' as const,
       url: '/tiles/city/tileset.json',
     };
+    const tmsSpec = {
+      id: 'terrain',
+      type: 'tms' as const,
+      url: '/tiles/terrain',
+    };
+    const wmtsSpec = {
+      id: 'imagery',
+      type: 'wmts' as const,
+      url: '/wmts',
+      layer: 'city:imagery',
+      style: 'default',
+      tileMatrixSetID: 'WebMercatorQuad',
+    };
 
     await expect(createCesiumLayer(viewer as never, geojsonSpec, context)).resolves.toEqual({
       id: 'geojson-handle',
@@ -55,8 +75,16 @@ describe('createCesiumLayer', () => {
     await expect(createCesiumLayer(viewer as never, tilesetSpec, context)).resolves.toEqual({
       id: 'tileset-handle',
     });
+    await expect(createCesiumLayer(viewer as never, tmsSpec, context)).resolves.toEqual({
+      id: 'tms-handle',
+    });
+    await expect(createCesiumLayer(viewer as never, wmtsSpec, context)).resolves.toEqual({
+      id: 'wmts-handle',
+    });
     expect(adapters.geojson).toHaveBeenCalledWith(viewer, geojsonSpec, context);
     expect(adapters.wms).toHaveBeenCalledWith(viewer, wmsSpec, context);
     expect(adapters.tiles3d).toHaveBeenCalledWith(viewer, tilesetSpec, context);
+    expect(adapters.tms).toHaveBeenCalledWith(viewer, tmsSpec, context);
+    expect(adapters.wmts).toHaveBeenCalledWith(viewer, wmtsSpec, context);
   });
 });

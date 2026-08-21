@@ -76,11 +76,11 @@ async function disposeMap() {
 | 范围                                                        | 状态                        | 应使用的入口                                                                                        |
 | ----------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------- |
 | 地图生命周期与事件                                          | 可用                        | `createMap`、`map.resize`、`map.destroy`、`map.events`                                              |
-| GeoJSON、WMS 与 3D Tiles 图层                               | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter`                                   |
+| GeoJSON、WMS、TMS、WMTS 与 3D Tiles 图层                    | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`ImageryLayerHandle`、`wmsFilter`             |
 | Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                                                    |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形                  | 可用                        | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                |
 | 数据管线、消息输入与帧调度                                  | 可用                        | `DataPipeline`、`DataPipelineMessageAdapter`、`DataPipelineFrameScheduler`（从 `/core` 或包根导入） |
-| TMS/WMTS、模型、动态实体                                    | 未发布                      | 没有对应 SDK 方法                                                                                   |
+| 模型、动态实体                                              | 未发布                      | 没有对应 SDK 方法                                                                                   |
 | Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                                                   |
 
 不要根据规划名称猜测调用方式。后续版本完成能力后，会在本页新增真实导出、参数表、运行效果和最小示例，同时在[功能状态与路线图](/guide/capability-status)记录版本。
@@ -195,12 +195,12 @@ const layer = await map.layers.add(
 );
 ```
 
-| 参数             | 类型                                                   | 必填 | 说明                         |
-| ---------------- | ------------------------------------------------------ | ---- | ---------------------------- |
-| `spec`           | `GeoJsonLayerSpec \| WmsLayerSpec \| Tiles3dLayerSpec` | 是   | 带 `type` 判别字段的图层配置 |
-| `options.signal` | `AbortSignal`                                          | 否   | 取消尚未完成的加载           |
+| 参数             | 类型                                                                                    | 必填 | 说明                         |
+| ---------------- | --------------------------------------------------------------------------------------- | ---- | ---------------------------- |
+| `spec`           | `GeoJsonLayerSpec \| WmsLayerSpec \| TmsLayerSpec \| WmtsLayerSpec \| Tiles3dLayerSpec` | 是   | 带 `type` 判别字段的图层配置 |
+| `options.signal` | `AbortSignal`                                                                           | 否   | 取消尚未完成的加载           |
 
-**返回值：** `Promise<LayerHandle>`，TypeScript 会根据 `type` 自动推导具体句柄：GeoJSON 返回 `GeoJsonLayerHandle`，WMS 返回 `WmsLayerHandle`，3D Tiles 返回通用 `LayerHandle`。
+**返回值：** `Promise<LayerHandle>`，TypeScript 会根据 `type` 自动推导具体句柄：GeoJSON 返回 `GeoJsonLayerHandle`，WMS 返回 `WmsLayerHandle`，TMS/WMTS 返回 `ImageryLayerHandle`，3D Tiles 返回通用 `LayerHandle`。
 
 **运行效果：** ID 在加载开始前即被预留，避免两个并发请求创建同名图层。Promise 完成后图层才会被 `get()` 和 `list()` 看见。
 
@@ -238,15 +238,15 @@ const snapshot = map.layers.list();
 
 每种图层句柄都有以下字段和方法：
 
-| 成员                  | 类型                               | 效果                                                             |
-| --------------------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `id`                  | `string`                           | 地图实例内唯一 ID                                                |
-| `type`                | `'geojson' \| 'wms' \| '3d-tiles'` | 图层判别字段                                                     |
-| `state`               | `LayerState`                       | `loading`、`ready`、`hidden`、`disposing`、`disposed` 或 `error` |
-| `visible`             | `boolean`                          | 当前显隐状态                                                     |
-| `events`              | `EventHub<LayerEventMap>`          | 订阅 `state:changed`                                             |
-| `setVisible(visible)` | `void`                             | 修改底层对象显隐，不重建数据源或 Provider                        |
-| `dispose()`           | `Promise<void>`                    | 幂等释放并从所属管理器移除                                       |
+| 成员                  | 类型                                                  | 效果                                                             |
+| --------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
+| `id`                  | `string`                                              | 地图实例内唯一 ID                                                |
+| `type`                | `'geojson' \| 'wms' \| 'tms' \| 'wmts' \| '3d-tiles'` | 图层判别字段                                                     |
+| `state`               | `LayerState`                                          | `loading`、`ready`、`hidden`、`disposing`、`disposed` 或 `error` |
+| `visible`             | `boolean`                                             | 当前显隐状态                                                     |
+| `events`              | `EventHub<LayerEventMap>`                             | 订阅 `state:changed`                                             |
+| `setVisible(visible)` | `void`                                                | 修改底层对象显隐，不重建数据源或 Provider                        |
+| `dispose()`           | `Promise<void>`                                       | 幂等释放并从所属管理器移除                                       |
 
 图层已释放后调用修改方法会抛出 `LAYER_DISPOSED`。
 
@@ -348,6 +348,96 @@ const roads = await map.layers.add({
 
 无参数，返回 `Promise<void>`。用当前 URL、样式、过滤和参数重新创建 Provider，适用于服务端数据更新后主动刷新。它不会改变 ID、顺序、显隐或透明度。
 
+## TMS 与 WMTS 影像图层
+
+### 添加 TMS
+
+```ts
+const terrain = await map.layers.add({
+  id: 'terrain',
+  type: 'tms',
+  url: '/tiles/terrain',
+  fileExtension: 'jpg',
+  maximumLevel: 12,
+  opacity: 0.8,
+});
+
+terrain.setVisible(false);
+terrain.setOpacity(0.6);
+```
+
+| 参数            | 类型      | 必填 | 默认值/效果                                     |
+| --------------- | --------- | ---- | ----------------------------------------------- |
+| `id`            | `string`  | 是   | 地图内唯一 ID                                   |
+| `type`          | `'tms'`   | 是   | 固定值                                          |
+| `url`           | `string`  | 是   | TMS 瓦片目录或元数据地址；会去除首尾空格        |
+| `visible`       | `boolean` | 否   | `true`；控制 `ImageryLayer.show`                |
+| `opacity`       | `number`  | 否   | `1`；控制 `ImageryLayer.alpha`，范围 `0` 到 `1` |
+| `fileExtension` | `string`  | 否   | Cesium 默认 `png`                               |
+| `minimumLevel`  | `number`  | 否   | 非负整数；传给 Cesium TMS Provider              |
+| `maximumLevel`  | `number`  | 否   | 非负整数；必须不小于 `minimumLevel`             |
+| `tileWidth`     | `number`  | 否   | 正整数像素                                      |
+| `tileHeight`    | `number`  | 否   | 正整数像素                                      |
+| `flipXY`        | `boolean` | 否   | 兼容旧版 gdal2tiles 的 X/Y 翻转                 |
+
+**返回值：** `Promise<ImageryLayerHandle>`。TMS 元数据加载成功后才加入 Viewer 的影像集合。
+
+### 添加 WMTS
+
+```ts
+const satellite = await map.layers.add({
+  id: 'satellite',
+  type: 'wmts',
+  url: 'https://maps.example.com/wmts',
+  layer: 'city:satellite',
+  style: 'default',
+  tileMatrixSetID: 'WebMercatorQuad',
+  format: 'image/jpeg',
+  maximumLevel: 18,
+  tileMatrixLabels: ['0', '1', '2'],
+});
+
+satellite.setOpacity(0.65);
+await satellite.dispose();
+```
+
+| 参数                 | 类型                          | 必填 | 默认值/效果                     |
+| -------------------- | ----------------------------- | ---- | ------------------------------- |
+| `id`                 | `string`                      | 是   | 地图内唯一 ID                   |
+| `type`               | `'wmts'`                      | 是   | 固定值                          |
+| `url`                | `string`                      | 是   | KVP GetTile 地址或 REST 模板    |
+| `layer`              | `string`                      | 是   | WMTS 图层标识，不能为空         |
+| `style`              | `string`                      | 是   | WMTS 样式标识，不能为空         |
+| `tileMatrixSetID`    | `string`                      | 是   | TileMatrixSet 标识，不能为空    |
+| `visible`            | `boolean`                     | 否   | `true`                          |
+| `opacity`            | `number`                      | 否   | `1`；范围 `0` 到 `1`            |
+| `format`             | `string`                      | 否   | Cesium 默认 `image/jpeg`        |
+| `enablePickFeatures` | `boolean`                     | 否   | 传给 Cesium GetFeatureInfo 策略 |
+| `minimumLevel`       | `number`                      | 否   | 非负整数                        |
+| `maximumLevel`       | `number`                      | 否   | 非负整数；不小于 `minimumLevel` |
+| `tileMatrixLabels`   | `readonly string[]`           | 否   | 每个层级对应的 TileMatrix 标识  |
+| `subdomains`         | `string \| readonly string[]` | 否   | REST 模板 `{s}` 使用的子域名    |
+
+### ImageryLayerHandle
+
+TMS 和 WMTS 返回同一个最小句柄：
+
+| 成员                  | 类型            | 运行效果                                      |
+| --------------------- | --------------- | --------------------------------------------- |
+| `id`、`type`、`state` | 只读属性        | 图层标识、`'tms'`/`'wmts'` 判别和生命周期状态 |
+| `visible`             | `boolean`       | 当前显隐状态                                  |
+| `opacity`             | `number`        | 当前透明度                                    |
+| `setVisible(visible)` | `void`          | 只改 `ImageryLayer.show`，不重建 Provider     |
+| `setOpacity(opacity)` | `void`          | 只改 `ImageryLayer.alpha`，范围 `0` 到 `1`    |
+| `dispose()`           | `Promise<void>` | 幂等调用 `imageryLayers.remove(layer, true)`  |
+
+非法 URL、服务标识、层级或透明度分别抛出 `INVALID_LAYER_CONFIG` 或 `INVALID_LAYER_OPACITY`；
+Provider 创建失败抛出可重试的 `LAYER_LOAD_FAILED`。通过 `options.signal` 取消尚未完成的 TMS
+元数据请求时抛出 `LAYER_OPERATION_ABORTED`，迟到 Provider 不会被加入地图。
+
+当前 SDK 不解析 WMTS Capabilities XML，也不封装动态时间/维度、单图、矢量瓦片和自动 LOD；
+这些能力仍属于未发布范围。
+
 ## 3D Tiles
 
 ### 添加 3D Tiles
@@ -445,9 +535,9 @@ map.raw.viewer.scene.requestRender();
 
 ## 尚未提供的 SDK 方法
 
-以下领域处于规划中，当前包没有 `map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `model`、`wmts` 或动态数据图层类型。`map.camera`、`map.basemap`、`map.terrain`、有界 `DataPipeline`、通用 Worker/MessagePort 消息输入适配器和帧预算调度器已发布，具体调用见[地图控制](/guide/map-controls)和[数据管线](/guide/data-pipeline)：
+以下领域处于规划中，当前包没有 `map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `model` 或动态数据图层类型。`map.camera`、`map.basemap`、`map.terrain`、有界 `DataPipeline`、通用 Worker/MessagePort 消息输入适配器和帧预算调度器已发布，具体调用见[地图控制](/guide/map-controls)和[数据管线](/guide/data-pipeline)：
 
-- TMS/WMTS、单图、glTF/3D 模型和动态实体；
+- 单图、glTF/3D 模型和动态实体；
 - Worker 池、专用协议解析/输入 Adapter、流式渲染、自动 LOD 与 Primitive/Collection 大数据渲染；
 - 绘制编辑、自定义材质、空间分析、插件机制和诊断面板；
 - 官方 Vue / React 绑定层、旧项目兼容适配器与浏览器性能基线。

@@ -6,12 +6,13 @@
 
 公共句柄只提供所有图层都能可靠支持的能力，类型专属操作由对应句柄提供：
 
-| 句柄                      | 公共能力               | 专属能力                       |
-| ------------------------- | ---------------------- | ------------------------------ |
-| `LayerHandle`             | 显隐、状态、事件、销毁 | 无                             |
-| `GeoJsonLayerHandle`      | 公共能力               | 原子替换 GeoJSON 数据          |
-| `WmsLayerHandle`          | 公共能力               | 透明度、样式、类型化过滤、重载 |
-| `LayerHandle`（3D Tiles） | 公共能力               | 无；保持最小稳定接口           |
+| 句柄                             | 公共能力               | 专属能力                       |
+| -------------------------------- | ---------------------- | ------------------------------ |
+| `LayerHandle`                    | 显隐、状态、事件、销毁 | 无                             |
+| `GeoJsonLayerHandle`             | 公共能力               | 原子替换 GeoJSON 数据          |
+| `WmsLayerHandle`                 | 公共能力               | 透明度、样式、类型化过滤、重载 |
+| `ImageryLayerHandle`（TMS/WMTS） | 公共能力               | 透明度                         |
+| `LayerHandle`（3D Tiles）        | 公共能力               | 无；保持最小稳定接口           |
 
 因此 WMS 不会出现无意义的 `setData()`，GeoJSON 也不会暴露无法稳定实现的影像透明度操作。
 
@@ -90,6 +91,81 @@ await roads.reload();
 `wmsFilter` 会校验属性名、拒绝非有限数字并转义字符串。稳定接口不接受原始 CQL 字符串，`parameters` 也不能绕过接口设置 `cql_filter`、`styles` 或 `layers`。
 
 CQL 是 GeoServer 扩展，不是通用 WMS 标准。其他 WMS 服务是否支持过滤取决于服务端；创建 WMS 图层成功表示 Provider 已注册，不表示所有瓦片已经下载完成。
+
+## TMS 与 WMTS 瓦片影像
+
+TMS 和 WMTS 都通过 `map.layers.add()` 加入 Viewer，并返回具备显隐、透明度和释放能力的
+`ImageryLayerHandle`。TMS 会先异步读取服务元数据，WMTS 使用调用方提供的服务标识直接创建
+Provider；两者都只有在 Provider 创建成功后才会加入 `imageryLayers`。
+
+```ts
+const terrain = await map.layers.add({
+  id: 'terrain',
+  type: 'tms',
+  url: '/tiles/terrain',
+  fileExtension: 'jpg',
+  maximumLevel: 12,
+  opacity: 0.8,
+});
+
+const satellite = await map.layers.add({
+  id: 'satellite',
+  type: 'wmts',
+  url: 'https://maps.example.com/wmts',
+  layer: 'city:satellite',
+  style: 'default',
+  tileMatrixSetID: 'WebMercatorQuad',
+  format: 'image/jpeg',
+  maximumLevel: 18,
+});
+
+terrain.setVisible(false);
+satellite.setOpacity(0.65);
+await map.layers.remove('terrain');
+```
+
+### TMS 参数
+
+| 字段            | 类型      | 必填 | 默认值/效果                                     |
+| --------------- | --------- | ---- | ----------------------------------------------- |
+| `id`            | `string`  | 是   | 地图内唯一 ID                                   |
+| `type`          | `'tms'`   | 是   | 固定值                                          |
+| `url`           | `string`  | 是   | TMS 瓦片目录或元数据地址；会去除首尾空格        |
+| `visible`       | `boolean` | 否   | `true`；写入 Cesium `ImageryLayer.show`         |
+| `opacity`       | `number`  | 否   | `1`；范围 `0` 到 `1`，写入 `ImageryLayer.alpha` |
+| `fileExtension` | `string`  | 否   | Cesium 默认 `png`；例如 `jpg`                   |
+| `minimumLevel`  | `number`  | 否   | Cesium 默认值；非负整数                         |
+| `maximumLevel`  | `number`  | 否   | Cesium 默认不限制；必须不小于 `minimumLevel`    |
+| `tileWidth`     | `number`  | 否   | Cesium 默认 `256`；正整数像素                   |
+| `tileHeight`    | `number`  | 否   | Cesium 默认 `256`；正整数像素                   |
+| `flipXY`        | `boolean` | 否   | 兼容旧版 gdal2tiles 的 X/Y 翻转                 |
+
+### WMTS 参数
+
+| 字段                 | 类型                          | 必填 | 默认值/效果                                  |
+| -------------------- | ----------------------------- | ---- | -------------------------------------------- |
+| `id`                 | `string`                      | 是   | 地图内唯一 ID                                |
+| `type`               | `'wmts'`                      | 是   | 固定值                                       |
+| `url`                | `string`                      | 是   | KVP GetTile 地址或 REST 模板；会去除首尾空格 |
+| `layer`              | `string`                      | 是   | WMTS 图层标识；不能为空                      |
+| `style`              | `string`                      | 是   | WMTS 样式标识；不能为空                      |
+| `tileMatrixSetID`    | `string`                      | 是   | TileMatrixSet 标识；不能为空                 |
+| `visible`            | `boolean`                     | 否   | `true`                                       |
+| `opacity`            | `number`                      | 否   | `1`；范围 `0` 到 `1`                         |
+| `format`             | `string`                      | 否   | Cesium 默认 `image/jpeg`                     |
+| `enablePickFeatures` | `boolean`                     | 否   | 交由 Cesium 默认策略                         |
+| `minimumLevel`       | `number`                      | 否   | 非负整数                                     |
+| `maximumLevel`       | `number`                      | 否   | 非负整数；不小于 `minimumLevel`              |
+| `tileMatrixLabels`   | `readonly string[]`           | 否   | 每个层级对应的服务端 TileMatrix 标识         |
+| `subdomains`         | `string \| readonly string[]` | 否   | REST 模板 `{s}` 使用的子域名                 |
+
+`ImageryLayerHandle.setOpacity()` 只修改当前 Cesium 影像图层，不重建 Provider；释放、移除或地图销毁
+会调用 `imageryLayers.remove(layer, true)`。通过 `AbortSignal` 取消 TMS 元数据加载时，Promise 以
+`LAYER_OPERATION_ABORTED` 拒绝，迟到的 Provider 不会加入地图。非法字段抛出 `INVALID_LAYER_CONFIG`
+或 `INVALID_LAYER_OPACITY`，Provider 创建失败抛出可重试的 `LAYER_LOAD_FAILED`。
+
+当前接口不包含 WMTS Capabilities XML 解析、动态时间/维度模板、单图 Provider、矢量瓦片或自动
+LOD；这些能力仍属于未发布范围。
 
 ## 3D Tiles
 
