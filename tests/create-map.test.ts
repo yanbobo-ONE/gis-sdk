@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
 import type { MapEngineAdapter } from '../src/core/contracts.js';
+import type {
+  BasemapController,
+  CameraController,
+  TerrainController,
+} from '../src/core/controls.js';
 import { GisError } from '../src/core/errors.js';
 import {
   createMapWithFactory,
@@ -20,11 +25,35 @@ interface FakeAdapter extends MapEngineAdapter<FakeRawContext> {
   destroy: Mock<() => void | Promise<void>>;
 }
 
+const camera = {
+  cancelFlight: vi.fn(),
+  flyTo: vi.fn(() => Promise.resolve()),
+  setView: vi.fn(),
+} satisfies CameraController;
+
+const basemap = {
+  clear: vi.fn(),
+  opacity: 1,
+  set: vi.fn(),
+  setOpacity: vi.fn(),
+  setVisible: vi.fn(),
+  type: 'none',
+  visible: false,
+} satisfies BasemapController;
+
+const terrain = {
+  set: vi.fn(() => Promise.resolve()),
+  type: 'ellipsoid',
+} satisfies TerrainController;
+
 function createFactory() {
   let receivedOptions: NormalizedCreateMapOptions | undefined;
   const adapter: FakeAdapter = {
     raw: { viewer: { kind: 'fake' } },
     layers: {} as LayerManager,
+    camera,
+    basemap,
+    terrain,
     resize: vi.fn(),
     destroy: vi.fn(),
   };
@@ -87,6 +116,22 @@ describe('createMapWithFactory', () => {
     );
 
     expect(context.options?.cesiumBaseUrl).toBe('https://static.example/cesium/');
+  });
+
+  it('rejects an invalid initial basemap before constructing the adapter', () => {
+    const context = createFactory();
+
+    expect(() => {
+      createMapWithFactory(
+        {
+          container: 'map',
+          basemap: { type: 'xyz', url: 'https://tiles.example.com/tiles.png' },
+        },
+        context.factory,
+      );
+    }).toThrow(expect.objectContaining({ code: 'INVALID_BASEMAP_CONFIG' }));
+
+    expect(context.options).toBeUndefined();
   });
 
   it('passes a deeply frozen normalized options object to the adapter factory', () => {

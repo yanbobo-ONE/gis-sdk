@@ -4,9 +4,25 @@ const cesium = vi.hoisted(() => {
   class Viewer {
     static readonly instances: Viewer[] = [];
     static constructionError: Error | undefined;
+    static imageryError: Error | undefined;
 
     readonly resize = vi.fn();
     readonly destroy = vi.fn();
+    readonly camera = {
+      cancelFlight: vi.fn(),
+      flyTo: vi.fn(),
+      setView: vi.fn(),
+    };
+    readonly imageryLayers = {
+      addImageryProvider: vi.fn(() => {
+        if (Viewer.imageryError) {
+          throw Viewer.imageryError;
+        }
+        return { alpha: 1, show: true };
+      }),
+      remove: vi.fn(() => true),
+    };
+    terrainProvider = { kind: 'ellipsoid' };
 
     constructor(
       readonly container: string | HTMLElement,
@@ -40,7 +56,16 @@ const cesium = vi.hoisted(() => {
 
 vi.mock('cesium', () => ({
   buildModuleUrl: cesium.buildModuleUrl,
+  CesiumTerrainProvider: { fromUrl: vi.fn() },
+  Cartesian3: { fromDegrees: vi.fn() },
+  EllipsoidTerrainProvider: function EllipsoidTerrainProvider() {
+    return undefined;
+  },
+  Math: { toRadians: vi.fn((value: number) => value) },
   SceneMode: { SCENE2D: 2, SCENE3D: 3 },
+  UrlTemplateImageryProvider: class UrlTemplateImageryProvider {
+    constructor(readonly options: Record<string, unknown>) {}
+  },
   Viewer: cesium.Viewer,
 }));
 
@@ -85,6 +110,7 @@ describe('CesiumMapAdapter', () => {
     cesium.setBaseUrl.mockClear();
     cesium.Viewer.instances.splice(0);
     cesium.Viewer.constructionError = undefined;
+    cesium.Viewer.imageryError = undefined;
   });
 
   it('configures one global base URL, delegates Viewer lifecycle, and rejects conflicts', async () => {
@@ -119,6 +145,42 @@ describe('CesiumMapAdapter', () => {
       }),
     );
     expect(cesium.Viewer.instances).toHaveLength(3);
+  });
+
+  it('installs an initial XYZ basemap below managed imagery layers', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const options = Object.freeze({
+      ...createOptions('map-1'),
+      basemap: Object.freeze({ type: 'xyz' as const, url: '/tiles/{z}/{x}/{y}.png' }),
+    });
+
+    const adapter = new CesiumMapAdapter(options);
+
+    expect(adapter.basemap.type).toBe('xyz');
+    expect(cesium.Viewer.instances[0]?.imageryLayers.addImageryProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { url: '/tiles/{z}/{x}/{y}.png' } }),
+      0,
+    );
+  });
+
+  it('cleans up the Viewer and releases the base URL when initial basemap setup fails', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const failure = new Error('imagery provider failed');
+    cesium.Viewer.imageryError = failure;
+
+    expect(() => {
+      new CesiumMapAdapter(
+        Object.freeze({
+          ...createOptions('map-1', 'https://a.example/cesium/'),
+          basemap: Object.freeze({ type: 'xyz' as const, url: '/tiles/{z}/{x}/{y}.png' }),
+        }),
+      );
+    }).toThrow(failure);
+    expect(cesium.Viewer.instances[0]?.destroy).toHaveBeenCalledOnce();
+
+    cesium.Viewer.imageryError = undefined;
+    const retry = new CesiumMapAdapter(createOptions('map-2', 'https://b.example/cesium/'));
+    expect(retry.raw.viewer).toBe(cesium.Viewer.instances[1]);
   });
 
   it('locks automatic base URL resolution when the first Viewer is created', async () => {

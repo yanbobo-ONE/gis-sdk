@@ -5,4 +5,5 @@ export type {
   CesiumSceneMode,
   CesiumWidgetOptions,
   CreateMapOptions,
+  XyzBasemapSpec,
 } from '../cesium/types.js';

@@ -68,15 +68,18 @@ async function disposeMap() {
 
 运行效果：创建一个不带在线默认底图的 Cesium Viewer，加入一个 GeoJSON 数据源和一个 WMS 影像图层。`setOpacity()` 即时更新影像透明度，`setData()` 成功后才替换旧 GeoJSON；销毁时会取消加载任务、清理图层和 Viewer。
 
+如需初始化 XYZ 底图、切换地形或控制相机，请阅读[地图控制](/guide/map-controls)。
+
 ## 当前已发布与未发布 API
 
-| 范围                                                        | 状态                        | 应使用的入口                                                      |
-| ----------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------- |
-| 地图生命周期与事件                                          | 可用                        | `createMap`、`map.resize`、`map.destroy`、`map.events`            |
-| GeoJSON 与 WMS 图层                                         | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter` |
-| Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                  |
-| 影像底图、地形、3D Tiles、模型、动态实体                    | 未发布                      | 没有对应 SDK 方法                                                 |
-| Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                 |
+| 范围                                                        | 状态                        | 应使用的入口                                                         |
+| ----------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------- |
+| 地图生命周期与事件                                          | 可用                        | `createMap`、`map.resize`、`map.destroy`、`map.events`               |
+| GeoJSON 与 WMS 图层                                         | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter`    |
+| Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                     |
+| XYZ 底图、相机、椭球 / Cesium Terrain 地形                  | 可用                        | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain` |
+| TMS/WMTS、3D Tiles、模型、动态实体                          | 未发布                      | 没有对应 SDK 方法                                                    |
+| Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                    |
 
 不要根据规划名称猜测调用方式。后续版本完成能力后，会在本页新增真实导出、参数表、运行效果和最小示例，同时在[功能状态与路线图](/guide/capability-status)记录版本。
 
@@ -101,13 +104,14 @@ const map = createMap({
 
 ### 参数
 
-| 参数            | 类型                    | 必填 | 默认值                | 作用                                                      |
-| --------------- | ----------------------- | ---- | --------------------- | --------------------------------------------------------- |
-| `container`     | `string \| HTMLElement` | 是   | -                     | Viewer 容器元素或元素 ID；字符串会去除首尾空格            |
-| `id`            | `string`                | 否   | `crypto.randomUUID()` | 地图实例标识，用于事件和错误定位                          |
-| `cesiumBaseUrl` | `string`                | 否   | 沿用 Cesium 当前配置  | `Workers`、`Assets`、`ThirdParty`、`Widgets` 的共同父路径 |
-| `scene.mode`    | `'2d' \| '3d'`          | 否   | `'3d'`                | 初始场景模式                                              |
-| `widgets`       | `CesiumWidgetOptions`   | 否   | 全部关闭              | 按字段启用 Cesium Viewer 控件                             |
+| 参数            | 类型                    | 必填 | 默认值                | 作用                                                         |
+| --------------- | ----------------------- | ---- | --------------------- | ------------------------------------------------------------ |
+| `container`     | `string \| HTMLElement` | 是   | -                     | Viewer 容器元素或元素 ID；字符串会去除首尾空格               |
+| `id`            | `string`                | 否   | `crypto.randomUUID()` | 地图实例标识，用于事件和错误定位                             |
+| `cesiumBaseUrl` | `string`                | 否   | 沿用 Cesium 当前配置  | `Workers`、`Assets`、`ThirdParty`、`Widgets` 的共同父路径    |
+| `scene.mode`    | `'2d' \| '3d'`          | 否   | `'3d'`                | 初始场景模式                                                 |
+| `basemap`       | `XyzBasemapSpec`        | 否   | 不加载在线底图        | 初始化 SDK 管理的 XYZ 底图；模板必须包含 `{z}`、`{x}`、`{y}` |
+| `widgets`       | `CesiumWidgetOptions`   | 否   | 全部关闭              | 按字段启用 Cesium Viewer 控件                                |
 
 `widgets` 支持 `animation`、`baseLayerPicker`、`fullscreenButton`、`geocoder`、`homeButton`、`infoBox`、`navigationHelpButton`、`sceneModePicker`、`selectionIndicator` 和 `timeline`。
 
@@ -118,6 +122,8 @@ const map = createMap({
 **可能抛出：**
 
 - `INVALID_CONTAINER`：容器字符串为空。
+- `INVALID_BASEMAP_CONFIG`：初始 XYZ 模板、类型或显隐配置无效。
+- `INVALID_BASEMAP_OPACITY`：初始底图透明度不是 `0` 到 `1` 的有限数。
 - `CESIUM_BASE_URL_CONFLICT`：已有地图使用了其他静态资源根路径。
 - Cesium Viewer 构造产生的原始错误，例如容器元素不存在或 WebGL 不可用。
 
@@ -403,9 +409,9 @@ map.raw.viewer.scene.requestRender();
 
 ## 尚未提供的 SDK 方法
 
-以下领域处于规划中，当前包没有 `map.camera`、`map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `3dtiles`、`model`、`xyz`、`wmts`、`terrain` 或动态数据图层类型：
+以下领域处于规划中，当前包没有 `map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `3dtiles`、`model`、`wmts` 或动态数据图层类型。`map.camera`、`map.basemap` 和 `map.terrain` 已发布，具体调用见[地图控制](/guide/map-controls)：
 
-- 影像底图、地形、3D Tiles、glTF/3D 模型和动态实体；
+- TMS/WMTS、单图、3D Tiles、glTF/3D 模型和动态实体；
 - Worker 数据解析、任务队列、流式数据更新、LOD 与 Primitive/Collection 大数据渲染；
 - 绘制编辑、自定义材质、空间分析、插件机制和诊断面板；
 - 官方 Vue / React 绑定层、旧项目兼容适配器与浏览器性能基线。

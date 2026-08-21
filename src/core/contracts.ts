@@ -1,6 +1,7 @@
 import type { GisError } from './errors.js';
 import type { EventHub } from './event-hub.js';
 import type { LayerManager } from '../layers/contracts.js';
+import type { BasemapController, CameraController, TerrainController } from './controls.js';
 
 /** 地图实例的生命周期状态。 */
 export type MapState = 'ready' | 'destroying' | 'destroyed';
@@ -35,6 +36,12 @@ export interface GisMap<TRaw = unknown> {
   readonly events: EventHub<MapEventMap>;
   /** 当前地图拥有的类型化图层管理器。 */
   readonly layers: LayerManager;
+  /** 类型化相机控制器。 */
+  readonly camera: CameraController;
+  /** 当前地图拥有的单底图控制器。 */
+  readonly basemap: BasemapController;
+  /** 类型化地形控制器。 */
+  readonly terrain: TerrainController;
   /** 高级场景使用的引擎原生上下文。 */
   readonly raw: Readonly<TRaw>;
   /**
@@ -55,6 +62,9 @@ export interface GisMap<TRaw = unknown> {
 export interface MapEngineAdapter<TRaw> {
   readonly raw: Readonly<TRaw>;
   readonly layers: LayerManager;
+  readonly camera: CameraController;
+  readonly basemap: BasemapController;
+  readonly terrain: TerrainController;
   resize(): void;
   destroy(): void | Promise<void>;
 }

@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
 import type { MapEngineAdapter, MapEventMap } from '../src/core/contracts.js';
+import type {
+  BasemapController,
+  CameraController,
+  TerrainController,
+} from '../src/core/controls.js';
 import { GisError } from '../src/core/errors.js';
 import { MapRuntime } from '../src/core/map-runtime.js';
 import type { LayerManager } from '../src/layers/contracts.js';
@@ -16,10 +21,34 @@ interface TestAdapter extends MapEngineAdapter<RawContext> {
   destroy: Mock<() => void | Promise<void>>;
 }
 
+const camera = {
+  cancelFlight: vi.fn(),
+  flyTo: vi.fn(() => Promise.resolve()),
+  setView: vi.fn(),
+} satisfies CameraController;
+
+const basemap = {
+  clear: vi.fn(),
+  opacity: 1,
+  set: vi.fn(),
+  setOpacity: vi.fn(),
+  setVisible: vi.fn(),
+  type: 'none',
+  visible: false,
+} satisfies BasemapController;
+
+const terrain = {
+  set: vi.fn(() => Promise.resolve()),
+  type: 'ellipsoid',
+} satisfies TerrainController;
+
 function createAdapter(): TestAdapter {
   return {
     raw: { name: 'fake' },
     layers: {} as LayerManager,
+    camera,
+    basemap,
+    terrain,
     resize: vi.fn(),
     destroy: vi.fn(),
   };
@@ -43,6 +72,32 @@ describe('MapRuntime', () => {
     map.resize();
 
     expect(adapter.resize).toHaveBeenCalledOnce();
+  });
+
+  it('provides stable control handles and rejects controller calls after destroy', async () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+
+    expect(map.camera).toBe(map.camera);
+    expect(map.basemap).toBe(map.basemap);
+    expect(map.terrain).toBe(map.terrain);
+    map.camera.setView({ longitude: 116.39, latitude: 39.9 });
+    map.basemap.set({ type: 'xyz', url: '/tiles/{z}/{x}/{y}.png' });
+    await map.terrain.set({ type: 'ellipsoid' });
+    expect((adapter.camera.setView as Mock).mock.calls).toHaveLength(1);
+    expect((adapter.basemap.set as Mock).mock.calls).toHaveLength(1);
+    expect((adapter.terrain.set as Mock).mock.calls).toHaveLength(1);
+
+    await map.destroy();
+    expect(() => {
+      map.camera.cancelFlight();
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'camera.cancelFlight' }));
+    expect(() => {
+      map.basemap.clear();
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'basemap.clear' }));
+    expect(() => {
+      void map.terrain.set({ type: 'ellipsoid' });
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'terrain.set' }));
   });
 
   it('destroys the adapter and emits map:destroy exactly once', async () => {

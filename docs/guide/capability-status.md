@@ -11,6 +11,9 @@
 | 图层生命周期        | 可用 | `map.layers.add/get/list/remove/clear`                                 | 图层 ID 预留、加载取消、资源释放和状态快照                |
 | GeoJSON             | 可用 | `type: 'geojson'`、`setData()`                                         | URL 或对象加载、基础样式、取消加载和原子数据替换          |
 | WMS / GeoServer     | 可用 | `type: 'wms'`、`setOpacity()`、`setStyle()`、`setFilter()`、`reload()` | 加入影像图层并运行时更新透明度、样式、CQL 过滤或 Provider |
+| 相机控制            | 可用 | `map.camera.setView()`、`flyTo()`、`cancelFlight()`                    | 使用度和米定位、飞行、取消和生命周期保护                  |
+| XYZ 底图            | 可用 | `createMap({ basemap })`、`map.basemap`                                | 单底图原子替换、透明度与显隐，始终位于业务影像图层下方    |
+| 地形                | 可用 | `map.terrain.set()`                                                    | 椭球切换和 Cesium Terrain 异步加载，失败时保留旧地形      |
 | Cesium 公共原生访问 | 可用 | `map.raw.viewer`                                                       | 调用 Cesium 文档中的公共成员；资源归业务代码所有          |
 | 按需导入            | 可用 | `/core`、`/cesium`、`/layers`、`/styles.css`                           | 将核心工具、Cesium 创建入口和图层工具拆分为独立子路径     |
 
@@ -20,7 +23,7 @@
 
 | 模块                                     | 当前状态 | 在完成前的边界                                                          |
 | ---------------------------------------- | -------- | ----------------------------------------------------------------------- |
-| XYZ、TMS、WMTS、影像服务、地形           | 未发布   | 没有 SDK 图层类型；可临时使用 `map.raw.viewer`，资源由业务清理          |
+| TMS、WMTS、单图与企业影像服务            | 未发布   | 当前只封装 XYZ；可临时使用 `map.raw.viewer`，资源由业务清理             |
 | 3D Tiles、glTF / 3D 模型、CZML、动态实体 | 未发布   | 没有 SDK 图层类型、加载策略或生命周期承诺                               |
 | Worker 数据管线与动态数据                | 未发布   | 尚无解析 Worker、任务队列、背压、流式更新或数据格式适配器               |
 | 海量数据渲染                             | 未发布   | 尚无 Primitive / Collection 批处理、LOD、分块调度、帧预算或基准数据承诺 |

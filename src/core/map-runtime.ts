@@ -1,10 +1,22 @@
 import type { GisMap, MapEngineAdapter, MapEventMap, MapState } from './contracts.js';
+import type {
+  BasemapController,
+  CameraController,
+  CameraFlight,
+  CameraView,
+  TerrainController,
+  TerrainSpec,
+  XyzBasemapSpec,
+} from './controls.js';
 import { GisError } from './errors.js';
 import { EventHub } from './event-hub.js';
 import type { LayerManager } from '../layers/contracts.js';
 
 export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly events = new EventHub<MapEventMap>();
+  readonly camera: CameraController;
+  readonly basemap: BasemapController;
+  readonly terrain: TerrainController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -12,7 +24,58 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   constructor(
     readonly id: string,
     private readonly adapter: MapEngineAdapter<TRaw>,
-  ) {}
+  ) {
+    this.camera = Object.freeze({
+      setView: (view: CameraView) => {
+        this.assertReady('camera.setView');
+        this.adapter.camera.setView(view);
+      },
+      flyTo: (view: CameraFlight) => {
+        this.assertReady('camera.flyTo');
+        return this.adapter.camera.flyTo(view);
+      },
+      cancelFlight: () => {
+        this.assertReady('camera.cancelFlight');
+        this.adapter.camera.cancelFlight();
+      },
+    });
+    this.basemap = Object.freeze({
+      get type() {
+        return adapter.basemap.type;
+      },
+      get visible() {
+        return adapter.basemap.visible;
+      },
+      get opacity() {
+        return adapter.basemap.opacity;
+      },
+      set: (spec: XyzBasemapSpec) => {
+        this.assertReady('basemap.set');
+        this.adapter.basemap.set(spec);
+      },
+      clear: () => {
+        this.assertReady('basemap.clear');
+        this.adapter.basemap.clear();
+      },
+      setVisible: (visible: boolean) => {
+        this.assertReady('basemap.setVisible');
+        this.adapter.basemap.setVisible(visible);
+      },
+      setOpacity: (opacity: number) => {
+        this.assertReady('basemap.setOpacity');
+        this.adapter.basemap.setOpacity(opacity);
+      },
+    });
+    this.terrain = Object.freeze({
+      get type() {
+        return adapter.terrain.type;
+      },
+      set: (spec: TerrainSpec) => {
+        this.assertReady('terrain.set');
+        return this.adapter.terrain.set(spec);
+      },
+    });
+  }
 
   get state(): MapState {
     return this.currentState;
@@ -27,14 +90,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   }
 
   resize(): void {
-    if (this.currentState !== 'ready') {
-      throw new GisError(`Map "${this.id}" has been disposed.`, {
-        code: 'MAP_DISPOSED',
-        module: 'map',
-        operation: 'resize',
-      });
-    }
-
+    this.assertReady('resize');
     this.adapter.resize();
   }
 
@@ -89,6 +145,16 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       this.events.emit('map:error', { id: this.id, error });
     } catch {
       // Listener failures must not replace the operation error being reported.
+    }
+  }
+
+  private assertReady(operation: string): void {
+    if (this.currentState !== 'ready') {
+      throw new GisError(`Map "${this.id}" has been disposed.`, {
+        code: 'MAP_DISPOSED',
+        module: 'map',
+        operation,
+      });
     }
   }
 }

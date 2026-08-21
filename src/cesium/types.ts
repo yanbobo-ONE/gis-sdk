@@ -1,6 +1,9 @@
 import type { Viewer } from 'cesium';
 
 import type { GisMap } from '../core/contracts.js';
+import type { XyzBasemapSpec } from '../core/controls.js';
+
+export type { XyzBasemapSpec } from '../core/controls.js';
 
 /** Cesium 场景模式的稳定 SDK 表达。 */
 export type CesiumSceneMode = '2d' | '3d';
@@ -47,6 +50,8 @@ export interface CreateMapOptions {
     /** 初始场景模式。 */
     readonly mode?: CesiumSceneMode;
   };
+  /** 初始 XYZ 底图；省略时不加载在线影像。 */
+  readonly basemap?: XyzBasemapSpec;
   /** Viewer 控件开关。 */
   readonly widgets?: CesiumWidgetOptions;
 }

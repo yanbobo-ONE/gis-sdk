@@ -1,11 +1,15 @@
 import { buildModuleUrl, SceneMode, Viewer } from 'cesium';
 
 import type { MapEngineAdapter } from '../core/contracts.js';
+import type { BasemapController, CameraController, TerrainController } from '../core/controls.js';
 import { GisError } from '../core/errors.js';
 import type { LayerManager } from '../layers/contracts.js';
 import { LayerRuntime } from '../layers/layer-runtime.js';
 import type { NormalizedCreateMapOptions } from './create-map.js';
 import { createCesiumLayer } from './layers/create-cesium-layer.js';
+import { CesiumBasemapController } from './basemap-controller.js';
+import { CesiumCameraController } from './camera-controller.js';
+import { CesiumTerrainController } from './terrain-controller.js';
 import type { CesiumRawContext } from './types.js';
 
 interface BuildModuleUrlWithBaseUrl {
@@ -125,33 +129,76 @@ function rollbackCesiumBaseUrl(reservation: BaseUrlReservation | undefined): voi
 export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   readonly raw: Readonly<CesiumRawContext>;
   readonly layers: LayerManager;
+  readonly camera: CameraController;
+  readonly basemap: BasemapController;
+  readonly terrain: TerrainController;
 
   private readonly layerRuntime: LayerRuntime;
+  private readonly cameraRuntime: CesiumCameraController;
+  private readonly basemapRuntime: CesiumBasemapController;
+  private readonly terrainRuntime: CesiumTerrainController;
 
   constructor(options: NormalizedCreateMapOptions) {
     const reservation = reserveCesiumBaseUrl(options.cesiumBaseUrl);
-    let viewer: Viewer;
+    let viewer: Viewer | undefined;
+    let cameraRuntime: CesiumCameraController | undefined;
+    let basemapRuntime: CesiumBasemapController | undefined;
+    let terrainRuntime: CesiumTerrainController | undefined;
     try {
       viewer = new Viewer(options.container, {
         ...options.widgets,
         baseLayer: false,
         sceneMode: options.scene.mode === '2d' ? SceneMode.SCENE2D : SceneMode.SCENE3D,
       });
+      const viewerInstance = viewer;
+      cameraRuntime = new CesiumCameraController(viewerInstance.camera);
+      basemapRuntime = new CesiumBasemapController(viewerInstance);
+      terrainRuntime = new CesiumTerrainController(viewerInstance);
+      const layerRuntime = new LayerRuntime((spec, context) => {
+        return createCesiumLayer(viewerInstance, spec, context);
+      });
+      if (options.basemap) {
+        basemapRuntime.set(options.basemap);
+      }
+
+      commitCesiumBaseUrl(reservation);
+      this.raw = Object.freeze({ viewer: viewerInstance });
+      this.cameraRuntime = cameraRuntime;
+      this.basemapRuntime = basemapRuntime;
+      this.terrainRuntime = terrainRuntime;
+      this.camera = cameraRuntime;
+      this.basemap = basemapRuntime;
+      this.terrain = terrainRuntime;
+      this.layerRuntime = layerRuntime;
+      this.layers = layerRuntime;
     } catch (error: unknown) {
+      try {
+        cameraRuntime?.destroy();
+      } catch {
+        // Preserve the original construction error.
+      }
+      try {
+        basemapRuntime?.destroy();
+      } catch {
+        // Preserve the original construction error.
+      }
+      try {
+        terrainRuntime?.destroy();
+      } catch {
+        // Preserve the original construction error.
+      }
+      try {
+        viewer?.destroy();
+      } catch {
+        // Preserve the original construction error.
+      }
       try {
         rollbackCesiumBaseUrl(reservation);
       } catch {
-        // Preserve the Viewer construction error; the shared lock is released in rollback's finally.
+        // Preserve the original construction error; rollback releases the lock in finally.
       }
       throw error;
     }
-    commitCesiumBaseUrl(reservation);
-
-    this.raw = Object.freeze({ viewer });
-    this.layerRuntime = new LayerRuntime((spec, context) => {
-      return createCesiumLayer(viewer, spec, context);
-    });
-    this.layers = this.layerRuntime;
   }
 
   resize(): void {
@@ -160,6 +207,9 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
 
   async destroy(): Promise<void> {
     await this.layerRuntime.destroy();
+    this.cameraRuntime.destroy();
+    this.basemapRuntime.destroy();
+    this.terrainRuntime.destroy();
     this.raw.viewer.destroy();
   }
 }

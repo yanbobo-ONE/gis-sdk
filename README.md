@@ -50,6 +50,10 @@ const map = createMap({
   container: 'map',
   cesiumBaseUrl: '/cesium/',
   scene: { mode: '3d' },
+  basemap: {
+    type: 'xyz',
+    url: 'https://tiles.example.com/{z}/{x}/{y}.png',
+  },
 });
 
 const roads = await map.layers.add({
@@ -62,6 +66,9 @@ const roads = await map.layers.add({
 
 // 立即改变已加入场景的影像透明度，不会重建服务提供器。
 roads.setOpacity(0.65);
+
+await map.camera.flyTo({ longitude: 116.39, latitude: 39.9, height: 30_000, duration: 1 });
+await map.terrain.set({ type: 'ellipsoid' });
 
 // 容器尺寸变化时让 Cesium 重新计算画布大小。
 const observer = new ResizeObserver(() => map.resize());
@@ -89,6 +96,7 @@ async function disposeMap() {
 
 - [快速开始](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/getting-started.md)
 - [导入与包体积](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/imports.md)
+- [地图控制](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/map-controls.md)
 - [API 使用参考](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/api-reference.md)
 - [图层管理](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/layers.md)
 - [功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)
@@ -103,7 +111,8 @@ async function disposeMap() {
 | GeoJSON                                           | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                            |
 | WMS / GeoServer                                   | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()` |
 | Cesium 公共原生能力                               | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                       |
-| XYZ/WMTS、地形、3D Tiles、模型                    | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
+| XYZ 底图、相机、椭球 / Cesium Terrain 地形        | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                   |
+| TMS/WMTS、3D Tiles、模型                          | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
 | Worker 数据管线、动态流数据、Primitive 大数据渲染 | 未完成                 | 当前没有吞吐量、数据规模或性能承诺                                                                     |
 | 绘制编辑、自定义材质、空间分析、插件与诊断        | 未完成                 | 当前没有稳定公开 API                                                                                   |
 

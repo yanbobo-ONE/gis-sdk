@@ -63,13 +63,17 @@ import '@yanbobo/gis-sdk/styles.css';
 const map = createMap({
   container: 'map',
   cesiumBaseUrl: '/cesium/',
+  basemap: {
+    type: 'xyz',
+    url: 'https://tiles.example.com/{z}/{x}/{y}.png',
+  },
   widgets: {
     fullscreenButton: true,
   },
 });
 ```
 
-SDK 默认设置 `baseLayer: false`，不会自动请求 Cesium ion 影像，因此创建空白地球不需要 ion token。GeoJSON 和 WMS 使用 [`map.layers`](./layers.md) 管理；尚未覆盖的影像、地形、3D Tiles 或 Primitive 可以暂时通过 `map.raw.viewer` 使用 Cesium 公共接口。
+SDK 默认设置 `baseLayer: false`，不会自动请求 Cesium ion 影像，因此创建空白地球不需要 ion token。GeoJSON 和 WMS 使用 [`map.layers`](./layers.md) 管理；XYZ 底图、相机和地形使用[地图控制](./map-controls.md)中的类型化句柄。尚未覆盖的影像服务、3D Tiles 或 Primitive 可以暂时通过 `map.raw.viewer` 使用 Cesium 公共接口。
 
 组件卸载、路由离开或场景切换时释放地图：
 

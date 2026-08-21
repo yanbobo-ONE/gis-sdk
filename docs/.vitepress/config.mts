@@ -29,6 +29,7 @@ export default defineConfig({
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '导入与包体积', link: '/guide/imports' },
+            { text: '地图控制', link: '/guide/map-controls' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
           ],
         },
@@ -53,6 +54,7 @@ export default defineConfig({
           items: [
             { text: '概览', link: '/' },
             { text: '快速开始', link: '/guide/getting-started' },
+            { text: '地图控制', link: '/guide/map-controls' },
             { text: 'API 使用参考', link: '/guide/api-reference' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: '图层管理', link: '/guide/layers' },

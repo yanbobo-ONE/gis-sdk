@@ -2,7 +2,13 @@ import type { GisMap, MapEngineAdapter } from '../core/contracts.js';
 import { GisError } from '../core/errors.js';
 import { MapRuntime } from '../core/map-runtime.js';
 import { CesiumMapAdapter } from './cesium-map-adapter.js';
-import type { CesiumMap, CesiumSceneMode, CesiumWidgetOptions, CreateMapOptions } from './types.js';
+import type {
+  CesiumMap,
+  CesiumSceneMode,
+  CesiumWidgetOptions,
+  CreateMapOptions,
+  XyzBasemapSpec,
+} from './types.js';
 
 type NormalizedWidgetOptions = Readonly<Required<CesiumWidgetOptions>>;
 
@@ -13,6 +19,7 @@ export interface NormalizedCreateMapOptions {
   readonly cesiumBaseUrl?: string;
   readonly scene: Readonly<{ mode: CesiumSceneMode }>;
   readonly widgets: NormalizedWidgetOptions;
+  readonly basemap?: Readonly<XyzBasemapSpec>;
 }
 
 /** @internal */
@@ -65,13 +72,55 @@ function normalizeBaseUrl(value: string | undefined): string | undefined {
   }
 }
 
+function invalidBasemap(
+  message: string,
+  code: 'INVALID_BASEMAP_CONFIG' | 'INVALID_BASEMAP_OPACITY',
+) {
+  return new GisError(message, {
+    code,
+    module: 'basemap',
+    operation: 'createMap',
+  });
+}
+
+function normalizeBasemap(spec: XyzBasemapSpec): Readonly<XyzBasemapSpec> {
+  const type = (spec as unknown as { readonly type: string }).type;
+  if (type !== 'xyz') {
+    throw invalidBasemap('Initial basemap type must be xyz.', 'INVALID_BASEMAP_CONFIG');
+  }
+
+  const url = typeof spec.url === 'string' ? spec.url.trim() : '';
+  if (!url || !url.includes('{z}') || !url.includes('{x}') || !url.includes('{y}')) {
+    throw invalidBasemap(
+      'XYZ basemap URL must contain {z}, {x}, and {y} placeholders.',
+      'INVALID_BASEMAP_CONFIG',
+    );
+  }
+  if (
+    spec.opacity !== undefined &&
+    (!Number.isFinite(spec.opacity) || spec.opacity < 0 || spec.opacity > 1)
+  ) {
+    throw invalidBasemap(
+      'Basemap opacity must be a finite number between 0 and 1.',
+      'INVALID_BASEMAP_OPACITY',
+    );
+  }
+  if (spec.visible !== undefined && typeof spec.visible !== 'boolean') {
+    throw invalidBasemap('Basemap visibility must be a boolean.', 'INVALID_BASEMAP_CONFIG');
+  }
+
+  return Object.freeze({ ...spec, url });
+}
+
 function normalizeOptions(options: CreateMapOptions): NormalizedCreateMapOptions {
   const cesiumBaseUrl = normalizeBaseUrl(options.cesiumBaseUrl);
+  const basemap = options.basemap ? normalizeBasemap(options.basemap) : undefined;
   const normalizedOptions = {
     container: normalizeContainer(options.container),
     id: options.id ?? globalThis.crypto.randomUUID(),
     scene: Object.freeze({ mode: options.scene?.mode ?? '3d' }),
     widgets: Object.freeze({ ...defaultWidgets, ...options.widgets }),
+    ...(basemap ? { basemap } : {}),
   } satisfies Omit<NormalizedCreateMapOptions, 'cesiumBaseUrl'>;
 
   return Object.freeze(cesiumBaseUrl ? { ...normalizedOptions, cesiumBaseUrl } : normalizedOptions);
