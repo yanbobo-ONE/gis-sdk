@@ -31,7 +31,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "gis-sdk-copy-assets": "./dist/copy-cesium-assets.mjs"
+    "gis-sdk-copy-assets": "dist/copy-cesium-assets.mjs"
   },
   "exports": {
     ".": {
