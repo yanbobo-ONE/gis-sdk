@@ -38,6 +38,11 @@ export interface DataPipelineMessageAdapterEventMap {
     /** 变化后的生命周期状态。 */
     readonly state: DataPipelineMessageAdapterState;
   };
+  /** 解码成功且已进入数据管线。 */
+  'message:accepted': {
+    /** 已成功进入数据管线的原始消息载荷。 */
+    readonly data: unknown;
+  };
   /** 解码或写入数据管线失败；后续消息会继续处理。 */
   'message:rejected': {
     /** 被拒绝消息的原始载荷。 */
@@ -91,7 +96,7 @@ function disposed(): GisError {
  * 调用方负责消息源、协议、Worker 终止和渲染资源；本适配器只拥有其注册的监听器。
  */
 export class DataPipelineMessageAdapter<T> {
-  /** 订阅状态变化、消息拒绝和满队列丢弃事件。 */
+  /** 订阅状态变化、消息接入、拒绝和满队列丢弃事件。 */
   readonly events = new EventHub<DataPipelineMessageAdapterEventMap>();
 
   private readonly source: DataPipelineMessageSource;
@@ -215,6 +220,7 @@ export class DataPipelineMessageAdapter<T> {
       const value = this.decode(data);
       if (this.pipeline.push(value)) {
         this.statsState.accepted += 1;
+        this.emit('message:accepted', { data });
       } else {
         this.statsState.dropped += 1;
         this.emit('message:dropped', { data });

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createMap } from '../src/entries/cesium.js';
 import {
   DataPipeline,
+  DataPipelineFrameScheduler,
   DataPipelineMessageAdapter,
   EventHub,
   GisError,
@@ -10,6 +11,7 @@ import {
 import type {
   DataPipelineMessageAdapterOptions,
   DataPipelineMessageSource,
+  DataPipelineFrameSchedulerOptions,
   DataPipelineOptions,
   DataPipelineStats,
 } from '../src/entries/core.js';
@@ -29,6 +31,8 @@ describe('package subpath entrypoints', () => {
       readonly pipeline: DataPipeline<{ readonly id: string }>;
       readonly messageAdapter: DataPipelineMessageAdapter<{ readonly id: string }>;
       readonly messageAdapterOptions: DataPipelineMessageAdapterOptions<{ readonly id: string }>;
+      readonly frameScheduler: DataPipelineFrameScheduler<{ readonly id: string }>;
+      readonly frameSchedulerOptions: DataPipelineFrameSchedulerOptions<{ readonly id: string }>;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
       readonly pipelineStats: DataPipelineStats;
     }
@@ -43,6 +47,7 @@ describe('package subpath entrypoints', () => {
     expect(EventHub).toBeTypeOf('function');
     expect(GisError).toBeTypeOf('function');
     expect(DataPipeline).toBeTypeOf('function');
+    expect(DataPipelineFrameScheduler).toBeTypeOf('function');
     expect(DataPipelineMessageAdapter).toBeTypeOf('function');
     expect(wmsFilter.eq('status', 'OPEN')).toEqual({
       op: 'eq',

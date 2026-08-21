@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { DataPipeline, DataPipelineMessageAdapter, wmsFilter } from '../src/index.js';
+import {
+  DataPipeline,
+  DataPipelineFrameScheduler,
+  DataPipelineMessageAdapter,
+  wmsFilter,
+} from '../src/index.js';
 import type {
+  DataPipelineFrameSchedulerOptions,
   DataPipelineMessageAdapterOptions,
   DataPipelineOptions,
   DataPipelineStats,
@@ -33,6 +39,7 @@ describe('package public layer interface', () => {
       readonly wmsSpec: WmsLayerSpec;
       readonly wmsHandle: WmsLayerHandle;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
+      readonly frameSchedulerOptions: DataPipelineFrameSchedulerOptions<{ readonly id: string }>;
       readonly messageAdapterOptions: DataPipelineMessageAdapterOptions<{ readonly id: string }>;
       readonly pipelineStats: DataPipelineStats;
     }
@@ -40,6 +47,7 @@ describe('package public layer interface', () => {
 
     expect(compileOnly).toBeUndefined();
     expect(DataPipeline).toBeTypeOf('function');
+    expect(DataPipelineFrameScheduler).toBeTypeOf('function');
     expect(DataPipelineMessageAdapter).toBeTypeOf('function');
   });
 });

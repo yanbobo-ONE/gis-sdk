@@ -61,6 +61,8 @@ describe('DataPipelineMessageAdapter', () => {
       pipeline,
       decode: decodePosition,
     });
+    const accepted = vi.fn();
+    adapter.events.on('message:accepted', accepted);
 
     adapter.start();
     adapter.start();
@@ -68,6 +70,7 @@ describe('DataPipelineMessageAdapter', () => {
 
     expect(port.start).toHaveBeenCalledOnce();
     expect(port.addEventListener).toHaveBeenCalledOnce();
+    expect(accepted).toHaveBeenCalledWith({ data: { id: 'aircraft-1', position: 1 } });
     expect(adapter.state).toBe('running');
     expect(adapter.stats).toEqual({
       accepted: 1,

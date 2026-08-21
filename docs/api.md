@@ -18,6 +18,7 @@
 | `map.terrain`                | 椭球 / Cesium Terrain 地形                            | alpha 可用 |
 | `DataPipeline`               | 有界更新、同键合并、批量读取和统计                    | alpha 可用 |
 | `DataPipelineMessageAdapter` | Worker / MessagePort 消息监听、业务解码转发和输入统计 | alpha 可用 |
+| `DataPipelineFrameScheduler` | 动画帧请求合并、每帧有界批量消费、取消和统计          | alpha 可用 |
 | `wmsFilter`                  | 类型化 CQL 过滤                                       | alpha 可用 |
 | `map.raw.viewer`             | Cesium 原生高级能力                                   | advanced   |
 

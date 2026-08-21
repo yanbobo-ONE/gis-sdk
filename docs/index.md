@@ -3,14 +3,14 @@
 <p class="doc-lead">面向业务项目的类型化 Cesium SDK。用稳定接口管理地图、相机、底图、地形和图层，同时保留访问 Cesium 公共 API 的能力。</p>
 
 <div class="status-line">
-  <span>alpha · 0.1.0-alpha.6</span>
+  <span>alpha · 0.1.0-alpha.7</span>
   <span>Cesium 1.144</span>
   <span>ESM + CommonJS</span>
   <span>TypeScript</span>
 </div>
 
 ::: tip 当前可用范围
-当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形、GeoJSON、WMS/GeoServer、3D Tiles、类型化 CQL 过滤、图层资源清理，以及有界数据缓冲、批处理和 Worker / MessagePort 消息输入转发。Worker 池、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
+当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形、GeoJSON、WMS/GeoServer、3D Tiles、类型化 CQL 过滤、图层资源清理，以及有界数据缓冲、批处理、Worker / MessagePort 消息输入转发和帧预算调度。Worker 池、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
 :::
 
 ## 为什么使用 gis-sdk
@@ -89,6 +89,7 @@ await map.destroy();
 | 相机/XYZ/地形        | 可用     | `map.camera`、`map.basemap`、`map.terrain` |
 | 数据管线核心         | 可用     | 有界更新、最新值合并、批量读取和统计       |
 | 消息输入适配器       | 可用     | Worker / MessagePort 监听、解码转发和统计  |
+| 帧预算调度器         | 可用     | 请求合并、每帧有界消费、取消和统计         |
 | TMS/WMTS             | 规划中   | 当前可通过原生出口接入                     |
 | Worker 池/大数据渲染 | 规划中   | 尚无 Worker 池、渲染策略或性能承诺         |
 | 材质/空间分析        | 规划中   | 尚未提供稳定 SDK 接口                      |

@@ -73,15 +73,15 @@ async function disposeMap() {
 
 ## 当前已发布与未发布 API
 
-| 范围                                                        | 状态                        | 应使用的入口                                                          |
-| ----------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------- |
-| 地图生命周期与事件                                          | 可用                        | `createMap`、`map.resize`、`map.destroy`、`map.events`                |
-| GeoJSON、WMS 与 3D Tiles 图层                               | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter`     |
-| Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                      |
-| XYZ 底图、相机、椭球 / Cesium Terrain 地形                  | 可用                        | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`  |
-| 数据管线与消息输入                                          | 可用                        | `DataPipeline`、`DataPipelineMessageAdapter`（从 `/core` 或包根导入） |
-| TMS/WMTS、模型、动态实体                                    | 未发布                      | 没有对应 SDK 方法                                                     |
-| Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                     |
+| 范围                                                        | 状态                        | 应使用的入口                                                                                        |
+| ----------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------- |
+| 地图生命周期与事件                                          | 可用                        | `createMap`、`map.resize`、`map.destroy`、`map.events`                                              |
+| GeoJSON、WMS 与 3D Tiles 图层                               | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter`                                   |
+| Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                                                    |
+| XYZ 底图、相机、椭球 / Cesium Terrain 地形                  | 可用                        | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                |
+| 数据管线、消息输入与帧调度                                  | 可用                        | `DataPipeline`、`DataPipelineMessageAdapter`、`DataPipelineFrameScheduler`（从 `/core` 或包根导入） |
+| TMS/WMTS、模型、动态实体                                    | 未发布                      | 没有对应 SDK 方法                                                                                   |
+| Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                                                   |
 
 不要根据规划名称猜测调用方式。后续版本完成能力后，会在本页新增真实导出、参数表、运行效果和最小示例，同时在[功能状态与路线图](/guide/capability-status)记录版本。
 
@@ -445,10 +445,10 @@ map.raw.viewer.scene.requestRender();
 
 ## 尚未提供的 SDK 方法
 
-以下领域处于规划中，当前包没有 `map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `model`、`wmts` 或动态数据图层类型。`map.camera`、`map.basemap`、`map.terrain`、有界 `DataPipeline` 和通用 Worker/MessagePort 消息输入适配器已发布，具体调用见[地图控制](/guide/map-controls)和[数据管线](/guide/data-pipeline)：
+以下领域处于规划中，当前包没有 `map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `model`、`wmts` 或动态数据图层类型。`map.camera`、`map.basemap`、`map.terrain`、有界 `DataPipeline`、通用 Worker/MessagePort 消息输入适配器和帧预算调度器已发布，具体调用见[地图控制](/guide/map-controls)和[数据管线](/guide/data-pipeline)：
 
 - TMS/WMTS、单图、glTF/3D 模型和动态实体；
-- Worker 池、专用协议解析/输入 Adapter、流式渲染、LOD 与 Primitive/Collection 大数据渲染；
+- Worker 池、专用协议解析/输入 Adapter、流式渲染、自动 LOD 与 Primitive/Collection 大数据渲染；
 - 绘制编辑、自定义材质、空间分析、插件机制和诊断面板；
 - 官方 Vue / React 绑定层、旧项目兼容适配器与浏览器性能基线。
 

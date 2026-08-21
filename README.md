@@ -12,6 +12,7 @@
 - GeoServer 样式切换和类型化 CQL 过滤；
 - 有界动态更新管线，支持同键最新值合并、溢出策略、批量读取和统计；
 - Worker / MessagePort 消息输入适配器，支持业务解码转发、拒绝/丢弃统计与监听释放；
+- 帧预算调度器，支持动画帧请求合并、每帧有界批处理、取消和统计；
 - 默认关闭在线底图和可选控件，无需 Cesium ion token 即可启动空白地球。
 
 ## 环境要求
@@ -118,6 +119,7 @@ async function disposeMap() {
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形     | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                   |
 | 数据管线核心                                   | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                         |
 | Worker / MessagePort 消息输入                  | 可用                   | `DataPipelineMessageAdapter`：消息监听、业务解码转发、统计和监听释放                                   |
+| 帧预算调度                                     | 可用                   | `DataPipelineFrameScheduler`：请求合并、每帧有界消费、取消和统计                                       |
 | TMS/WMTS、模型                                 | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
 | Worker 池、专用动态输入和 Primitive 大数据渲染 | 未完成                 | 当前没有 Worker 池、协议 Adapter、吞吐量、数据规模或性能承诺                                           |
 | 绘制编辑、自定义材质、空间分析、插件与诊断     | 未完成                 | 当前没有稳定公开 API                                                                                   |

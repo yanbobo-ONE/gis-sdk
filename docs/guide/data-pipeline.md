@@ -4,7 +4,8 @@
 
 需要把 Worker 或 `MessagePort` 消息接入管线时，使用同样框架无关的
 `DataPipelineMessageAdapter<T>`。它负责监听、解码转发、输入统计和解绑；不创建或终止
-Worker，也不解析任何固定业务协议。
+Worker，也不解析任何固定业务协议。需要把待消费数据限制在每帧预算内时，使用
+`DataPipelineFrameScheduler<T>`，避免每条消息直接触发一次渲染。
 
 ## 典型使用
 
@@ -102,9 +103,72 @@ pipeline.close();
 | `dispose()`    | `void`                                      | 幂等地解绑监听器并永久关闭适配器；不关闭 `source` 或 `pipeline`                                     |
 | `stats`        | `Readonly<DataPipelineMessageAdapterStats>` | 冻结快照，包含 `received`、`accepted`、`dropped`、`rejected` 与 `state`                             |
 
-解码失败或数据管线 `push()` 抛出时，适配器触发 `message:rejected` 并继续处理后续消息。
-`drop-newest` 等策略拒绝新输入时，适配器触发 `message:dropped` 并增加 `dropped`。
+解码成功并进入数据管线时，适配器触发 `message:accepted`，适合在此调用
+`scheduler.request()`。解码失败或数据管线 `push()` 抛出时，适配器触发
+`message:rejected` 并继续处理后续消息。`drop-newest` 等策略拒绝新输入时，适配器触发
+`message:dropped` 并增加 `dropped`。
 配置不合法时构造函数抛出 `INVALID_DATA_PIPELINE_MESSAGE_ADAPTER_CONFIG`。
+
+## 帧预算调度
+
+调度器不主动轮询，也不会在构造时访问浏览器时钟。业务只在值成功进入数据管线后请求一帧；
+重复 `request()` 会合并为同一个动画帧。每帧最多取出 `maxItemsPerFrame` 条，再由业务更新自己
+拥有的 Cesium 对象并请求重绘。
+
+```ts
+import {
+  DataPipeline,
+  DataPipelineFrameScheduler,
+  DataPipelineMessageAdapter,
+} from '@yanbobo/gis-sdk/core';
+
+const updates = new DataPipeline<PositionUpdate>({
+  keyBy: (value) => value.id,
+  maxQueueItems: 2_000,
+  coalesce: 'latest',
+});
+
+const scheduler = new DataPipelineFrameScheduler({
+  pipeline: updates,
+  maxItemsPerFrame: 200,
+  onBatch(values) {
+    for (const value of values) {
+      applyPositionUpdate(value);
+    }
+    map.raw.viewer.scene.requestRender();
+  },
+});
+
+const input = new DataPipelineMessageAdapter({ source: worker, pipeline: updates, decode });
+input.events.on('message:accepted', () => scheduler.request());
+input.start();
+
+// 页面或图层销毁时，调度器只取消自己的回调，不关闭调用方管线或 Worker。
+scheduler.dispose();
+input.dispose();
+worker.terminate();
+updates.close();
+```
+
+| 配置/成员          | 类型                                        | 默认值/效果                                                          |
+| ------------------ | ------------------------------------------- | -------------------------------------------------------------------- |
+| `pipeline`         | `DataPipeline<T>`                           | 必填；每帧从该调用方拥有的管线读取一批数据                           |
+| `onBatch(values)`  | `(readonly T[]) => void`                    | 必填；在主线程处理已取出的批次，通常在这里调用 Cesium 公共 API       |
+| `maxItemsPerFrame` | `number`                                    | `200`；正安全整数，限制单帧交给业务回调的最大条数                    |
+| `clock`            | `DataPipelineFrameClock`                    | 浏览器动画帧；可为测试、SSR 或宿主环境提供 `request/cancel` 时钟     |
+| `request()`        | `boolean`                                   | 注册一帧返回 `true`；已有挂起帧时返回 `false` 且不会重复注册         |
+| `cancel()`         | `boolean`                                   | 取消尚未执行的帧，不读取管线数据；不存在挂起帧时返回 `false`         |
+| `dispose()`        | `void`                                      | 幂等取消挂起帧并永久关闭调度器；不关闭 `pipeline`、Worker 或渲染对象 |
+| `stats`            | `Readonly<DataPipelineFrameSchedulerStats>` | 冻结快照，含请求合并、实际帧数、已消费条数和失败次数                 |
+
+一帧成功处理后，如管线仍有值，调度器会自动注册下一帧；这避免单帧过量工作，同时不会在
+队列清空后持续空转。`onBatch()` 发生异常时触发 `frame:failed`，**不会**自动继续下一帧，
+由业务修复渲染状态后重新调用 `request()`。批次在进入 `onBatch()` 前已经从管线取出，
+因此它不是可回滚事务；需要重试时由业务在失败处理内重新入队。
+
+已释放调度器调用 `request()` 会抛出 `DATA_PIPELINE_FRAME_SCHEDULER_DISPOSED`。没有浏览器
+动画帧且未提供 `clock` 时会抛出可重试的 `DATA_PIPELINE_FRAME_SCHEDULER_UNAVAILABLE`；无效配置
+会抛出 `INVALID_DATA_PIPELINE_FRAME_SCHEDULER_CONFIG`。
 
 ## 创建参数
 
@@ -159,12 +223,12 @@ const pipeline = new DataPipeline({
 
 `close()` 后的 `push()`、`take()` 和 `clear()` 都会抛出 `DATA_PIPELINE_CLOSED`。在地图或图层拥有此对象时，应在其销毁流程中调用 `close()`，避免遗留未交付的业务数据。
 
-本 alpha 版本提供有界输入、合并、批量读取、统计快照，以及 Worker/MessagePort 的通用消息监听与转发。以下能力尚未发布：
+本 alpha 版本提供有界输入、合并、批量读取、统计快照、Worker/MessagePort 的通用消息监听与转发，以及每帧有界消费调度。以下能力尚未发布：
 
 - Worker 池、主线程降级、CSP / bundler Worker URL 适配；
 - WebSocket、SSE、CZML、二进制协议、GeoJSON 等专用协议 Adapter；
 - schema 校验、坐标/单位/时间标准化、时间排序和轨迹窗口；
 - Cesium Entity、Collection、Primitive、Model 或 3D Tiles 动态渲染器；
-- LOD、帧预算调度、诊断面板、性能阈值和公开压测结果。
+- 自动 LOD、诊断面板、性能阈值和公开压测结果。
 
 因此它不承诺任何数据规模或帧率。生产接入前应根据实际消息协议、设备数量、更新频率和目标浏览器建立压力测试。

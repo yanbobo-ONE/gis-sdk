@@ -6,6 +6,14 @@ export type {
   DataPipelineOverflow,
   DataPipelineStats,
 } from '../core/data-pipeline.js';
+export { DataPipelineFrameScheduler } from '../core/data-pipeline-frame-scheduler.js';
+export type {
+  DataPipelineFrameClock,
+  DataPipelineFrameSchedulerEventMap,
+  DataPipelineFrameSchedulerOptions,
+  DataPipelineFrameSchedulerState,
+  DataPipelineFrameSchedulerStats,
+} from '../core/data-pipeline-frame-scheduler.js';
 export { DataPipelineMessageAdapter } from '../core/data-pipeline-message-adapter.js';
 export type {
   DataPipelineMessageAdapterEventMap,

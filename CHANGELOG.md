@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.7
+
+### Minor Changes
+
+- 增加有界数据管线的帧预算调度器，支持请求合并、批量消费、取消和调度统计。
+
 ## 0.1.0-alpha.6
 
 ### Minor Changes
