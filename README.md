@@ -82,6 +82,10 @@ pnpm test
 pnpm build
 pnpm docs:build
 pnpm pack:check
+pnpm example:build
 ```
+
+`example:build` 会把当前 SDK 打成 `.tgz`，安装到隔离的 Vanilla 应用，复制 Cesium
+Workers、Assets 和 Widgets 后再执行 Vite 构建，避免示例误用仓库源码掩盖发布包问题。
 
 当前仓库使用 `UNLICENSED`，在明确开源或商业授权方案前不得把源码或 npm 包视为开放许可证软件。

@@ -5,6 +5,7 @@
 node_modules/
 dist/
 coverage/
+.tmp/
 docs/public/api/
 .vitepress/cache/
 docs/.vitepress/cache/

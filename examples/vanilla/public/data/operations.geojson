@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North command point",
+        "status": "ACTIVE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [116.397, 39.908]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Observation area",
+        "status": "READY"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [116.08, 39.72],
+            [116.68, 39.72],
+            [116.68, 40.08],
+            [116.08, 40.08],
+            [116.08, 39.72]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 node_modules
 dist
 coverage
+.tmp
 docs/api
 docs/public/api
 docs/.vitepress/cache

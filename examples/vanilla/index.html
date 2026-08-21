@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090d0c" />
+    <title>gis-sdk Vanilla 验收台</title>
+  </head>
+  <body>
+    <main class="workspace">
+      <section class="map-stage" aria-label="Cesium 地图">
+        <div id="map"></div>
+        <div class="map-badge">
+          <span class="signal" aria-hidden="true"></span>
+          <span>Cesium 1.144</span>
+        </div>
+      </section>
+
+      <aside class="control-panel" aria-label="SDK 验收控制台">
+        <header class="panel-header">
+          <div>
+            <p class="eyebrow">PACKAGE CONSUMER</p>
+            <h1>gis-sdk 验收台</h1>
+          </div>
+          <span id="runtime-state" class="runtime-state" data-state="idle">idle</span>
+        </header>
+
+        <section class="summary" aria-label="运行摘要">
+          <div><span>图层</span><strong id="layer-count">0</strong></div>
+          <div><span>数据版本</span><strong id="data-revision">0</strong></div>
+          <div><span>WMS alpha</span><strong id="opacity-value">0.72</strong></div>
+        </section>
+
+        <section class="control-section">
+          <div class="section-heading">
+            <div>
+              <p class="section-label">GEOJSON</p>
+              <h2>业务要素</h2>
+            </div>
+            <label class="switch-control">
+              <input id="geojson-visible" type="checkbox" checked />
+              <span>显示</span>
+            </label>
+          </div>
+          <button id="replace-geojson" type="button">替换为实时数据</button>
+        </section>
+
+        <section class="control-section">
+          <div class="section-heading">
+            <div>
+              <p class="section-label">WMS / GEOSERVER</p>
+              <h2>服务端影像</h2>
+            </div>
+            <label class="switch-control">
+              <input id="wms-filter" type="checkbox" />
+              <span>ACTIVE</span>
+            </label>
+          </div>
+          <label class="range-control" for="wms-opacity">
+            <span>透明度</span>
+            <input id="wms-opacity" type="range" min="0" max="1" step="0.05" value="0.72" />
+          </label>
+          <button id="reload-wms" type="button">刷新 Provider</button>
+        </section>
+
+        <section class="control-section lifecycle-section">
+          <div>
+            <p class="section-label">LIFECYCLE</p>
+            <h2>资源生命周期</h2>
+          </div>
+          <button id="restart-map" class="secondary" type="button">销毁并重建地图</button>
+        </section>
+
+        <p id="operation-message" class="operation-message" role="status">正在创建地图...</p>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

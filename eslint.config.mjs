@@ -20,6 +20,7 @@ export default tseslint.config(
       'docs/.vitepress/dist/**',
       '.vitepress/cache/**',
       '.vitepress/dist/**',
+      '.tmp/**',
     ],
   },
   {
