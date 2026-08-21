@@ -1,6 +1,84 @@
 # API 使用参考
 
-本页按实际调用任务说明当前稳定出口。每个方法都列出参数、返回值、运行效果和常见异常；需要查看完整 TypeScript 结构时，使用[类型索引](/api/)。
+本页按实际调用任务说明当前已发布的 alpha 出口。每个方法都列出参数、返回值、运行效果和常见异常；需要查看完整 TypeScript 结构时，使用[类型索引](/api/)。功能是否已完成、何时变更，以[功能状态与路线图](/guide/capability-status)为准。
+
+## 从安装到运行
+
+下面的流程可以直接放进原生页面、Vue、React 或其他前端框架的组件生命周期中。示例使用空白地球，因此不需要 Cesium ion token；WMS 地址替换成实际服务地址即可显示业务数据。
+
+```bash
+pnpm add @yanbobo/gis-sdk@alpha
+pnpm exec gis-sdk-copy-assets public/cesium
+```
+
+```html
+<div id="map"></div>
+```
+
+```css
+#map {
+  width: 100%;
+  height: 100vh;
+}
+```
+
+```ts
+import { createMap } from '@yanbobo/gis-sdk/cesium';
+import { wmsFilter } from '@yanbobo/gis-sdk/layers';
+import '@yanbobo/gis-sdk/styles.css';
+
+const map = createMap({
+  container: 'map',
+  cesiumBaseUrl: '/cesium/',
+  scene: { mode: '3d' },
+});
+
+const offError = map.events.on('map:error', ({ error }) => {
+  console.error(error.code, error.operation, error.retryable);
+});
+
+const areas = await map.layers.add({
+  id: 'areas',
+  type: 'geojson',
+  data: '/data/areas.geojson',
+  style: { fill: '#249b6a66', stroke: '#dce7e1', strokeWidth: 2 },
+});
+
+const roads = await map.layers.add({
+  id: 'roads',
+  type: 'wms',
+  url: 'https://maps.example.com/geoserver/wms',
+  layers: 'city:roads',
+  filter: wmsFilter.eq('status', 'OPEN'),
+});
+
+roads.setOpacity(0.65);
+await areas.setData('/data/areas-next.geojson');
+
+const observer = new ResizeObserver(() => map.resize());
+observer.observe(document.querySelector('#map')!);
+
+// 在组件卸载、路由离开或场景切换时调用。
+async function disposeMap() {
+  offError();
+  observer.disconnect();
+  await map.destroy();
+}
+```
+
+运行效果：创建一个不带在线默认底图的 Cesium Viewer，加入一个 GeoJSON 数据源和一个 WMS 影像图层。`setOpacity()` 即时更新影像透明度，`setData()` 成功后才替换旧 GeoJSON；销毁时会取消加载任务、清理图层和 Viewer。
+
+## 当前已发布与未发布 API
+
+| 范围                                                        | 状态                        | 应使用的入口                                                      |
+| ----------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| 地图生命周期与事件                                          | 可用                        | `createMap`、`map.resize`、`map.destroy`、`map.events`            |
+| GeoJSON 与 WMS 图层                                         | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter` |
+| Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                  |
+| 影像底图、地形、3D Tiles、模型、动态实体                    | 未发布                      | 没有对应 SDK 方法                                                 |
+| Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                 |
+
+不要根据规划名称猜测调用方式。后续版本完成能力后，会在本页新增真实导出、参数表、运行效果和最小示例，同时在[功能状态与路线图](/guide/capability-status)记录版本。
 
 ## createMap(options)
 
@@ -42,6 +120,8 @@ const map = createMap({
 - `INVALID_CONTAINER`：容器字符串为空。
 - `CESIUM_BASE_URL_CONFLICT`：已有地图使用了其他静态资源根路径。
 - Cesium Viewer 构造产生的原始错误，例如容器元素不存在或 WebGL 不可用。
+
+创建成功后的实际效果是：Viewer 已绑定到容器，`map.layers` 可以立即使用；但网络图层尚未被添加。`cesiumBaseUrl` 与 `gis-sdk-copy-assets public/cesium` 的目标目录对应，最终部署时应确保 `/cesium/Workers`、`/cesium/Assets`、`/cesium/ThirdParty` 和 `/cesium/Widgets` 都可访问。
 
 ## 地图实例
 
@@ -320,3 +400,14 @@ map.raw.viewer.scene.requestRender();
 `raw.viewer` 是 Cesium 原生 `Viewer`，用于 SDK 尚未覆盖的高级能力。只使用 Cesium 文档中的公共成员；访问 `_layers`、`_root`、`_materialCache` 等私有字段不属于 SDK 兼容承诺。
 
 不要自行移除由 `map.layers` 创建的 `dataSources` 或 `imageryLayers`，否则 SDK 无法保证状态和资源清理。业务自行添加到 Viewer 的对象，也必须由业务自行释放。
+
+## 尚未提供的 SDK 方法
+
+以下领域处于规划中，当前包没有 `map.camera`、`map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `3dtiles`、`model`、`xyz`、`wmts`、`terrain` 或动态数据图层类型：
+
+- 影像底图、地形、3D Tiles、glTF/3D 模型和动态实体；
+- Worker 数据解析、任务队列、流式数据更新、LOD 与 Primitive/Collection 大数据渲染；
+- 绘制编辑、自定义材质、空间分析、插件机制和诊断面板；
+- 官方 Vue / React 绑定层、旧项目兼容适配器与浏览器性能基线。
+
+这些能力临时只能通过 `map.raw.viewer` 使用 Cesium 公共 API，资源创建方必须自行维护销毁。新增稳定封装后，本节会替换为具体方法说明，而不是保留模糊的“已支持”表述。

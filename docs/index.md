@@ -71,7 +71,7 @@ roads.setOpacity(0.65);
 await map.destroy();
 ```
 
-继续阅读[快速开始](/guide/getting-started)，或直接查看带参数、返回值和异常说明的 [API 使用参考](/guide/api-reference)。自动生成的完整类型列表位于 [TypeScript 类型索引](/api/)。
+继续阅读[快速开始](/guide/getting-started)，或直接查看带参数、返回值、异常和完整流程的 [API 使用参考](/guide/api-reference)。自动生成的完整类型列表位于 [TypeScript 类型索引](/api/)；已完成与未完成能力以[功能状态与路线图](/guide/capability-status)为准。
 
 ## 能力状态
 
@@ -84,3 +84,5 @@ await map.destroy();
 | 影像/地形/3D Tiles | 规划中   | 当前可通过原生出口接入                   |
 | Worker/大数据管线  | 规划中   | 尚无吞吐量或数据规模承诺                 |
 | 材质/空间分析      | 规划中   | 尚未提供稳定 SDK 接口                    |
+
+规划中的能力没有公开调用方法。功能完成后会同时更新[功能状态与路线图](/guide/capability-status)、API 使用参考、README/npm 包页面和变更日志，并发布新的 alpha 版本。

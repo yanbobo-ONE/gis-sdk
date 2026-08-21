@@ -18,6 +18,7 @@ export default defineConfig({
     nav: [
       { text: '快速开始', link: '/guide/getting-started' },
       { text: 'API 使用', link: '/guide/api-reference' },
+      { text: '功能状态', link: '/guide/capability-status' },
       { text: '类型索引', link: '/api/' },
       { text: '变更日志', link: '/changelog' },
     ],
@@ -28,6 +29,7 @@ export default defineConfig({
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '导入与包体积', link: '/guide/imports' },
+            { text: '功能状态与路线图', link: '/guide/capability-status' },
           ],
         },
         {
@@ -52,6 +54,7 @@ export default defineConfig({
             { text: '概览', link: '/' },
             { text: '快速开始', link: '/guide/getting-started' },
             { text: 'API 使用参考', link: '/guide/api-reference' },
+            { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: '图层管理', link: '/guide/layers' },
             { text: 'TypeScript 类型索引', link: '/api/' },
           ],

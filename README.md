@@ -1,6 +1,6 @@
 # gis-sdk
 
-基于 Cesium 1.144 的框架无关 GIS SDK。项目当前处于 alpha 阶段，npm 包通过 `alpha` dist-tag 发布。
+基于 Cesium 1.144 的框架无关 GIS SDK。项目当前处于 alpha 阶段，npm 包通过 `alpha` dist-tag 发布；当前可安装版本以 npm 的 `alpha` 标签为准。
 
 当前首个可用切片提供：
 
@@ -27,7 +27,20 @@ pnpm add @yanbobo/gis-sdk@alpha
 pnpm exec gis-sdk-copy-assets public/cesium
 ```
 
-## 创建地图
+## 从安装到页面销毁
+
+页面需要一个有明确尺寸的容器，并且 Cesium 样式与静态资源路径必须同时配置：
+
+```html
+<div id="map"></div>
+```
+
+```css
+#map {
+  width: 100%;
+  height: 100vh;
+}
+```
 
 ```ts
 import { createMap } from '@yanbobo/gis-sdk/cesium';
@@ -39,28 +52,38 @@ const map = createMap({
   scene: { mode: '3d' },
 });
 
-map.events.on('map:error', ({ error }) => {
-  console.error(error.code, error);
-});
-
 const roads = await map.layers.add({
   id: 'roads',
   type: 'wms',
-  url: 'https://maps.example/geoserver/wms',
+  url: 'https://maps.example.com/geoserver/wms',
   layers: 'city:roads',
+  opacity: 0.7,
+});
+
+// 立即改变已加入场景的影像透明度，不会重建服务提供器。
+roads.setOpacity(0.65);
+
+// 容器尺寸变化时让 Cesium 重新计算画布大小。
+const observer = new ResizeObserver(() => map.resize());
+observer.observe(document.querySelector('#map')!);
+
+// 监听可恢复的 SDK 错误；监听函数返回取消订阅函数。
+const offError = map.events.on('map:error', ({ error }) => {
+  console.error(error.code, error.operation, error.retryable);
 });
 
 // 高级需求可受控访问 Cesium 原生对象
 map.raw.viewer.scene.requestRender();
+
+// 在组件卸载、路由离开或场景切换时调用，释放图层、请求、监听器和 Viewer。
+async function disposeMap() {
+  offError();
+  observer.disconnect();
+  await map.destroy();
+}
 ```
 
-应用销毁页面或切换 GIS 场景时必须释放实例：
-
-```ts
-await map.destroy();
-```
-
-`destroy()` 支持并发和重复调用，不会重复销毁底层 `Viewer`。
+`destroy()` 支持并发和重复调用，不会重复销毁底层 `Viewer`。创建地图时，`cesiumBaseUrl` 必须与 `gis-sdk-copy-assets` 的目标目录一致；首个 Viewer 创建后，同一页面进程不能切换到另一个基址。
 
 ## 文档
 
@@ -68,10 +91,23 @@ await map.destroy();
 - [导入与包体积](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/imports.md)
 - [API 使用参考](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/api-reference.md)
 - [图层管理](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/layers.md)
+- [功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)
 - [TypeScript 类型索引](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
 - [变更日志](https://github.com/yanbobo-ONE/gis-sdk/blob/main/CHANGELOG.md)
 
-完整架构目标还包括海量数据管线、Worker 计算、材质、分析和诊断；这些能力按版本逐步交付，不虚构尚未实现的能力。
+## 当前能力与未完成项
+
+| 能力                                              | 状态                   | 现在怎样使用                                                                                           |
+| ------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| 地图创建、尺寸更新、事件与销毁                    | 可用                   | `createMap()`、`map.resize()`、`map.events`、`map.destroy()`                                           |
+| GeoJSON                                           | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                            |
+| WMS / GeoServer                                   | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()` |
+| Cesium 公共原生能力                               | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                       |
+| XYZ/WMTS、地形、3D Tiles、模型                    | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
+| Worker 数据管线、动态流数据、Primitive 大数据渲染 | 未完成                 | 当前没有吞吐量、数据规模或性能承诺                                                                     |
+| 绘制编辑、自定义材质、空间分析、插件与诊断        | 未完成                 | 当前没有稳定公开 API                                                                                   |
+
+功能完成后会在[功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)将状态改为“可用”，补充可运行示例、API 参数页和变更日志，并以新的 npm alpha 版本发布。规划能力不是已发布 API，不能按名称直接调用。
 
 ## 本地开发
 

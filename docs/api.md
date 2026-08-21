@@ -6,14 +6,16 @@
 
 ## 当前入口
 
-| 接口                   | 用途                | 稳定性    |
-| ---------------------- | ------------------- | --------- |
-| `createMap(options)`   | 创建 Cesium 地图    | pre-alpha |
-| `GisMap` / `CesiumMap` | 地图实例与生命周期  | pre-alpha |
-| `EventHub`             | 类型化事件订阅      | pre-alpha |
-| `GisError`             | 结构化错误处理      | pre-alpha |
-| `map.layers`           | GeoJSON 与 WMS 图层 | pre-alpha |
-| `wmsFilter`            | 类型化 CQL 过滤     | pre-alpha |
-| `map.raw.viewer`       | Cesium 原生高级能力 | advanced  |
+| 接口                   | 用途                | 稳定性     |
+| ---------------------- | ------------------- | ---------- |
+| `createMap(options)`   | 创建 Cesium 地图    | alpha 可用 |
+| `GisMap` / `CesiumMap` | 地图实例与生命周期  | alpha 可用 |
+| `EventHub`             | 类型化事件订阅      | alpha 可用 |
+| `GisError`             | 结构化错误处理      | alpha 可用 |
+| `map.layers`           | GeoJSON 与 WMS 图层 | alpha 可用 |
+| `wmsFilter`            | 类型化 CQL 过滤     | alpha 可用 |
+| `map.raw.viewer`       | Cesium 原生高级能力 | advanced   |
 
 包根不会导出 `MapRuntime`、`MapEngineAdapter`、`createMapWithFactory` 或归一化辅助函数。业务代码只应依赖本页列出的稳定出口。
+
+未发布能力及后续完成记录见[功能状态与路线图](/guide/capability-status)。

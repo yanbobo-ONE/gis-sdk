@@ -7,20 +7,20 @@
 
 ## 1. 一页结论
 
-HGD 当前 GIS 不应继续作为 `hgd-II-web` 内的一个大单例类原地扩写，也不应照搬 Phersim 的仿真页面实现。正确方向是：
+现有业务 GIS 不应继续作为业务工程中的大单例类原地扩写，也不应照搬特定仿真页面实现。正确方向是：
 
 1. 将 GIS 从业务项目中拆成一个框架无关、TypeScript 类型完整、可独立发布的 Cesium SDK。
-2. 保留 HGD “通过封装方法降低团队研发成本”的优点，但把 60 多个平铺方法收敛为少量深模块：地图、图层、交互、绘制、分析、材质和诊断。
+2. 保留成熟业务项目通过封装方法降低团队研发成本的优点，但把大量平铺方法收敛为少量深模块：地图、图层、交互、绘制、分析、材质和诊断。
 3. 默认提供开箱即用的完整包，业务方 5 分钟内创建地图；同时提供插件和 Cesium 高级出口，避免封装限制底层能力。
 4. 把数据管线设计为 SDK 内建能力。Web Worker 只是其中的计算环节，完整管线还包括接入、校验、标准化、排序、去重、合并、背压、调度、渲染策略和指标。
 5. 根据数据规模与交互需求自动选择 Entity、Collection、Primitive、Model 或 3D Tiles；默认不让业务方承担底层选型，但允许高级用户显式覆盖。
-6. 新业务只依赖通用 GIS 数据契约。HGD、Phersim 和其他项目通过 Adapter 把各自业务对象转换为通用要素，SDK 核心不认识 `SimulationRuntimePlatform` 等仿真类型。
+6. 新业务只依赖通用 GIS 数据契约。业务项目通过 Adapter 把各自业务对象转换为通用要素，SDK 核心不认识任何项目专有类型。
 7. 文档产品必须和 SDK 同期交付，至少包含指南、类型化接口参考、在线示例、可运行代码、迁移手册、版本兼容表和性能选型指南，不能只依靠源码注释。
 
 最终推荐形态：
 
 ```text
-业务项目（HGD / Phersim / 其他 GIS）
+业务项目（已有项目 / 其他 GIS）
               │
        业务 Adapter（薄）
               │
@@ -35,9 +35,9 @@ HGD 当前 GIS 不应继续作为 `hgd-II-web` 内的一个大单例类原地扩
 
 ## 2. 背景与现状
 
-### 2.1 HGD 当前可保留的价值
+### 2.1 已有业务 GIS 可保留的价值
 
-HGD 已经验证了 SDK 化调用对业务团队有价值：业务页面通过 `GISAPI.getAPI()`、`showSatellite()`、`startDraw()`、`visibilityAnalysis()` 等方法使用 GIS，不需要每个研发都理解 Cesium 的全部细节。
+已有业务 GIS 已经验证了 SDK 化调用对业务团队有价值：业务页面通过稳定的方法调用使用 GIS，不需要每个研发都理解 Cesium 的全部细节。
 
 应保留的能力包括：
 
@@ -52,29 +52,29 @@ HGD 已经验证了 SDK 化调用对业务团队有价值：业务页面通过 `
 
 ### 2.2 当前实现的主要问题
 
-现场代码表现出四类版本来源和运行耦合：
+现有实现普遍存在版本来源和运行耦合问题：
 
-- 当前 `package-lock.json` 声明 Cesium `^1.132.0`，但 `package.json` 未声明 Cesium，依赖状态不一致；
-- 实际运行库位于 `public/static/third/CesiumUnminified`，源码映射显示版本为 Cesium 1.86；
-- `Core`/`LibManager` 动态加载全局脚本，业务实现直接依赖全局 `Cesium`、`BaseMapConfig`、`window` 和 DOM；
-- `GISAPI`、`LayerManager`、Helper 均使用静态单例，无法自然支持多地图、隔离测试和按实例销毁。
+- 依赖声明与实际运行时资源可能不一致；
+- 静态资源、全局脚本和构建产物混合管理，升级边界不清；
+- 业务实现直接依赖全局 `Cesium`、配置对象、`window` 和 DOM；
+- 地图入口、图层管理与辅助逻辑使用静态单例，无法自然支持多地图、隔离测试和按实例销毁。
 
 其他核心问题：
 
 | 问题 | 当前表现 | 影响 |
 | --- | --- | --- |
-| 接口过宽 | `GISAPI` 约 836 行、约 63 个公开方法，大量 `showX/closeX/setXCallback` | 学习成本持续增长，命名和行为难以统一 |
+| 接口过宽 | 单一全局入口暴露大量 `showX/closeX/setXCallback` 一类方法 | 学习成本持续增长，命名和行为难以统一 |
 | 类型缺失 | JavaScript 对象、注释字段和运行时隐式约定 | 错误到运行时才暴露，IDE 无法可靠提示 |
 | 生命周期不确定 | 全局单例、轮询等待回调、监听器散落 | 多项目、微前端、多 Viewer 和销毁重建风险高 |
 | 私有接口依赖 | `_materialCache`、`_root`、`readyPromise` 等旧式或私有用法 | Cesium 升级容易破坏 |
 | 渲染策略混用 | Entity、Primitive、Model 由各文件自行决定 | 缺少统一阈值、降级和性能预算 |
 | 数据管线缺失 | 业务数据直接进入渲染层 | 大量实时数据下无法统一排序、去重、背压和合并 |
-| 业务耦合 | “卫星”等领域语义进入底层 SDK | 其他项目复用时被迫理解 HGD 业务模型 |
+| 业务耦合 | 领域语义进入底层 SDK | 其他项目复用时被迫理解特定业务模型 |
 | 文档不可交付 | 主要依赖源码 JSDoc 和旧 demo | 新项目无法按版本、按示例自助接入 |
 
-### 2.3 Phersim 可借鉴但不能直接复用的部分
+### 2.3 可借鉴但不能直接复用的部分
 
-Phersim 值得吸收的设计包括：
+已有仿真项目值得吸收的设计包括：
 
 - TypeScript 领域类型；
 - Worker 内 16ms 批次、按实体排队、排序和合并；
@@ -89,13 +89,13 @@ Phersim 值得吸收的设计包括：
 - 类型和流程依赖仿真运行时；
 - 对普通 GIS 项目而言接口不通用。
 
-因此本项目的方向是：保留 HGD 的通用调用体验，吸收 Phersim 的类型和实时数据管线，而不是二选一。
+因此本项目的方向是：保留成熟封装的通用调用体验，吸收类型化实时数据管线，而不是复制任一现有实现。
 
 ## 3. 产品定位
 
 ### 3.1 产品愿景
 
-提供一套“安装即可创建地图、简单需求无需懂 Cesium、复杂需求仍可深入底层”的企业级三维 GIS SDK，使 HGD、仿真平台和新 GIS 项目共用同一套地图能力、数据契约、性能策略和文档。
+提供一套“安装即可创建地图、简单需求无需懂 Cesium、复杂需求仍可深入底层”的企业级三维 GIS SDK，使不同业务项目共用同一套地图能力、数据契约、性能策略和文档。
 
 ### 3.2 目标用户
 
@@ -110,8 +110,8 @@ Phersim 值得吸收的设计包括：
 ### 3.3 核心使用场景
 
 1. 新项目通过 npm 安装，在 5 分钟内显示底图、地形和一个业务图层。
-2. HGD 逐步从旧 `GISAPI` 迁移，新旧接口可在过渡期共存。
-3. Phersim 将仿真消息转换成通用动态要素，由 SDK 负责合并、LOD 和渲染。
+2. 既有项目逐步从旧接口迁移，新旧接口可在过渡期共存。
+3. 仿真业务将消息转换成通用动态要素，由 SDK 负责合并、LOD 和渲染。
 4. 普通项目加载 GeoJSON、CZML、影像、地形、模型和 3D Tiles。
 5. GIS 研发注册自定义材质或新图层，而不修改 SDK 核心代码。
 6. 大数据场景根据规模自动选择渲染后端，并能看到为什么选择、是否降级和当前性能。
@@ -129,12 +129,12 @@ Phersim 值得吸收的设计包括：
 - 可升级：业务代码不直接依赖 Cesium 私有成员，Cesium 版本只在引擎 Adapter 中处理。
 - 大数据：内建 Worker 数据管线、批处理、背压、LOD 和渲染策略选择。
 - 可诊断：能查询图层规模、渲染策略、队列水位、丢弃/合并数、加载阶段和帧窗口。
-- 可迁移：提供 HGD 旧接口兼容层和逐项迁移文档。
+- 可迁移：提供旧接口兼容层和逐项迁移文档。
 - 有文档：文档站、接口参考、示例和版本文档与 SDK 同版本发布。
 
 ### 4.2 明确不做
 
-- 不把 HGD 或 Phersim 的完整业务模型放进 SDK 核心。
+- 不把任何项目的完整业务模型放进 SDK 核心。
 - 不承诺“任意数量数据自动高帧率”；超大数据必须采用分块、瓦片或服务端预处理。
 - 不重新实现 Cesium 的地球、坐标、瓦片和 WebGL 引擎。
 - 不把所有 Cesium 类重新包一层；浅透传封装不产生价值。
@@ -174,7 +174,7 @@ SDK 核心只理解 `Feature`、`Layer`、`Position`、`DynamicObject`、`Covera
 
 ```mermaid
 flowchart TD
-  A["业务应用"] --> B["HGD / Phersim / 自定义 Adapter"]
+  A["业务应用"] --> B["业务 Adapter / 自定义 Adapter"]
   B --> C["SDK Facade"]
   C --> D["Map Runtime"]
   C --> E["Layer Runtime"]
@@ -216,7 +216,7 @@ flowchart TD
 
 ## 7. 包与仓库设计
 
-建议建立独立 monorepo，不直接在 `hgd-II-web/src/components` 内开发新内核。
+建议建立独立 monorepo，不直接在业务应用目录内开发新内核。
 
 ```text
 gis-sdk/
@@ -225,7 +225,7 @@ gis-sdk/
     cesium/            # Cesium Adapter 与具体渲染实现
     sdk/               # 开箱即用完整预设包
     vue/               # Vue 3 Adapter，不进入 core
-    legacy-hgd/        # HGD 旧 GISAPI 兼容层
+    legacy/            # 旧接口兼容层
     devtools/          # 可选诊断面板
   plugins/
     materials-standard/
@@ -249,7 +249,7 @@ gis-sdk/
 | `@yanbobo/gis-core` | 高级集成、非 Cesium 契约和测试 | 不依赖框架、不暴露 Cesium 类型 |
 | `@yanbobo/gis-cesium` | 引擎 Adapter | 以精确兼容范围约束 `cesium`，防止重复实例 |
 | `@yanbobo/gis-vue` | Vue 3 组件和 composable | 仅依赖 SDK 公开接口 |
-| `@yanbobo/gis-legacy-hgd` | 旧 HGD 方法适配 | 只用于迁移，明确废弃周期 |
+| `@yanbobo/gis-legacy` | 旧接口方法适配 | 只用于迁移，明确废弃周期 |
 | `@yanbobo/gis-devtools` | 开发环境诊断 | 生产可完全不打包 |
 
 一期不建议把每个小能力都拆成 npm 包。包过多会增加版本、依赖和文档成本。只有确实存在按需安装、独立演进或两个实现的模块才拆包。
@@ -489,7 +489,7 @@ interface DynamicObjectFeature<P = Record<string, unknown>> extends GisFeature<P
 }
 ```
 
-`SimulationRuntimePlatform`、HGD 卫星数据或其他业务对象均由项目 Adapter 转成此类型。SDK 不反向依赖业务类型。
+项目专有的动态对象或其他业务对象均由项目 Adapter 转成此类型。SDK 不反向依赖业务类型。
 
 ### 9.3 覆盖区和关系
 
@@ -532,7 +532,7 @@ Worker 负责适合离开主线程的 CPU 工作：解析、校验、转换、�
 - JSON 字符串或二进制消息；
 - WebSocket/SSE 流；
 - 用户提供的 `AsyncIterable`；
-- HGD legacy 数据 Adapter。
+- 旧接口数据 Adapter。
 
 后续可选：MVT、FlatGeobuf、GeoParquet/Arrow、专用仿真二进制协议。
 
@@ -821,7 +821,7 @@ interface GisPlugin {
 
 ### 16.1 Cesium 版本策略
 
-截至 2026-08-17，[Cesium 官方 Releases](https://github.com/CesiumGS/cesium/releases)将 [1.144](https://github.com/CesiumGS/cesium/releases/tag/1.144)（2026-08-03）列为最新稳定发布；HGD 当前实际静态运行库仍为 1.86。这不是普通小版本更新，而是跨越大量异步接口、构建要求和渲染能力变化的迁移。M0 应以 1.144 作为首个候选基线完成 PoC，最终版本以 PoC 结论精确锁定，不在业务项目中使用浮动的 `latest`。
+截至 2026-08-17，[Cesium 官方 Releases](https://github.com/CesiumGS/cesium/releases)将 [1.144](https://github.com/CesiumGS/cesium/releases/tag/1.144)（2026-08-03）列为最新稳定发布。跨大版本迁移会涉及异步接口、构建要求和渲染能力变化；M0 应以候选版本完成 PoC，最终版本以 PoC 结论精确锁定，不在业务项目中使用浮动的 `latest`。
 
 - `@yanbobo/gis-sdk` 使用单一、精确、经过测试的 Cesium 版本，不使用无人负责的宽泛 `^` 自动升级；
 - SDK 发布说明明确 Cesium 版本；
@@ -859,7 +859,7 @@ interface GisPlugin {
 
 构建环境也要进入兼容矩阵。Cesium 1.141 已将最低 Node.js 构建版本提升到 22，因此 SDK CI、文档站、示例和使用方构建机必须统一验证 Node 22；这不等于浏览器运行时需要 Node。
 
-React 不应进入 core。可提供官方示例或后续 Adapter。Vue 2 项目可直接调用框架无关 SDK，legacy 包只解决旧 HGD 接口，不把 Vue 2 依赖带入核心。
+React 不应进入 core。可提供官方示例或后续 Adapter。旧版 Vue 项目可直接调用框架无关 SDK，legacy 包只解决旧接口，不把框架依赖带入核心。
 
 ### 16.4 两种交付形态
 
@@ -930,11 +930,11 @@ const snapshot = map.diagnostics.snapshot()
 - 每个配置字段、方法、事件和错误是什么；
 - 代码能否直接运行；
 - 当前版本支持哪些 Cesium/浏览器/构建工具；
-- 如何从 HGD 旧接口迁移；
+- 如何从旧接口迁移；
 - 如何开发插件和自定义材质；
 - 大数据性能达不到时先看什么。
 
-用户给出的 [`addAttribute`](http://mars3d.cn/api/cesium/global.html#addAttribute) 页面只适合借鉴“稳定锚点 + 源码跳转 + 底层文档互链”。调研确认该符号是 Cesium `VertexArray.js` 的文件内辅助函数，并非公共导出，而且页面缺少参数、返回值、稳定性和示例。HGD 文档不能照搬这种“扫描到什么就发布什么”的方式，公共接口参考必须只从 npm 包的 public exports 生成。
+用户给出的 [`addAttribute`](http://mars3d.cn/api/cesium/global.html#addAttribute) 页面只适合借鉴“稳定锚点 + 源码跳转 + 底层文档互链”。调研确认该符号是 Cesium `VertexArray.js` 的文件内辅助函数，并非公共导出，而且页面缺少参数、返回值、稳定性和示例。SDK 文档不能照搬这种“扫描到什么就发布什么”的方式，公共接口参考必须只从 npm 包的 public exports 生成。
 
 ### 18.2 文档技术方案
 
@@ -981,7 +981,7 @@ const snapshot = map.diagnostics.snapshot()
 │  ├─ 材质
 │  └─ 分析
 ├─ 迁移
-│  ├─ HGD GISAPI -> SDK 2.0
+│  ├─ 旧 GIS 接口 -> SDK 2.0
 │  ├─ Cesium 1.86 -> SDK 基线
 │  └─ 版本升级指南
 └─ 质量与支持
@@ -1032,56 +1032,52 @@ const snapshot = map.diagnostics.snapshot()
 - 未更新兼容矩阵和 Changelog；
 - 破坏性变更没有迁移说明。
 
-## 19. HGD 迁移方案
+## 19. 旧项目迁移方案
 
 ### 19.1 迁移原则
 
 - 新 SDK 建在独立目录/仓库，旧实现只修阻塞迁移的问题；
 - 先实现 compatibility Adapter，再按页面迁移；
-- 新功能只进入 SDK 2.0，不再扩写旧 `GISAPI`；
+- 新功能只进入 SDK 2.0，不再扩写旧全局接口；
 - 兼容层有明确废弃日期和调用告警；
 - 每迁移一类能力，使用旧数据回放和视觉基线做对照。
 
 ### 19.2 旧新接口映射
 
-| 旧 HGD | SDK 2.0 | 说明 |
+| 旧接口模式 | SDK 2.0 | 说明 |
 | --- | --- | --- |
-| `GISAPI.getAPI()` | `await createMap(config)` | 从全局单例改为实例 |
-| `GISAPI.destroyAPI()` | `await map.destroy()` | 实例级幂等销毁 |
-| `DestroyViewer()` | `map.raw.cesium.viewer` | 修正命名，仅高级使用 |
-| `showX()/closeX()` | `map.layers.add()` / `handle.dispose()` | 专题图层统一生命周期 |
-| `showSatellite()` | 动态对象图层 `setData()` | 去除卫星领域耦合 |
-| `add/update/deleteSatelliteData()` | `layer.apply()` | 统一增量协议 |
-| `setXCallBack()` | `map.events.on()` | 返回取消订阅函数 |
-| `startDraw/endDraw()` | `map.drawing.start()` + session | 明确状态机 |
-| `visibilityAnalysis()` | `map.analysis.run('line-of-sight')` | 类型化输入输出 |
-| `getDistance()` | `map.analysis.run('distance')` | 明确空间/地表距离 |
-| `flyTo()` | `map.camera.flyTo()` | 支持 Promise 和 AbortSignal |
-| `getState/setState()` | `map.scene.getMode()/setMode()` | 使用明确枚举 |
-| `_materialCache` 注册 | `map.materials.register()` | 私有 Cesium 细节收口 |
-| `_root.transform` | Tileset 公共变换接口/隔离桥 | 禁止业务访问私有根节点 |
-| `createWorldTerrain()` | Cesium Adapter 内部使用 `createWorldTerrainAsync()` | 业务不感知 Cesium 异步升级 |
-| `new Cesium3DTileset()` + `readyPromise` | Adapter 内部使用 `Cesium3DTileset.fromUrl()` | 适配新版异步工厂 |
-| `Model.fromGltf()` | Adapter 内部使用 `Model.fromGltfAsync()` | 适配新版异步工厂 |
+| 全局地图入口 | `await createMap(config)` | 从全局单例改为实例 |
+| 全局销毁入口 | `await map.destroy()` | 实例级幂等销毁 |
+| 专题显示与隐藏方法 | `map.layers.add()` / `handle.dispose()` | 图层统一生命周期 |
+| 动态业务数据方法 | `layer.apply()` | 统一增量协议 |
+| 回调注册方法 | `map.events.on()` | 返回取消订阅函数 |
+| 绘制方法 | `map.drawing.start()` + session | 明确状态机 |
+| 空间分析方法 | `map.analysis.run()` | 类型化输入输出 |
+| 视角控制方法 | `map.camera.flyTo()` | 支持 Promise 和 AbortSignal |
+| 场景状态方法 | `map.scene.getMode()/setMode()` | 使用明确枚举 |
+| 私有材质缓存注册 | `map.materials.register()` | 私有 Cesium 细节收口 |
+| 私有 Tiles 变换 | Tileset 公共变换接口/隔离桥 | 禁止业务访问私有根节点 |
+| 旧地形工厂 | Cesium Adapter 内部异步工厂 | 业务不感知 Cesium 异步升级 |
+| 旧 Tiles 与模型工厂 | Cesium Adapter 内部异步工厂 | 适配新版异步工厂 |
 
 ### 19.3 兼容层示例
 
 ```ts
-import { createLegacyGisApi } from '@yanbobo/gis-legacy-hgd'
+import { createLegacyGisApi } from '@yanbobo/gis-legacy'
 
 const legacy = await createLegacyGisApi({
   map,
   warn: message => migrationLogger.warn(message)
 })
 
-legacy.showSatellite(oldData, callback)
+legacy.showDynamicObject(oldData, callback)
 ```
 
 兼容层只做：参数转换、调用新接口、返回旧格式和废弃告警。不能复制一套渲染实现，否则迁移会形成永久双轨。
 
-### 19.4 Phersim 接入方式
+### 19.4 仿真项目接入方式
 
-Phersim 不直接搬入 SDK。新建仿真 Adapter：
+仿真项目不直接搬入 SDK。新建仿真 Adapter：
 
 ```ts
 const adapter = createSimulationGisAdapter({
@@ -1095,8 +1091,8 @@ adapter.accept(simulationEnvelope)
 
 Adapter 负责：
 
-- `SimulationRuntimePlatform` -> `DynamicObjectFeature`；
-- `SimulationCoverageState` -> `CoverageFeature`；
+- 平台运行状态 -> `DynamicObjectFeature`；
+- 覆盖区状态 -> `CoverageFeature`；
 - 仿真消息类型 -> 通用 `FeatureChange`；
 - 仿真时钟 -> SDK 时间戳。
 
@@ -1113,7 +1109,7 @@ Adapter 负责：
 - 冻结 Cesium 候选版本和浏览器矩阵；
 - 验证 Vite、Webpack/离线资产、Worker、3D Tiles、`Model.fromGltfAsync`、材质方案和实验性 Buffer Primitive Collection；
 - 建立 5 个性能基准数据集；
-- 列出 HGD 私有 Cesium 调用和旧功能清单；
+- 列出旧项目中的私有 Cesium 调用和旧功能清单；
 - 形成 ADR：包结构、版本策略、公开接口和内部接口隔离。
 
 退出条件：关键技术无未验证阻塞项，基准可重复运行。
@@ -1141,7 +1137,7 @@ Adapter 负责：
 - 材质注册和标准材质；
 - 15 个以上示例。
 
-退出条件：HGD 核心视觉能力能用新 SDK 表达，禁止业务私有 Cesium 调用。
+退出条件：既有项目核心视觉能力能用新 SDK 表达，禁止业务私有 Cesium 调用。
 
 ### M3：数据管线和大数据（4-5 周）
 
@@ -1155,13 +1151,13 @@ Adapter 负责：
 
 退出条件：第 11.5 节性能目标达到或有经过批准的调整记录，不存在无界队列。
 
-### M4：分析、兼容层和 HGD 试点（3-4 周）
+### M4：分析、兼容层和旧项目试点（3-4 周）
 
 交付：
 
 - 标准分析工具；
-- `legacy-hgd` Adapter；
-- 选择 1-2 个 HGD 页面真实迁移；
+- `legacy` Adapter；
+- 选择 1-2 个既有页面真实迁移；
 - 新旧视觉、交互和数据回放对照；
 - 完整迁移文档。
 
@@ -1171,7 +1167,7 @@ Adapter 负责：
 
 交付：
 
-- Phersim 或第二 GIS 项目 Adapter PoC；
+- 第二个 GIS 项目 Adapter PoC；
 - npm 私库与离线包；
 - 30 个以上示例、版本化文档和 Changelog；
 - 安全、许可证、浏览器和回滚验收；
@@ -1207,7 +1203,7 @@ Adapter 负责：
 8. 3D Tiles 加载失败返回稳定错误，不访问 `_root`。
 9. Map 销毁后所有方法行为确定，重复销毁不报未知异常。
 10. 文档快速开始在全新 Vite 项目和离线示例中均可运行。
-11. HGD legacy 同一份输入在旧基线和新 SDK 中视觉/交互结果可对比。
+11. 旧接口适配层使用同一份输入时，旧基线和新 SDK 的视觉/交互结果可对比。
 12. 监控/诊断 Adapter 故障不影响地图功能。
 
 ### 21.3 发布门禁
@@ -1233,7 +1229,7 @@ Adapter 负责：
 
 ### 22.2 复用和质量
 
-- 1.0 发布前至少 HGD + 另一个项目真实接入；
+- 1.0 发布前至少两个不同项目真实接入；
 - 公共接口 TypeScript 覆盖率 100%；
 - 核心模块语句覆盖率建议 ≥ 85%，关键队列/生命周期分支 ≥ 95%；
 - 无已知 Cesium 私有接口泄漏到业务包；
@@ -1282,8 +1278,8 @@ Adapter 负责：
 1. 正式产品名、npm scope 和仓库归属；
 2. 首个 Cesium 稳定版本及升级节奏；
 3. 公司实际最低浏览器和 GPU 终端；
-4. 一期必须迁移的 HGD 页面和功能优先级；
-5. 第二个真实接入项目选择 Phersim 还是其他 GIS；
+4. 一期必须迁移的既有页面和功能优先级；
+5. 第二个真实接入项目的选择；
 6. 私有 npm、离线包和文档站部署位置；
 7. 一期性能基准机和真实数据集；
 8. 视域、坡度、风场等重型能力是否进入 1.0，还是作为后续插件；
@@ -1299,7 +1295,7 @@ SDK 1.0 只有同时满足以下条件才算“拿来就能用”：
 - 高级 GIS 研发能扩展图层、材质和分析，必要时可访问 Cesium 公共底层；
 - 大量静态和动态数据经过有界数据管线、自动渲染策略和 LOD；
 - Map/图层可重复创建销毁，无残留全局状态和资源；
-- HGD 至少一个真实页面完成迁移，第二个项目完成真实接入；
+- 至少一个既有页面完成迁移，第二个项目完成真实接入；
 - npm 和离线两种交付均通过空项目验收；
 - 文档站包含可运行快速开始、完整接口参考、30+ 示例、迁移和性能指南；
 - 兼容、性能、安全、许可证、升级和回滚都有可重复证据；
