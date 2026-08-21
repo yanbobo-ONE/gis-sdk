@@ -69,6 +69,7 @@ async function disposeMap() {
 运行效果：创建一个不带在线默认底图的 Cesium Viewer，加入一个 GeoJSON 数据源和一个 WMS 影像图层。`setOpacity()` 即时更新影像透明度，`setData()` 成功后才替换旧 GeoJSON；销毁时会取消加载任务、清理图层和 Viewer。
 
 如需初始化 XYZ 底图、切换地形或控制相机，请阅读[地图控制](/guide/map-controls)。
+动态更新的有界缓冲、同键合并与批量读取见[数据管线](/guide/data-pipeline)。
 
 ## 当前已发布与未发布 API
 
@@ -78,6 +79,7 @@ async function disposeMap() {
 | GeoJSON 与 WMS 图层                                         | 可用                        | `map.layers`、`GeoJsonLayerHandle`、`WmsLayerHandle`、`wmsFilter`    |
 | Cesium 原生公共能力                                         | 可用，但不纳入 SDK 封装承诺 | `map.raw.viewer`                                                     |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形                  | 可用                        | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain` |
+| 数据管线核心                                                | 可用                        | `DataPipeline`（从 `/core` 或包根导入）                              |
 | TMS/WMTS、3D Tiles、模型、动态实体                          | 未发布                      | 没有对应 SDK 方法                                                    |
 | Worker 管线、海量数据渲染、绘制、材质、空间分析、插件、诊断 | 未发布                      | 没有对应 SDK 方法                                                    |
 
@@ -409,10 +411,10 @@ map.raw.viewer.scene.requestRender();
 
 ## 尚未提供的 SDK 方法
 
-以下领域处于规划中，当前包没有 `map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `3dtiles`、`model`、`wmts` 或动态数据图层类型。`map.camera`、`map.basemap` 和 `map.terrain` 已发布，具体调用见[地图控制](/guide/map-controls)：
+以下领域处于规划中，当前包没有 `map.drawing`、`map.analysis`、`map.materials`、`map.diagnostics` 等公开入口，也没有 `3dtiles`、`model`、`wmts` 或动态数据图层类型。`map.camera`、`map.basemap`、`map.terrain` 和有界 `DataPipeline` 已发布，具体调用见[地图控制](/guide/map-controls)和[数据管线](/guide/data-pipeline)：
 
 - TMS/WMTS、单图、3D Tiles、glTF/3D 模型和动态实体；
-- Worker 数据解析、任务队列、流式数据更新、LOD 与 Primitive/Collection 大数据渲染；
+- Worker 数据解析、输入 Adapter、流式渲染、LOD 与 Primitive/Collection 大数据渲染；
 - 绘制编辑、自定义材质、空间分析、插件机制和诊断面板；
 - 官方 Vue / React 绑定层、旧项目兼容适配器与浏览器性能基线。
 

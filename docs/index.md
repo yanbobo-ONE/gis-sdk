@@ -10,7 +10,7 @@
 </div>
 
 ::: tip 当前可用范围
-当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形、GeoJSON、WMS/GeoServer、类型化 CQL 过滤和图层资源清理。Worker 数据管线、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
+当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形、GeoJSON、WMS/GeoServer、类型化 CQL 过滤、图层资源清理，以及有界数据缓冲与批处理。Worker 执行、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
 :::
 
 ## 为什么使用 gis-sdk
@@ -31,6 +31,10 @@
   <div>
     <strong>类型化能力句柄</strong>
     <p>GeoJSON 只暴露数据替换，WMS 只暴露透明度、样式与过滤，IDE 能直接提示正确方法。</p>
+  </div>
+  <div>
+    <strong>有界动态数据</strong>
+    <p>通过 DataPipeline 合并同一对象的高频更新，并用明确的容量策略避免输入积压无限增长。</p>
   </div>
   <div>
     <strong>可按需导入</strong>
@@ -82,8 +86,9 @@ await map.destroy();
 | WMS               | 可用     | 透明度、样式、类型化过滤、Provider 重载    |
 | 原生出口          | 可用     | `map.raw.viewer`，仅承诺 Cesium 公共接口   |
 | 相机/XYZ/地形     | 可用     | `map.camera`、`map.basemap`、`map.terrain` |
+| 数据管线核心      | 可用     | 有界更新、最新值合并、批量读取和统计       |
 | TMS/WMTS/3D Tiles | 规划中   | 当前可通过原生出口接入                     |
-| Worker/大数据管线 | 规划中   | 尚无吞吐量或数据规模承诺                   |
+| Worker/大数据渲染 | 规划中   | 尚无 Worker、渲染策略或性能承诺            |
 | 材质/空间分析     | 规划中   | 尚未提供稳定 SDK 接口                      |
 
 规划中的能力没有公开调用方法。功能完成后会同时更新[功能状态与路线图](/guide/capability-status)、API 使用参考、README/npm 包页面和变更日志，并发布新的 alpha 版本。

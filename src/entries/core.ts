@@ -1,4 +1,11 @@
 export type { GisMap, MapEventMap, MapState } from '../core/contracts.js';
+export { DataPipeline } from '../core/data-pipeline.js';
+export type {
+  DataPipelineCoalesce,
+  DataPipelineOptions,
+  DataPipelineOverflow,
+  DataPipelineStats,
+} from '../core/data-pipeline.js';
 export type {
   BasemapController,
   BasemapType,

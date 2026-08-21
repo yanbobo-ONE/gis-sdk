@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.4
+
+### Minor Changes
+
+- 增加框架无关的有界数据管线，支持最新值合并、溢出策略、批量读取和统计快照。
+
 ## 0.1.0-alpha.3
 
 ### Minor Changes
