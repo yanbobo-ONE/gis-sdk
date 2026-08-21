@@ -63,7 +63,7 @@ await loading;
 ## WMS 与 GeoServer
 
 ```ts
-import { wmsFilter } from '@yanbobo/gis-sdk';
+import { wmsFilter } from '@yanbobo/gis-sdk/layers';
 
 const roads = await map.layers.add({
   id: 'roads',

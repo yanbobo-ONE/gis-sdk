@@ -4,44 +4,63 @@ export default defineConfig({
   lang: 'zh-CN',
   title: 'gis-sdk',
   description: '框架无关、可扩展的 Cesium GIS SDK',
-  srcExclude: ['superpowers/**', 'api-readme.md'],
+  appearance: 'dark',
+  cleanUrls: true,
+  srcExclude: [
+    'superpowers/**',
+    'research/**',
+    'api-readme.md',
+    'cesium-sdk-prd.md',
+    'publishing.md',
+  ],
   lastUpdated: true,
   themeConfig: {
     nav: [
-      { text: '指南', link: '/guide/getting-started' },
-      { text: 'API', link: '/api/' },
-      { text: 'PRD', link: '/cesium-sdk-prd' },
-      { text: '发布', link: '/publishing' },
-      { text: 'Changelog', link: '/changelog' },
+      { text: '快速开始', link: '/guide/getting-started' },
+      { text: 'API 使用', link: '/guide/api-reference' },
+      { text: '类型索引', link: '/api/' },
+      { text: '变更日志', link: '/changelog' },
     ],
     sidebar: {
       '/guide/': [
         {
-          text: '接入指南',
+          text: '开始',
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
+            { text: '导入与包体积', link: '/guide/imports' },
+          ],
+        },
+        {
+          text: '核心能力',
+          items: [
+            { text: 'API 使用参考', link: '/guide/api-reference' },
             { text: '图层管理', link: '/guide/layers' },
+          ],
+        },
+        {
+          text: '参考',
+          items: [
+            { text: 'TypeScript 类型索引', link: '/api/' },
+            { text: '变更日志', link: '/changelog' },
           ],
         },
       ],
       '/': [
         {
-          text: '项目文档',
+          text: 'gis-sdk',
           items: [
             { text: '概览', link: '/' },
-            { text: '公开接口', link: '/api' },
-            { text: '产品需求文档', link: '/cesium-sdk-prd' },
-            { text: '参考调研', link: '/research/cesium-sdk-reference-research' },
-            { text: '12255230 案例评估', link: '/research/12255230-catalog' },
-            { text: 'npm 发布', link: '/publishing' },
-            { text: '变更日志', link: '/changelog' },
+            { text: '快速开始', link: '/guide/getting-started' },
+            { text: 'API 使用参考', link: '/guide/api-reference' },
+            { text: '图层管理', link: '/guide/layers' },
+            { text: 'TypeScript 类型索引', link: '/api/' },
           ],
         },
       ],
     },
     socialLinks: [{ icon: 'github', link: 'https://github.com/yanbobo-ONE/gis-sdk' }],
     search: { provider: 'local' },
-    outline: { level: [2, 3] },
+    outline: { level: [2, 3], label: '本页内容' },
     docFooter: { prev: '上一页', next: '下一页' },
     lastUpdated: { text: '最后更新' },
   },

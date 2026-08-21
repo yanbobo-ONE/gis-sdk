@@ -21,6 +21,7 @@
     "tests/**/*.ts",
     "docs/**/*.ts",
     "docs/**/*.mts",
+    "docs/.vitepress/**/*.ts",
     "docs/.vitepress/**/*.mts",
     "*.config.ts"
   ],

@@ -30,7 +30,7 @@ pnpm exec gis-sdk-copy-assets public/cesium
 ## 创建地图
 
 ```ts
-import { createMap } from '@yanbobo/gis-sdk';
+import { createMap } from '@yanbobo/gis-sdk/cesium';
 import '@yanbobo/gis-sdk/styles.css';
 
 const map = createMap({
@@ -65,13 +65,13 @@ await map.destroy();
 ## 文档
 
 - [快速开始](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/getting-started.md)
+- [导入与包体积](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/imports.md)
+- [API 使用参考](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/api-reference.md)
 - [图层管理](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/layers.md)
-- [公开接口说明](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
-- [产品需求文档](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/cesium-sdk-prd.md)
-- [npm 发布流程](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/publishing.md)
+- [TypeScript 类型索引](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
 - [变更日志](https://github.com/yanbobo-ONE/gis-sdk/blob/main/CHANGELOG.md)
 
-完整架构目标还包括海量数据管线、Worker 计算、材质、分析、诊断和 HGD 兼容层；这些能力按 PRD 里程碑逐步交付，不虚构尚未实现的能力。
+完整架构目标还包括海量数据管线、Worker 计算、材质、分析和诊断；这些能力按版本逐步交付，不虚构尚未实现的能力。
 
 ## 本地开发
 

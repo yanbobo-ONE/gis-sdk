@@ -1,7 +1,12 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: {
+    index: 'src/index.ts',
+    core: 'src/entries/core.ts',
+    cesium: 'src/entries/cesium.ts',
+    layers: 'src/entries/layers.ts',
+  },
   format: ['esm', 'cjs'],
   dts: true,
   sourcemap: true,

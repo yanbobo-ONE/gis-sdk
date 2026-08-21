@@ -57,7 +57,7 @@ const map = createMap({
 然后导入 SDK 和 Cesium 控件样式：
 
 ```ts
-import { createMap } from '@yanbobo/gis-sdk';
+import { createMap } from '@yanbobo/gis-sdk/cesium';
 import '@yanbobo/gis-sdk/styles.css';
 
 const map = createMap({

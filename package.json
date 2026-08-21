@@ -44,6 +44,36 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./core": {
+      "import": {
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
+      },
+      "require": {
+        "types": "./dist/core.d.cts",
+        "default": "./dist/core.cjs"
+      }
+    },
+    "./cesium": {
+      "import": {
+        "types": "./dist/cesium.d.ts",
+        "default": "./dist/cesium.js"
+      },
+      "require": {
+        "types": "./dist/cesium.d.cts",
+        "default": "./dist/cesium.cjs"
+      }
+    },
+    "./layers": {
+      "import": {
+        "types": "./dist/layers.d.ts",
+        "default": "./dist/layers.js"
+      },
+      "require": {
+        "types": "./dist/layers.d.cts",
+        "default": "./dist/layers.cjs"
+      }
+    },
     "./styles.css": "./dist/styles.css"
   },
   "sideEffects": [
@@ -64,9 +94,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "docs:api": "typedoc --options typedoc.json",
-    "docs:dev": "pnpm docs:api && vitepress docs",
+    "docs:dev": "pnpm docs:api && vitepress dev docs",
     "docs:build": "pnpm docs:api && vitepress build docs",
-    "pack:check": "pnpm build && publint && attw --pack --exclude-entrypoints ./styles.css && npm pack --dry-run",
+    "pack:check": "pnpm build && publint && attw --pack --profile node16 --exclude-entrypoints ./styles.css && npm pack --dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish"
