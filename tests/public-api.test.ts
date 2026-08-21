@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { DataPipeline, wmsFilter } from '../src/index.js';
+import { DataPipeline, DataPipelineMessageAdapter, wmsFilter } from '../src/index.js';
 import type {
+  DataPipelineMessageAdapterOptions,
   DataPipelineOptions,
   DataPipelineStats,
   GeoJsonLayerHandle,
@@ -32,11 +33,13 @@ describe('package public layer interface', () => {
       readonly wmsSpec: WmsLayerSpec;
       readonly wmsHandle: WmsLayerHandle;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
+      readonly messageAdapterOptions: DataPipelineMessageAdapterOptions<{ readonly id: string }>;
       readonly pipelineStats: DataPipelineStats;
     }
     const compileOnly: PublicLayerTypes | undefined = undefined;
 
     expect(compileOnly).toBeUndefined();
     expect(DataPipeline).toBeTypeOf('function');
+    expect(DataPipelineMessageAdapter).toBeTypeOf('function');
   });
 });

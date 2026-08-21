@@ -11,6 +11,7 @@
 - 类型化图层生命周期以及 GeoJSON、WMS、3D Tiles 图层；
 - GeoServer 样式切换和类型化 CQL 过滤；
 - 有界动态更新管线，支持同键最新值合并、溢出策略、批量读取和统计；
+- Worker / MessagePort 消息输入适配器，支持业务解码转发、拒绝/丢弃统计与监听释放；
 - 默认关闭在线底图和可选控件，无需 Cesium ion token 即可启动空白地球。
 
 ## 环境要求
@@ -107,18 +108,19 @@ async function disposeMap() {
 
 ## 当前能力与未完成项
 
-| 能力                                       | 状态                   | 现在怎样使用                                                                                           |
-| ------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------ |
-| 地图创建、尺寸更新、事件与销毁             | 可用                   | `createMap()`、`map.resize()`、`map.events`、`map.destroy()`                                           |
-| GeoJSON                                    | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                            |
-| WMS / GeoServer                            | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()` |
-| 3D Tiles                                   | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                |
-| Cesium 公共原生能力                        | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                       |
-| XYZ 底图、相机、椭球 / Cesium Terrain 地形 | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                   |
-| 数据管线核心                               | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                         |
-| TMS/WMTS、模型                             | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
-| Worker、动态流输入和 Primitive 大数据渲染  | 未完成                 | 当前没有 Worker、输入 Adapter、吞吐量、数据规模或性能承诺                                              |
-| 绘制编辑、自定义材质、空间分析、插件与诊断 | 未完成                 | 当前没有稳定公开 API                                                                                   |
+| 能力                                           | 状态                   | 现在怎样使用                                                                                           |
+| ---------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| 地图创建、尺寸更新、事件与销毁                 | 可用                   | `createMap()`、`map.resize()`、`map.events`、`map.destroy()`                                           |
+| GeoJSON                                        | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                            |
+| WMS / GeoServer                                | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()` |
+| 3D Tiles                                       | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                |
+| Cesium 公共原生能力                            | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                       |
+| XYZ 底图、相机、椭球 / Cesium Terrain 地形     | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                   |
+| 数据管线核心                                   | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                         |
+| Worker / MessagePort 消息输入                  | 可用                   | `DataPipelineMessageAdapter`：消息监听、业务解码转发、统计和监听释放                                   |
+| TMS/WMTS、模型                                 | 未完成                 | 当前没有 SDK 方法；临时使用 `map.raw.viewer`，由业务自行清理资源                                       |
+| Worker 池、专用动态输入和 Primitive 大数据渲染 | 未完成                 | 当前没有 Worker 池、协议 Adapter、吞吐量、数据规模或性能承诺                                           |
+| 绘制编辑、自定义材质、空间分析、插件与诊断     | 未完成                 | 当前没有稳定公开 API                                                                                   |
 
 功能完成后会在[功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)将状态改为“可用”，补充可运行示例、API 参数页和变更日志，并以新的 npm alpha 版本发布。规划能力不是已发布 API，不能按名称直接调用。
 

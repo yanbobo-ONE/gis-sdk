@@ -2,6 +2,10 @@
 
 `DataPipeline<T>` 是框架无关的动态更新缓冲区。它把高频输入变成可控的 FIFO 批次，并在队列有上限时按规则合并或丢弃更新。业务代码负责把消息解析为自己的类型；后续渲染器负责把取出的更新应用到它拥有的 Cesium 对象。
 
+需要把 Worker 或 `MessagePort` 消息接入管线时，使用同样框架无关的
+`DataPipelineMessageAdapter<T>`。它负责监听、解码转发、输入统计和解绑；不创建或终止
+Worker，也不解析任何固定业务协议。
+
 ## 典型使用
 
 ```ts
@@ -36,6 +40,71 @@ function renderFrame() {
 ```
 
 每帧最多读取 200 条，因此输入速率高于渲染速率时内存不会无限增长。相同 `id` 在同一队列窗口内只保留最新位置，旧中间位置计入 `coalesced`。
+
+## Worker 与 MessagePort 输入
+
+下面示例由业务代码创建 Worker 并定义消息协议。SDK 只接收 `worker` 的标准 `message`
+事件，把 `event.data` 解码为业务类型后送入已有的有界队列。
+
+```ts
+import { DataPipeline, DataPipelineMessageAdapter } from '@yanbobo/gis-sdk/core';
+
+interface PositionUpdate {
+  readonly id: string;
+  readonly longitude: number;
+  readonly latitude: number;
+}
+
+const pipeline = new DataPipeline<PositionUpdate>({
+  keyBy: (value) => value.id,
+  maxQueueItems: 2_000,
+  coalesce: 'latest',
+});
+
+const worker = new Worker(new URL('./position-worker.ts', import.meta.url), { type: 'module' });
+const input = new DataPipelineMessageAdapter({
+  source: worker,
+  pipeline,
+  decode(data): PositionUpdate {
+    if (
+      typeof data !== 'object' ||
+      data === null ||
+      typeof (data as { id?: unknown }).id !== 'string'
+    ) {
+      throw new Error('Invalid position message.');
+    }
+    return data as PositionUpdate;
+  },
+});
+
+input.events.on('message:rejected', ({ data, cause }) => {
+  console.warn('Ignored worker message', data, cause);
+});
+
+input.start();
+
+// 组件卸载或图层销毁时：仅移除 SDK 监听器，Worker 和管线仍由业务决定如何释放。
+input.dispose();
+worker.terminate();
+pipeline.close();
+```
+
+`MessagePort` 也可直接作为 `source` 传入。适配器会在 `start()` 时调用其可选的
+`source.start()`，因此对已启动的 Port 和 Worker 都可安全使用。
+
+| 配置/成员      | 类型                                        | 效果                                                                                                |
+| -------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `source`       | `DataPipelineMessageSource`                 | 必填；具有 `addEventListener/removeEventListener('message', ...)` 的 Worker、MessagePort 或同类对象 |
+| `pipeline`     | `DataPipeline<T>`                           | 必填；解码后的值进入其合并、容量和溢出策略                                                          |
+| `decode(data)` | `(unknown) => T`                            | 必填；由业务协议实现，抛出异常时当前消息记为拒绝，后续消息继续处理                                  |
+| `start()`      | `void`                                      | 注册监听器；重复调用无副作用，已释放时抛出 `DATA_PIPELINE_MESSAGE_ADAPTER_DISPOSED`                 |
+| `stop()`       | `void`                                      | 解绑监听器，允许随后再次 `start()`；不终止消息源                                                    |
+| `dispose()`    | `void`                                      | 幂等地解绑监听器并永久关闭适配器；不关闭 `source` 或 `pipeline`                                     |
+| `stats`        | `Readonly<DataPipelineMessageAdapterStats>` | 冻结快照，包含 `received`、`accepted`、`dropped`、`rejected` 与 `state`                             |
+
+解码失败或数据管线 `push()` 抛出时，适配器触发 `message:rejected` 并继续处理后续消息。
+`drop-newest` 等策略拒绝新输入时，适配器触发 `message:dropped` 并增加 `dropped`。
+配置不合法时构造函数抛出 `INVALID_DATA_PIPELINE_MESSAGE_ADAPTER_CONFIG`。
 
 ## 创建参数
 
@@ -90,10 +159,10 @@ const pipeline = new DataPipeline({
 
 `close()` 后的 `push()`、`take()` 和 `clear()` 都会抛出 `DATA_PIPELINE_CLOSED`。在地图或图层拥有此对象时，应在其销毁流程中调用 `close()`，避免遗留未交付的业务数据。
 
-本 alpha 版本只提供有界输入、合并、批量读取和统计快照。以下能力尚未发布：
+本 alpha 版本提供有界输入、合并、批量读取、统计快照，以及 Worker/MessagePort 的通用消息监听与转发。以下能力尚未发布：
 
 - Worker 池、主线程降级、CSP / bundler Worker URL 适配；
-- WebSocket、SSE、CZML、二进制协议、GeoJSON 等输入 Adapter；
+- WebSocket、SSE、CZML、二进制协议、GeoJSON 等专用协议 Adapter；
 - schema 校验、坐标/单位/时间标准化、时间排序和轨迹窗口；
 - Cesium Entity、Collection、Primitive、Model 或 3D Tiles 动态渲染器；
 - LOD、帧预算调度、诊断面板、性能阈值和公开压测结果。

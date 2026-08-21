@@ -6,6 +6,14 @@ export type {
   DataPipelineOverflow,
   DataPipelineStats,
 } from '../core/data-pipeline.js';
+export { DataPipelineMessageAdapter } from '../core/data-pipeline-message-adapter.js';
+export type {
+  DataPipelineMessageAdapterEventMap,
+  DataPipelineMessageAdapterOptions,
+  DataPipelineMessageAdapterState,
+  DataPipelineMessageAdapterStats,
+  DataPipelineMessageSource,
+} from '../core/data-pipeline-message-adapter.js';
 export type {
   BasemapController,
   BasemapType,
