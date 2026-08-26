@@ -12,6 +12,7 @@
 | GeoJSON             | 可用 | `type: 'geojson'`、`setData()`                                         | URL 或对象加载、基础样式、取消加载和原子数据替换                  |
 | WMS / GeoServer     | 可用 | `type: 'wms'`、`setOpacity()`、`setStyle()`、`setFilter()`、`reload()` | 加入影像图层并运行时更新透明度、样式、CQL 过滤或 Provider         |
 | TMS / WMTS          | 可用 | `type: 'tms'`、`type: 'wmts'`、`ImageryLayerHandle`                    | 类型化瓦片 Provider、显隐、透明度、取消加载和统一资源释放         |
+| 单图影像            | 可用 | `type: 'single-image'`、`ImageryLayerHandle`                           | WGS84 度数范围、异步加载、显隐、透明度、取消加载和统一资源释放    |
 | 3D Tiles            | 可用 | `type: '3d-tiles'`                                                     | 加载标准 Tileset、显隐、基础 LOD 配置、取消后的延迟资源清理和释放 |
 | 相机控制            | 可用 | `map.camera.setView()`、`flyTo()`、`cancelFlight()`                    | 使用度和米定位、飞行、取消和生命周期保护                          |
 | XYZ 底图            | 可用 | `createMap({ basemap })`、`map.basemap`                                | 单底图原子替换、透明度与显隐，始终位于业务影像图层下方            |
@@ -28,7 +29,7 @@
 
 | 模块                            | 当前状态 | 在完成前的边界                                                         |
 | ------------------------------- | -------- | ---------------------------------------------------------------------- |
-| 单图与企业影像服务              | 未发布   | 当前未封装单图 Provider、企业鉴权或服务专属参数；可临时使用原生出口    |
+| 企业影像服务                    | 未发布   | 当前未封装企业鉴权、服务专属参数或凭证更新策略；可临时使用原生出口     |
 | glTF / 3D 模型、CZML、动态实体  | 未发布   | 没有 SDK 图层类型、加载策略或生命周期承诺                              |
 | Worker 池与专用动态输入 Adapter | 未发布   | 尚无 Worker 池、WebSocket/SSE/CZML/二进制协议适配、校验和标准化        |
 | 海量数据渲染                    | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺 |

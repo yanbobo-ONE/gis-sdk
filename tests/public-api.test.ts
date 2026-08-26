@@ -15,6 +15,7 @@ import type {
   GeoJsonLayerSpec,
   ImageryLayerHandle,
   LayerManager,
+  SingleImageLayerSpec,
   Tiles3dLayerSpec,
   TmsLayerSpec,
   WmtsLayerSpec,
@@ -43,6 +44,7 @@ describe('package public layer interface', () => {
       readonly wmsHandle: WmsLayerHandle;
       readonly tmsSpec: TmsLayerSpec;
       readonly wmtsSpec: WmtsLayerSpec;
+      readonly singleImageSpec: SingleImageLayerSpec;
       readonly imageryHandle: ImageryLayerHandle;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
       readonly frameSchedulerOptions: DataPipelineFrameSchedulerOptions<{ readonly id: string }>;

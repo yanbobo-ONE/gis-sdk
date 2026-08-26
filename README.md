@@ -8,7 +8,7 @@
 - ESM、CommonJS 和 TypeScript 声明；
 - 幂等地图销毁与类型化生命周期事件；
 - 受控的 Cesium 原生 `Viewer` 访问入口；
-- 类型化图层生命周期以及 GeoJSON、WMS、TMS、WMTS、3D Tiles 图层；
+- 类型化图层生命周期以及 GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles 图层；
 - TMS/WMTS 影像图层统一透明度、显隐、取消加载和资源释放；
 - GeoServer 样式切换和类型化 CQL 过滤；
 - 有界动态更新管线，支持同键最新值合并、溢出策略、批量读取和统计；
@@ -122,6 +122,7 @@ async function disposeMap() {
 | GeoJSON                                        | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                                                    |
 | WMS / GeoServer                                | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()`                         |
 | TMS / WMTS                                     | 可用                   | TMS/WMTS 分别使用 `map.layers.add({ type: 'tms', ... })` 或 `map.layers.add({ type: 'wmts', ... })`，返回 `ImageryLayerHandle` |
+| 单图影像                                       | 可用                   | `map.layers.add({ type: 'single-image', url, rectangle?, ... })`，范围使用 WGS84 度数，返回 `ImageryLayerHandle`               |
 | 3D Tiles                                       | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                                        |
 | Cesium 公共原生能力                            | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                               |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形     | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                                           |

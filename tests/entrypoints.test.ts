@@ -21,6 +21,7 @@ import type { GisMap } from '../src/entries/core.js';
 import type {
   ImageryLayerHandle,
   LayerManager,
+  SingleImageLayerSpec,
   Tiles3dLayerSpec,
   TmsLayerSpec,
   WmsLayerSpec,
@@ -37,6 +38,7 @@ describe('package subpath entrypoints', () => {
       readonly wms: WmsLayerSpec;
       readonly tms: TmsLayerSpec;
       readonly wmts: WmtsLayerSpec;
+      readonly singleImage: SingleImageLayerSpec;
       readonly imagery: ImageryLayerHandle;
       readonly pipeline: DataPipeline<{ readonly id: string }>;
       readonly messageAdapter: DataPipelineMessageAdapter<{ readonly id: string }>;

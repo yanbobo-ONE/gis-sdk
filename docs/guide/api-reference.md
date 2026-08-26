@@ -9,7 +9,7 @@
 | 创建地图、监听事件、调整尺寸、释放资源 | [地图生命周期](./map-lifecycle.md)       | `createMap`、`resize`、`destroy`、`state`、`events`        |
 | 添加、查询、移除或清空图层             | [图层管理](./layer-management.md)        | `map.layers.add/get/list/remove/clear`、通用 `LayerHandle` |
 | 加载或替换业务要素数据                 | [GeoJSON 图层](./geojson-layer.md)       | GeoJSON 对象/URL、样式、`setData`、取消加载                |
-| 接入 WMS、TMS 或 WMTS 服务             | [影像图层](./imagery-layers.md)          | 样式、CQL 过滤、透明度、TMS/WMTS 参数与释放                |
+| 接入 WMS、TMS、WMTS 或单张配准影像     | [影像图层](./imagery-layers.md)          | 样式、CQL 过滤、透明度、瓦片/单图参数与释放                |
 | 加载城市/倾斜摄影等 3D Tiles           | [3D Tiles 图层](./tiles3d-layer.md)      | 加载、显隐、基础 LOD、取消和释放                           |
 | 设置 XYZ 底图、相机或地形              | [地图控制](./map-controls.md)            | `map.basemap`、`map.camera`、`map.terrain`                 |
 | 消化高频业务消息                       | [实时数据导航](./data-pipeline.md)       | 有界队列、Worker/MessagePort 输入、帧预算调度              |
@@ -36,4 +36,4 @@ await map.destroy();
 
 ## 已发布范围
 
-当前 alpha 包已发布地图生命周期、GeoJSON、WMS、TMS、WMTS、3D Tiles、XYZ 底图、相机、地形与数据管线。模型、动态实体、Worker 池、大数据渲染器、绘制、材质和空间分析尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。
+当前 alpha 包已发布地图生命周期、GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles、XYZ 底图、相机、地形与数据管线。模型、动态实体、Worker 池、大数据渲染器、绘制、材质和空间分析尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。

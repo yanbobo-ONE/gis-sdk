@@ -1,6 +1,6 @@
-# WMS、TMS 与 WMTS 影像图层
+# WMS、TMS、WMTS 与单图影像图层
 
-本页用于接入服务端地图影像。三种类型都通过 `map.layers.add()` 创建：WMS 适合带样式和属性过滤的服务；TMS/WMTS 适合标准瓦片服务。
+本页用于接入服务端地图影像。所有类型都通过 `map.layers.add()` 创建：WMS 适合带样式和属性过滤的服务；TMS/WMTS 适合标准瓦片服务；单图影像适合已有地理配准范围的 PNG、JPG 或 WebP 图。
 
 ## WMS：样式与类型化过滤
 
@@ -100,7 +100,28 @@ const satellite = await map.layers.add({
 | `tileMatrixLabels`              | `readonly string[]`           | 否   | 每个层级的 TileMatrix 标识   |
 | `subdomains`                    | `string \| readonly string[]` | 否   | REST 模板 `{s}` 的子域名     |
 
-## TMS/WMTS 共有句柄：ImageryLayerHandle
+## 单图影像：覆盖指定范围的图片
+
+```ts
+const survey = await map.layers.add({
+  id: 'survey-2026',
+  type: 'single-image',
+  url: '/images/survey-2026.png',
+  rectangle: { west: 115.8, south: 39.6, east: 116.8, north: 40.4 },
+  opacity: 0.7,
+});
+```
+
+| 字段        | 类型                           | 必填 | 说明                                                                                                    |
+| ----------- | ------------------------------ | ---- | ------------------------------------------------------------------------------------------------------- |
+| `url`       | `string`                       | 是   | 单张影像 URL；首尾空格会去除                                                                            |
+| `rectangle` | `{ west, south, east, north }` | 否   | WGS84 度数范围；经度在 `-180..180`，纬度在 `-90..90`，且 `west < east`、`south < north`。省略时覆盖全局 |
+| `opacity`   | `number`                       | 否   | `0` 到 `1`，默认 `1`                                                                                    |
+| `visible`   | `boolean`                      | 否   | 默认 `true`                                                                                             |
+
+图像必须已按上述范围完成地理配准；SDK 不读取世界文件、投影文件或影像 EXIF。跨日期变更线的图像需由业务拆分后分别添加。
+
+## 影像图层共有句柄：ImageryLayerHandle
 
 ```ts
 terrain.setVisible(false);
@@ -117,5 +138,5 @@ await satellite.dispose();
 非法配置为 `INVALID_LAYER_CONFIG`，透明度非法为 `INVALID_LAYER_OPACITY`，Provider 创建失败为可重试的 `LAYER_LOAD_FAILED`。
 
 ::: info 当前边界
-SDK 不解析 WMTS Capabilities XML，也不封装动态时间/维度、单图、矢量瓦片、企业鉴权参数或自动 LOD。
+SDK 不解析 WMTS Capabilities XML，也不封装动态时间/维度、矢量瓦片、企业鉴权参数或自动 LOD。
 :::

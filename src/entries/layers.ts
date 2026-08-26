@@ -15,6 +15,8 @@ export type {
   LayerState,
   LayerType,
   OperationOptions,
+  SingleImageLayerSpec,
+  SingleImageRectangle,
   Tiles3dLayerSpec,
   TmsLayerSpec,
   WmsComparisonOperator,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.9
+
+### Minor Changes
+
+- 增加类型化单图影像图层，支持 WGS84 度数范围、异步加载、显隐、透明度、取消加载和统一资源释放。
+
 ## 0.1.0-alpha.8
 
 ### Minor Changes

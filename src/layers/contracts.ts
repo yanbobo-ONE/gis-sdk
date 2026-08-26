@@ -3,7 +3,7 @@ import type { GeoJSON } from 'geojson';
 import type { EventHub } from '../core/event-hub.js';
 
 /** 当前稳定支持的图层类型。 */
-export type LayerType = 'geojson' | 'wms' | 'tms' | 'wmts' | '3d-tiles';
+export type LayerType = 'geojson' | 'wms' | 'tms' | 'wmts' | 'single-image' | '3d-tiles';
 
 /** 图层句柄的生命周期状态。 */
 export type LayerState = 'loading' | 'ready' | 'hidden' | 'disposing' | 'disposed' | 'error';
@@ -161,6 +161,30 @@ export interface WmtsLayerSpec extends BaseLayerSpec {
   readonly subdomains?: string | readonly string[];
 }
 
+/** 单图影像覆盖范围，使用 WGS84 经度/纬度度数。 */
+export interface SingleImageRectangle {
+  /** 西边界经度，范围 -180 到 180。 */
+  readonly west: number;
+  /** 南边界纬度，范围 -90 到 90。 */
+  readonly south: number;
+  /** 东边界经度，范围 -180 到 180，必须大于 west。 */
+  readonly east: number;
+  /** 北边界纬度，范围 -90 到 90，必须大于 south。 */
+  readonly north: number;
+}
+
+/** 单张地理配准影像图层配置。 */
+export interface SingleImageLayerSpec extends BaseLayerSpec {
+  /** 判别单图影像图层。 */
+  readonly type: 'single-image';
+  /** 可被浏览器访问的单张影像 URL。 */
+  readonly url: string;
+  /** 初始透明度，取值范围为 0 到 1，默认 1。 */
+  readonly opacity?: number;
+  /** 图像实际覆盖范围；省略时覆盖整个地球。 */
+  readonly rectangle?: SingleImageRectangle;
+}
+
 /** Cesium 3D Tiles 图层配置。 */
 export interface Tiles3dLayerSpec extends BaseLayerSpec {
   /** 判别 3D Tiles 图层。 */
@@ -175,7 +199,12 @@ export interface Tiles3dLayerSpec extends BaseLayerSpec {
 
 /** 图层配置的判别联合。 */
 export type LayerSpec =
-  GeoJsonLayerSpec | WmsLayerSpec | TmsLayerSpec | WmtsLayerSpec | Tiles3dLayerSpec;
+  | GeoJsonLayerSpec
+  | WmsLayerSpec
+  | TmsLayerSpec
+  | WmtsLayerSpec
+  | SingleImageLayerSpec
+  | Tiles3dLayerSpec;
 
 /** 图层自身可订阅的生命周期事件。 */
 export interface LayerEventMap {
@@ -257,7 +286,7 @@ export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayer
   ? GeoJsonLayerHandle
   : TSpec extends WmsLayerSpec
     ? WmsLayerHandle
-    : TSpec extends TmsLayerSpec | WmtsLayerSpec
+    : TSpec extends TmsLayerSpec | WmtsLayerSpec | SingleImageLayerSpec
       ? ImageryLayerHandle
       : TSpec extends Tiles3dLayerSpec
         ? LayerHandle

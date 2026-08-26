@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 const adapters = vi.hoisted(() => ({
   geojson: vi.fn(() => Promise.resolve({ id: 'geojson-handle' })),
   tiles3d: vi.fn(() => Promise.resolve({ id: 'tileset-handle' })),
+  singleImage: vi.fn(() => Promise.resolve({ id: 'single-image-handle' })),
   tms: vi.fn(() => Promise.resolve({ id: 'tms-handle' })),
   wmts: vi.fn(() => Promise.resolve({ id: 'wmts-handle' })),
   wms: vi.fn(() => Promise.resolve({ id: 'wms-handle' })),
@@ -18,6 +19,10 @@ vi.mock('../src/cesium/layers/wms-layer.js', () => ({
 
 vi.mock('../src/cesium/layers/tileset-layer.js', () => ({
   createTiles3dLayer: adapters.tiles3d,
+}));
+
+vi.mock('../src/cesium/layers/single-image-layer.js', () => ({
+  createSingleImageLayer: adapters.singleImage,
 }));
 
 vi.mock('../src/cesium/layers/tiled-imagery-layer.js', () => ({
@@ -65,6 +70,7 @@ describe('createCesiumLayer', () => {
       style: 'default',
       tileMatrixSetID: 'WebMercatorQuad',
     };
+    const singleImageSpec = { id: 'survey', type: 'single-image' as const, url: '/survey.png' };
 
     await expect(createCesiumLayer(viewer as never, geojsonSpec, context)).resolves.toEqual({
       id: 'geojson-handle',
@@ -81,10 +87,14 @@ describe('createCesiumLayer', () => {
     await expect(createCesiumLayer(viewer as never, wmtsSpec, context)).resolves.toEqual({
       id: 'wmts-handle',
     });
+    await expect(createCesiumLayer(viewer as never, singleImageSpec, context)).resolves.toEqual({
+      id: 'single-image-handle',
+    });
     expect(adapters.geojson).toHaveBeenCalledWith(viewer, geojsonSpec, context);
     expect(adapters.wms).toHaveBeenCalledWith(viewer, wmsSpec, context);
     expect(adapters.tiles3d).toHaveBeenCalledWith(viewer, tilesetSpec, context);
     expect(adapters.tms).toHaveBeenCalledWith(viewer, tmsSpec, context);
     expect(adapters.wmts).toHaveBeenCalledWith(viewer, wmtsSpec, context);
+    expect(adapters.singleImage).toHaveBeenCalledWith(viewer, singleImageSpec, context);
   });
 });

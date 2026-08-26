@@ -12,7 +12,7 @@
 | `GisMap` / `CesiumMap`       | 地图实例与生命周期                                    | alpha 可用 |
 | `EventHub`                   | 类型化事件订阅                                        | alpha 可用 |
 | `GisError`                   | 结构化错误处理                                        | alpha 可用 |
-| `map.layers`                 | GeoJSON、WMS、TMS、WMTS 与 3D Tiles 图层              | alpha 可用 |
+| `map.layers`                 | GeoJSON、WMS、TMS、WMTS、单图影像与 3D Tiles 图层     | alpha 可用 |
 | `map.camera`                 | 类型化视角、飞行和取消                                | alpha 可用 |
 | `map.basemap`                | XYZ 底图、透明度和显隐                                | alpha 可用 |
 | `map.terrain`                | 椭球 / Cesium Terrain 地形                            | alpha 可用 |
