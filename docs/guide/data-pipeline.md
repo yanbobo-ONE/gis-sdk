@@ -1,119 +1,14 @@
-# 数据管线
+# 实时数据导航
 
-`DataPipeline<T>` 是框架无关的动态更新缓冲区。它把高频输入变成可控的 FIFO 批次，并在队列有上限时按规则合并或丢弃更新。业务代码负责把消息解析为自己的类型；后续渲染器负责把取出的更新应用到它拥有的 Cesium 对象。
+实时数据能力按职责拆成三个可独立使用的对象。它们不依赖 Vue、React 或 Cesium，业务可以把最终批次应用到任意渲染对象。
 
-需要把 Worker 或 `MessagePort` 消息接入管线时，使用同样框架无关的
-`DataPipelineMessageAdapter<T>`。它负责监听、解码转发、输入统计和解绑；不创建或终止
-Worker，也不解析任何固定业务协议。需要把待消费数据限制在每帧预算内时，使用
-`DataPipelineFrameScheduler<T>`，避免每条消息直接触发一次渲染。
+| 你要解决的问题                          | 使用对象                        | 页面                                                          | 负责什么                                |
+| --------------------------------------- | ------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| 高频更新不能无限堆积                    | `DataPipeline<T>`               | [有界数据管线](./data-pipeline-core.md)                       | 同键合并、容量限制、FIFO 批量读取与统计 |
+| 将 Worker 或 `MessagePort` 消息接入队列 | `DataPipelineMessageAdapter<T>` | [Worker / MessagePort 输入](./data-pipeline-message-input.md) | 监听、业务解码、转发、输入统计与解绑    |
+| 限制单帧处理量                          | `DataPipelineFrameScheduler<T>` | [帧预算调度](./data-pipeline-frame-scheduler.md)              | 请求合并、每帧有界消费、取消与帧统计    |
 
-## 典型使用
-
-```ts
-import { DataPipeline } from '@yanbobo/gis-sdk/core';
-
-interface PositionUpdate {
-  readonly id: string;
-  readonly longitude: number;
-  readonly latitude: number;
-  readonly timestamp: number;
-}
-
-const updates = new DataPipeline<PositionUpdate>({
-  keyBy: (value) => value.id,
-  maxQueueItems: 2_000,
-  coalesce: 'latest',
-  overflow: 'keep-latest',
-});
-
-socket.onmessage = ({ data }) => {
-  const value = JSON.parse(data) as PositionUpdate;
-  updates.push(value);
-};
-
-function renderFrame() {
-  for (const update of updates.take(200)) {
-    // 后续图层或渲染器在这里更新自己拥有的 Cesium 对象。
-    // 本管线不直接访问 Viewer、DOM 或 WebGL。
-  }
-  requestAnimationFrame(renderFrame);
-}
-```
-
-每帧最多读取 200 条，因此输入速率高于渲染速率时内存不会无限增长。相同 `id` 在同一队列窗口内只保留最新位置，旧中间位置计入 `coalesced`。
-
-## Worker 与 MessagePort 输入
-
-下面示例由业务代码创建 Worker 并定义消息协议。SDK 只接收 `worker` 的标准 `message`
-事件，把 `event.data` 解码为业务类型后送入已有的有界队列。
-
-```ts
-import { DataPipeline, DataPipelineMessageAdapter } from '@yanbobo/gis-sdk/core';
-
-interface PositionUpdate {
-  readonly id: string;
-  readonly longitude: number;
-  readonly latitude: number;
-}
-
-const pipeline = new DataPipeline<PositionUpdate>({
-  keyBy: (value) => value.id,
-  maxQueueItems: 2_000,
-  coalesce: 'latest',
-});
-
-const worker = new Worker(new URL('./position-worker.ts', import.meta.url), { type: 'module' });
-const input = new DataPipelineMessageAdapter({
-  source: worker,
-  pipeline,
-  decode(data): PositionUpdate {
-    if (
-      typeof data !== 'object' ||
-      data === null ||
-      typeof (data as { id?: unknown }).id !== 'string'
-    ) {
-      throw new Error('Invalid position message.');
-    }
-    return data as PositionUpdate;
-  },
-});
-
-input.events.on('message:rejected', ({ data, cause }) => {
-  console.warn('Ignored worker message', data, cause);
-});
-
-input.start();
-
-// 组件卸载或图层销毁时：仅移除 SDK 监听器，Worker 和管线仍由业务决定如何释放。
-input.dispose();
-worker.terminate();
-pipeline.close();
-```
-
-`MessagePort` 也可直接作为 `source` 传入。适配器会在 `start()` 时调用其可选的
-`source.start()`，因此对已启动的 Port 和 Worker 都可安全使用。
-
-| 配置/成员      | 类型                                        | 效果                                                                                                |
-| -------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `source`       | `DataPipelineMessageSource`                 | 必填；具有 `addEventListener/removeEventListener('message', ...)` 的 Worker、MessagePort 或同类对象 |
-| `pipeline`     | `DataPipeline<T>`                           | 必填；解码后的值进入其合并、容量和溢出策略                                                          |
-| `decode(data)` | `(unknown) => T`                            | 必填；由业务协议实现，抛出异常时当前消息记为拒绝，后续消息继续处理                                  |
-| `start()`      | `void`                                      | 注册监听器；重复调用无副作用，已释放时抛出 `DATA_PIPELINE_MESSAGE_ADAPTER_DISPOSED`                 |
-| `stop()`       | `void`                                      | 解绑监听器，允许随后再次 `start()`；不终止消息源                                                    |
-| `dispose()`    | `void`                                      | 幂等地解绑监听器并永久关闭适配器；不关闭 `source` 或 `pipeline`                                     |
-| `stats`        | `Readonly<DataPipelineMessageAdapterStats>` | 冻结快照，包含 `received`、`accepted`、`dropped`、`rejected` 与 `state`                             |
-
-解码成功并进入数据管线时，适配器触发 `message:accepted`，适合在此调用
-`scheduler.request()`。解码失败或数据管线 `push()` 抛出时，适配器触发
-`message:rejected` 并继续处理后续消息。`drop-newest` 等策略拒绝新输入时，适配器触发
-`message:dropped` 并增加 `dropped`。
-配置不合法时构造函数抛出 `INVALID_DATA_PIPELINE_MESSAGE_ADAPTER_CONFIG`。
-
-## 帧预算调度
-
-调度器不主动轮询，也不会在构造时访问浏览器时钟。业务只在值成功进入数据管线后请求一帧；
-重复 `request()` 会合并为同一个动画帧。每帧最多取出 `maxItemsPerFrame` 条，再由业务更新自己
-拥有的 Cesium 对象并请求重绘。
+## 推荐组合
 
 ```ts
 import {
@@ -122,113 +17,32 @@ import {
   DataPipelineMessageAdapter,
 } from '@yanbobo/gis-sdk/core';
 
-const updates = new DataPipeline<PositionUpdate>({
+const pipeline = new DataPipeline<PositionUpdate>({
   keyBy: (value) => value.id,
   maxQueueItems: 2_000,
   coalesce: 'latest',
 });
-
 const scheduler = new DataPipelineFrameScheduler({
-  pipeline: updates,
+  pipeline,
   maxItemsPerFrame: 200,
   onBatch(values) {
-    for (const value of values) {
-      applyPositionUpdate(value);
-    }
+    values.forEach(applyPositionUpdate); // 业务更新自己拥有的 Cesium 对象
     map.raw.viewer.scene.requestRender();
   },
 });
-
-const input = new DataPipelineMessageAdapter({ source: worker, pipeline: updates, decode });
+const input = new DataPipelineMessageAdapter({ source: worker, pipeline, decode });
 input.events.on('message:accepted', () => scheduler.request());
 input.start();
-
-// 页面或图层销毁时，调度器只取消自己的回调，不关闭调用方管线或 Worker。
-scheduler.dispose();
-input.dispose();
-worker.terminate();
-updates.close();
 ```
 
-| 配置/成员          | 类型                                        | 默认值/效果                                                          |
-| ------------------ | ------------------------------------------- | -------------------------------------------------------------------- |
-| `pipeline`         | `DataPipeline<T>`                           | 必填；每帧从该调用方拥有的管线读取一批数据                           |
-| `onBatch(values)`  | `(readonly T[]) => void`                    | 必填；在主线程处理已取出的批次，通常在这里调用 Cesium 公共 API       |
-| `maxItemsPerFrame` | `number`                                    | `200`；正安全整数，限制单帧交给业务回调的最大条数                    |
-| `clock`            | `DataPipelineFrameClock`                    | 浏览器动画帧；可为测试、SSR 或宿主环境提供 `request/cancel` 时钟     |
-| `request()`        | `boolean`                                   | 注册一帧返回 `true`；已有挂起帧时返回 `false` 且不会重复注册         |
-| `cancel()`         | `boolean`                                   | 取消尚未执行的帧，不读取管线数据；不存在挂起帧时返回 `false`         |
-| `dispose()`        | `void`                                      | 幂等取消挂起帧并永久关闭调度器；不关闭 `pipeline`、Worker 或渲染对象 |
-| `stats`            | `Readonly<DataPipelineFrameSchedulerStats>` | 冻结快照，含请求合并、实际帧数、已消费条数和失败次数                 |
+页面、图层或组件销毁时，按资源拥有关系执行：`scheduler.dispose()`、`input.dispose()`、`worker.terminate()`、`pipeline.close()`。SDK 只管理自己的队列、监听器和帧回调。
 
-一帧成功处理后，如管线仍有值，调度器会自动注册下一帧；这避免单帧过量工作，同时不会在
-队列清空后持续空转。`onBatch()` 发生异常时触发 `frame:failed`，**不会**自动继续下一帧，
-由业务修复渲染状态后重新调用 `request()`。批次在进入 `onBatch()` 前已经从管线取出，
-因此它不是可回滚事务；需要重试时由业务在失败处理内重新入队。
+## 选择顺序
 
-已释放调度器调用 `request()` 会抛出 `DATA_PIPELINE_FRAME_SCHEDULER_DISPOSED`。没有浏览器
-动画帧且未提供 `clock` 时会抛出可重试的 `DATA_PIPELINE_FRAME_SCHEDULER_UNAVAILABLE`；无效配置
-会抛出 `INVALID_DATA_PIPELINE_FRAME_SCHEDULER_CONFIG`。
+1. 先阅读[有界数据管线](./data-pipeline-core.md)，确定合并键、容量和溢出策略。
+2. 输入来自 Worker 或 `MessagePort` 时，再接入[消息输入适配器](./data-pipeline-message-input.md)。普通 WebSocket、SSE 或 HTTP 回调可直接调用 `pipeline.push()`。
+3. 需要避免每条消息直接渲染时，再添加[帧预算调度器](./data-pipeline-frame-scheduler.md)。
 
-## 创建参数
+## 当前边界
 
-```ts
-const pipeline = new DataPipeline({
-  keyBy: (value) => value.id,
-  maxQueueItems: 1_000,
-  coalesce: 'latest',
-  overflow: 'keep-latest',
-});
-```
-
-| 参数            | 类型                                              | 默认值                                                | 效果                                                     |
-| --------------- | ------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------- |
-| `keyBy`         | `(value: T) => string`                            | -                                                     | 必填。返回非空键，用于同对象更新合并                     |
-| `maxQueueItems` | `number`                                          | `1000`                                                | 正安全整数。限制仍在等待消费的更新条数                   |
-| `coalesce`      | `'none' \| 'latest'`                              | `'latest'`                                            | `latest` 用相同键的新值替换旧排队值；`none` 保留每条输入 |
-| `overflow`      | `'drop-oldest' \| 'drop-newest' \| 'keep-latest'` | `latest` 时为 `'keep-latest'`，否则为 `'drop-oldest'` | 队列满时的处理策略                                       |
-
-`keyBy` 返回空字符串、非字符串，或容量/读取上限不是正安全整数时，SDK 会抛出 `INVALID_DATA_PIPELINE_KEY`、`INVALID_DATA_PIPELINE_CONFIG` 或 `INVALID_DATA_PIPELINE_TAKE_LIMIT`。
-
-## 方法与统计
-
-| 成员              | 参数       | 返回值                        | 效果                                                           |
-| ----------------- | ---------- | ----------------------------- | -------------------------------------------------------------- |
-| `push(value)`     | 一条 `T`   | `boolean`                     | 接收/合并成功时为 `true`；`drop-newest` 丢弃新输入时为 `false` |
-| `take(maxItems?)` | 正安全整数 | `readonly T[]`                | 按 FIFO 取出最多 N 条；省略时取出当前全部                      |
-| `clear()`         | 无         | `void`                        | 丢弃未交付值，不计入 `dropped`                                 |
-| `close()`         | 无         | `void`                        | 清空并永久关闭；重复调用无副作用                               |
-| `stats`           | 无         | `Readonly<DataPipelineStats>` | 返回冻结的当前统计快照                                         |
-
-`stats` 包含：
-
-- `accepted`：进入处理流程的输入次数，包含合并的新值；
-- `coalesced`：替换同键旧排队值的次数；
-- `dropped`：容量策略丢弃的次数；
-- `queued`：当前等待消费的条数；
-- `taken`：已交付给消费者的条数；
-- `closed`：是否已关闭。
-
-## 溢出策略
-
-| 策略          | 满队列时效果                                                   | 适合场景                         |
-| ------------- | -------------------------------------------------------------- | -------------------------------- |
-| `drop-oldest` | 删除最早排队值后写入新值                                       | 只关注最近变化，且不需要同键合并 |
-| `drop-newest` | 保留现有队列，拒绝当前输入                                     | 先到数据优先，或上游可自行重试   |
-| `keep-latest` | 仅与 `latest` 合并配合；同键先替换，其他新键满队列时淘汰最早值 | 动态位置、状态或传感器读数       |
-
-`keep-latest` 与 `coalesce: 'none'` 组合无意义，创建时会抛出 `INVALID_DATA_PIPELINE_CONFIG`。
-
-## 生命周期与当前边界
-
-`close()` 后的 `push()`、`take()` 和 `clear()` 都会抛出 `DATA_PIPELINE_CLOSED`。在地图或图层拥有此对象时，应在其销毁流程中调用 `close()`，避免遗留未交付的业务数据。
-
-本 alpha 版本提供有界输入、合并、批量读取、统计快照、Worker/MessagePort 的通用消息监听与转发，以及每帧有界消费调度。以下能力尚未发布：
-
-- Worker 池、主线程降级、CSP / bundler Worker URL 适配；
-- WebSocket、SSE、CZML、二进制协议、GeoJSON 等专用协议 Adapter；
-- schema 校验、坐标/单位/时间标准化、时间排序和轨迹窗口；
-- Cesium Entity、Collection、Primitive、Model 或 3D Tiles 动态渲染器；
-- 自动 LOD、诊断面板、性能阈值和公开压测结果。
-
-因此它不承诺任何数据规模或帧率。生产接入前应根据实际消息协议、设备数量、更新频率和目标浏览器建立压力测试。
+当前 alpha 提供通用输入与消费基础设施，不包含固定业务协议或 Cesium 动态渲染器。Worker 池、WebSocket/SSE/CZML/二进制专用 Adapter、schema 校验、坐标/时间标准化、动态 Entity/Primitive/Model 渲染、自动 LOD 和公开压测结果均尚未发布。完整状态见[功能状态与路线图](./capability-status.md)。

@@ -12,7 +12,7 @@
 | 接入 WMS、TMS 或 WMTS 服务             | [影像图层](./imagery-layers.md)          | 样式、CQL 过滤、透明度、TMS/WMTS 参数与释放                |
 | 加载城市/倾斜摄影等 3D Tiles           | [3D Tiles 图层](./tiles3d-layer.md)      | 加载、显隐、基础 LOD、取消和释放                           |
 | 设置 XYZ 底图、相机或地形              | [地图控制](./map-controls.md)            | `map.basemap`、`map.camera`、`map.terrain`                 |
-| 消化高频业务消息                       | [数据管线](./data-pipeline.md)           | 有界队列、Worker/MessagePort 输入、帧预算调度              |
+| 消化高频业务消息                       | [实时数据导航](./data-pipeline.md)       | 有界队列、Worker/MessagePort 输入、帧预算调度              |
 | 判断和处理失败                         | [错误与原生出口](./errors-and-native.md) | `GisError`、错误码、`map.raw.viewer` 的边界                |
 
 ## 统一调用规则

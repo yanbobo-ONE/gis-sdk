@@ -51,7 +51,12 @@ export default defineConfig({
         },
         {
           text: '实时数据',
-          items: [{ text: '数据管线', link: '/guide/data-pipeline' }],
+          items: [
+            { text: '实时数据导航', link: '/guide/data-pipeline' },
+            { text: '有界数据管线', link: '/guide/data-pipeline-core' },
+            { text: 'Worker / MessagePort 输入', link: '/guide/data-pipeline-message-input' },
+            { text: '帧预算调度', link: '/guide/data-pipeline-frame-scheduler' },
+          ],
         },
         {
           text: '可靠性与参考',
@@ -77,7 +82,10 @@ export default defineConfig({
             { text: 'GeoJSON 图层', link: '/guide/geojson-layer' },
             { text: 'WMS、TMS 与 WMTS', link: '/guide/imagery-layers' },
             { text: '3D Tiles 图层', link: '/guide/tiles3d-layer' },
-            { text: '数据管线', link: '/guide/data-pipeline' },
+            { text: '实时数据导航', link: '/guide/data-pipeline' },
+            { text: '有界数据管线', link: '/guide/data-pipeline-core' },
+            { text: 'Worker / MessagePort 输入', link: '/guide/data-pipeline-message-input' },
+            { text: '帧预算调度', link: '/guide/data-pipeline-frame-scheduler' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: 'TypeScript 类型索引', link: '/api/' },
