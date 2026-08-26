@@ -41,7 +41,7 @@ map.basemap.clear();
 | `setOpacity(value)`   | `0` 到 `1` 的有限数 | 立即修改当前底图透明度，不重建 Provider             | `INVALID_BASEMAP_OPACITY` |
 | `clear()`             | 无                  | 只释放 SDK 当前拥有的底图                           | -                         |
 
-当前只封装 XYZ。TMS、WMTS、单图、企业地图目录和缓存策略仍未发布；使用它们时可暂时通过 `map.raw.viewer` 调用 Cesium 公共 API，并由业务负责资源释放。
+`map.basemap` 当前只封装“地图基础底图”的 XYZ 管理。TMS 与 WMTS 已通过[影像图层](./imagery-layers.md)的 `map.layers.add()` 发布；单图、企业地图目录和缓存策略仍未发布，临时使用时由业务通过 `map.raw.viewer` 管理资源。
 
 ## 相机
 
