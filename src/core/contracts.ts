@@ -7,6 +7,7 @@ import type {
   CaptureOptions,
   CoordinateTransform,
   FrameCapture,
+  MapDrawingController,
   PickingController,
   SceneController,
   TerrainController,
@@ -60,6 +61,8 @@ export interface GisMap<TRaw = unknown> {
   readonly picking: PickingController;
   /** 类型化场景模式控制器。 */
   readonly scene: SceneController;
+  /** 类型化绘制控制器。 */
+  readonly drawing: MapDrawingController;
   /** 高级场景使用的引擎原生上下文。 */
   readonly raw: Readonly<TRaw>;
   /**
@@ -94,6 +97,7 @@ export interface MapEngineAdapter<TRaw> {
   readonly quality: QualityController;
   readonly picking: PickingController;
   readonly scene: SceneController;
+  readonly drawing: MapDrawingController;
   /** 引擎内部异步失败的上报入口；`MapRuntime` 在构造时接入 `map:error`。 */
   setErrorReporter?(reporter: (error: GisError) => void): void;
   resize(): void;

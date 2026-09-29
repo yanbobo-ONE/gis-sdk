@@ -1,3 +1,4 @@
+import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { Unsubscribe } from './event-hub.js';
 
 /** 经纬度位置，单位为度和米。 */
@@ -83,6 +84,43 @@ export interface SceneController {
    * @returns 形变完成时结算；被新的切换取代时以 `SCENE_MORPH_SUPERSEDED` 拒绝。
    */
   setMode(mode: MapSceneMode, duration?: number): Promise<void>;
+}
+
+/** 绘制控制器的事件。 */
+export interface DrawingEventMap {
+  /** 一次绘制完成。 */
+  readonly complete: DrawGeometry;
+  /** 一次绘制被取消。 */
+  readonly cancel: undefined;
+}
+
+/**
+ * 类型化绘制控制器。
+ *
+ * 输入由地图适配器接管：左键落点、光标移动预览、右键或双击确认、Esc 取消。
+ * 已完成图形由控制器持有，可用 `clearCompleted()` 或 `removeLatestCompleted()` 管理；
+ * 业务需要自定义样式时，监听 `complete` 后自行用图层渲染同一份几何。
+ */
+export interface MapDrawingController {
+  /** 当前绘制模式；未在绘制时为 `undefined`。 */
+  readonly mode: DrawMode | undefined;
+  /** 已确定的顶点数（不含预览用的光标位置）。 */
+  readonly vertexCount: number;
+  /** 开始绘制；开始新的绘制会先取消进行中的一次。 */
+  readonly start: (mode: DrawMode) => boolean;
+  /** 结束绘制并返回几何；顶点不足时返回 `undefined` 且保持绘制中。 */
+  finish(): DrawGeometry | undefined;
+  /** 取消当前绘制；已完成图形不受影响。 */
+  cancel(): void;
+  /** 移除最近一次完成的图形。 */
+  removeLatestCompleted(): void;
+  /** 移除全部已完成图形。 */
+  clearCompleted(): void;
+  /** 订阅绘制事件，返回取消订阅函数。 */
+  on<TKey extends keyof DrawingEventMap>(
+    kind: TKey,
+    listener: (event: DrawingEventMap[TKey]) => void,
+  ): Unsubscribe;
 }
 
 /**

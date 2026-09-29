@@ -27,6 +27,8 @@ export type {
   BasemapType,
   CaptureCanvasLike,
   CaptureOptions,
+  DrawingEventMap,
+  MapDrawingController,
   FrameCapture,
   MapSceneMode,
   PickingController,
@@ -76,6 +78,8 @@ export type {
   CsvRejectedRow,
   CsvTable,
 } from '../core/csv.js';
+export { DrawingStateMachine } from '../core/drawing.js';
+export type { DrawGeometry, DrawMode, DrawRendererPort, DrawRenderValue } from '../core/drawing.js';
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
 export { RealtimeTimestampGuard } from '../core/realtime-timestamp-guard.js';
 export type { RealtimeTimestampGuardOptions } from '../core/realtime-timestamp-guard.js';

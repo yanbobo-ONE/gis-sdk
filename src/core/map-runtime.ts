@@ -1,3 +1,4 @@
+import type { DrawMode } from './drawing.js';
 import type { GisMap, MapEngineAdapter, MapEventMap, MapState } from './contracts.js';
 import type {
   BasemapController,
@@ -7,7 +8,9 @@ import type {
   CaptureOptions,
   CoordinateTransform,
   FrameCapture,
+  DrawingEventMap,
   GeoPosition,
+  MapDrawingController,
   MapSceneMode,
   PickingController,
   PickingEvent,
@@ -37,6 +40,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly quality: QualityController;
   readonly picking: PickingController;
   readonly scene: SceneController;
+  readonly drawing: MapDrawingController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -95,6 +99,43 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
         this.assertReady('scene.setMode');
         return adapter.scene.setMode(mode, duration);
       },
+    });
+    this.drawing = Object.freeze({
+      get mode() {
+        return adapter.drawing.mode;
+      },
+      get vertexCount() {
+        return adapter.drawing.vertexCount;
+      },
+      start: (mode: DrawMode) => {
+        this.assertReady('drawing.start');
+        return adapter.drawing.start(mode);
+      },
+      finish: () => {
+        this.assertReady('drawing.finish');
+        return adapter.drawing.finish();
+      },
+      cancel: () => {
+        this.assertReady('drawing.cancel');
+        adapter.drawing.cancel();
+      },
+      removeLatestCompleted: () => {
+        this.assertReady('drawing.removeLatestCompleted');
+        adapter.drawing.removeLatestCompleted();
+      },
+      clearCompleted: () => {
+        this.assertReady('drawing.clearCompleted');
+        adapter.drawing.clearCompleted();
+      },
+      on: <TKey extends keyof DrawingEventMap>(
+        kind: TKey,
+        listener: (event: DrawingEventMap[TKey]) => void,
+      ) =>
+        adapter.drawing.on<TKey>(kind, (event) => {
+          if (this.currentState === 'ready') {
+            listener(event);
+          }
+        }),
     });
     this.quality = Object.freeze({
       get current() {

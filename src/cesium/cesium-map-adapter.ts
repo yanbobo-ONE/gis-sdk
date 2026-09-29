@@ -7,6 +7,7 @@ import type {
   CaptureOptions,
   CoordinateTransform,
   FrameCapture,
+  MapDrawingController,
   PickingController,
   SceneController,
   TerrainController,
@@ -24,6 +25,7 @@ import { guardCameraPose, guardDegenerateCameraRotation } from './camera-guards.
 import type { CameraPoseGuard } from './camera-guards.js';
 import { CesiumCoordinateTransform } from './coordinates.js';
 import { captureViewerFrame } from './frame-capture.js';
+import { CesiumDrawingController } from './drawing-controller.js';
 import { CesiumSceneController } from './scene-controller.js';
 import { ModelAppearanceShaders } from './layers/model-appearance.js';
 import { LoadLimiter } from './load-limiter.js';
@@ -157,6 +159,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   readonly quality: QualityController;
   readonly picking: PickingController;
   readonly scene: SceneController;
+  readonly drawing: MapDrawingController;
 
   private readonly layerRuntime: LayerRuntime;
   private readonly cameraRuntime: CesiumCameraController;
@@ -165,6 +168,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   private readonly qualityRuntime: CesiumQualityController;
   private readonly pickingRuntime: CesiumPickingController;
   private readonly sceneRuntime: CesiumSceneController;
+  private readonly drawingRuntime: CesiumDrawingController;
   private readonly cameraPoseGuard: CameraPoseGuard;
 
   constructor(options: NormalizedCreateMapOptions) {
@@ -176,6 +180,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     let qualityRuntime: CesiumQualityController | undefined;
     let pickingRuntime: CesiumPickingController | undefined;
     let sceneRuntime: CesiumSceneController | undefined;
+    let drawingRuntime: CesiumDrawingController | undefined;
     let cameraPoseGuard: CameraPoseGuard | undefined;
     try {
       viewer = new Viewer(options.container, {
@@ -196,6 +201,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       const coordinates = new CesiumCoordinateTransform(viewerInstance);
       pickingRuntime = new CesiumPickingController(viewerInstance, coordinates);
       sceneRuntime = new CesiumSceneController(viewerInstance.scene);
+      drawingRuntime = new CesiumDrawingController(viewerInstance, coordinates);
       qualityRuntime = new CesiumQualityController({
         viewer: viewerInstance,
         limiter: modelLoad,
@@ -221,6 +227,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       this.qualityRuntime = qualityRuntime;
       this.pickingRuntime = pickingRuntime;
       this.sceneRuntime = sceneRuntime;
+      this.drawingRuntime = drawingRuntime;
       this.camera = cameraRuntime;
       this.basemap = basemapRuntime;
       this.terrain = terrainRuntime;
@@ -228,6 +235,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       this.quality = qualityRuntime;
       this.picking = pickingRuntime;
       this.scene = sceneRuntime;
+      this.drawing = drawingRuntime;
       this.layerRuntime = layerRuntime;
       this.layers = layerRuntime;
     } catch (error: unknown) {
@@ -239,6 +247,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         quality: () => qualityRuntime?.dispose(),
         picking: () => pickingRuntime?.dispose(),
         scene: () => sceneRuntime?.destroy(),
+        drawing: () => drawingRuntime?.dispose(),
         viewer: () => viewer?.destroy(),
         // 回滚失败不覆盖原始错误；rollback 在 finally 中释放锁。
         baseUrl: () => {
@@ -266,6 +275,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     this.qualityRuntime.dispose();
     this.pickingRuntime.dispose();
     this.sceneRuntime.destroy();
+    this.drawingRuntime.dispose();
     this.cameraRuntime.destroy();
     this.basemapRuntime.destroy();
     this.terrainRuntime.destroy();
