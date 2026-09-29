@@ -5,6 +5,7 @@ import type {
   BasemapController,
   CameraController,
   CoordinateTransform,
+  PickingController,
   TerrainController,
 } from './controls.js';
 import type { QualityController } from './quality.js';
@@ -52,6 +53,8 @@ export interface GisMap<TRaw = unknown> {
   readonly coordinates: CoordinateTransform;
   /** 类型化渲染质量控制。 */
   readonly quality: QualityController;
+  /** 类型化拾取控制器。 */
+  readonly picking: PickingController;
   /** 高级场景使用的引擎原生上下文。 */
   readonly raw: Readonly<TRaw>;
   /**
@@ -77,6 +80,7 @@ export interface MapEngineAdapter<TRaw> {
   readonly terrain: TerrainController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
+  readonly picking: PickingController;
   /** 引擎内部异步失败的上报入口；`MapRuntime` 在构造时接入 `map:error`。 */
   setErrorReporter?(reporter: (error: GisError) => void): void;
   resize(): void;

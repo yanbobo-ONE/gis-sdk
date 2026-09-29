@@ -113,6 +113,8 @@ describe('points layer', () => {
         pixelSize: 12,
         outlineWidth: 2,
         outlineColor: { css: '#43bfeb' },
+        // 拾取标记：没有业务 id 时只标记图层。
+        id: { layerId: 'targets' },
       },
       {
         position: { longitude: 121.47, latitude: 31.23, height: 0 },
@@ -120,6 +122,7 @@ describe('points layer', () => {
         pixelSize: 20,
         outlineWidth: 2,
         outlineColor: { css: '#43bfeb' },
+        id: { layerId: 'targets' },
       },
     ]);
     expect(layer).toMatchObject({ id: 'targets', type: 'points', count: 2, visible: true });
@@ -294,5 +297,27 @@ describe('points layer', () => {
       ),
     ).toThrow(expect.objectContaining({ code: 'LAYER_OPERATION_ABORTED' }));
     expect(view.add).not.toHaveBeenCalled();
+  });
+
+  it('writes the business id into the picking marker', async () => {
+    const view = createViewer();
+    const layer = await createPointsLayer(
+      view.viewer as never,
+      {
+        id: 'targets',
+        type: 'points',
+        points: [
+          { id: 'sat-1', longitude: 0, latitude: 0 },
+          { id: '  ', longitude: 1, latitude: 1 },
+        ],
+      },
+      createContext().context,
+    );
+
+    expect(view.items[0]?.points[0]?.id).toEqual({ layerId: 'targets', objectId: 'sat-1' });
+    // 空白 id 视为未提供，只标记图层。
+    expect(view.items[0]?.points[1]?.id).toEqual({ layerId: 'targets' });
+
+    await layer.dispose();
   });
 });

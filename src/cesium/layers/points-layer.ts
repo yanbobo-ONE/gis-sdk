@@ -1,6 +1,7 @@
 import { Cartesian3, Color, PointPrimitiveCollection } from 'cesium';
 import type { PointPrimitive, Viewer } from 'cesium';
 
+import type { PickingMarker } from '../../core/controls.js';
 import { GisError } from '../../core/errors.js';
 import type { EventHub } from '../../core/event-hub.js';
 import type {
@@ -103,11 +104,19 @@ interface NormalizedPoint {
   readonly position: Cartesian3;
   readonly color: Color | undefined;
   readonly pixelSize: number | undefined;
+  /** 拾取标记；命中后由拾取控制器还原图层与对象 id。 */
+  readonly marker: PickingMarker;
 }
 
 /** 按运行时未知输入校验；JS 调用方可能传入缺少字段的对象。 */
 function normalizePoint(id: string, point: unknown, operation: string): NormalizedPoint {
   const candidate = (point ?? {}) as Partial<PointSpec>;
+  const objectId =
+    typeof candidate.id === 'string' && candidate.id.trim() !== ''
+      ? candidate.id.trim()
+      : undefined;
+  const marker: PickingMarker =
+    objectId === undefined ? { layerId: id } : { layerId: id, objectId };
   const { longitude, latitude, height = 0 } = candidate;
   if (
     !finite(longitude) ||
@@ -140,6 +149,7 @@ function normalizePoint(id: string, point: unknown, operation: string): Normaliz
     position: Cartesian3.fromDegrees(longitude, latitude, height),
     color: candidate.color === undefined ? undefined : parseColor(id, candidate.color, operation),
     pixelSize: candidate.pixelSize,
+    marker,
   };
 }
 
@@ -175,6 +185,7 @@ function buildCollection(
       pixelSize: point.pixelSize ?? style.pixelSize,
       outlineWidth: style.outlineWidth,
       outlineColor: style.outlineColor,
+      id: point.marker,
     });
   }
   return collection;

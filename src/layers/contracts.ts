@@ -270,6 +270,12 @@ export interface ModelLayerSpec extends BaseLayerSpec {
 
 /** 单个点位的稳定表达。 */
 export interface PointSpec {
+  /**
+   * 业务对象 id；写入拾取标记，命中时通过 `PickingEvent.hit.objectId` 返回。
+   *
+   * 省略时只标记所属图层。
+   */
+  readonly id?: string;
   /** 经度，范围 -180 到 180。 */
   readonly longitude: number;
   /** 纬度，范围 -90 到 90。 */

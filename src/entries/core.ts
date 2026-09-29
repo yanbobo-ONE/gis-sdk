@@ -25,6 +25,11 @@ export type {
 export type {
   BasemapController,
   BasemapType,
+  PickingController,
+  PickingEvent,
+  PickingEventKind,
+  PickingHit,
+  PickingMarker,
   CameraController,
   CameraFlight,
   CameraView,

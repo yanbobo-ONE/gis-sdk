@@ -8,10 +8,15 @@ const cesium = vi.hoisted(() => {
 
     readonly resize = vi.fn();
     readonly destroy = vi.fn();
+    readonly screenSpaceEventHandler = {
+      setInputAction: vi.fn(),
+      removeInputAction: vi.fn(),
+    };
     readonly camera = {
       cancelFlight: vi.fn(),
       flyTo: vi.fn(),
       setView: vi.fn(),
+      changed: { addEventListener: vi.fn(() => () => undefined) },
       position: { x: 1, y: 2, z: 3 },
       direction: { x: 1, y: 0, z: 0 },
       up: { x: 0, y: 0, z: 1 },
@@ -20,6 +25,9 @@ const cesium = vi.hoisted(() => {
     readonly frameListeners = new Set<() => void>();
     resolutionScale = 1;
     readonly scene = {
+      camera: { changed: { addEventListener: vi.fn(() => () => undefined) } },
+      pick: vi.fn(),
+      drillPick: vi.fn(() => []),
       globe: { maximumScreenSpaceError: 2, terrainProvider: undefined as unknown },
       preUpdate: {
         addEventListener: (listener: () => void) => {
@@ -86,6 +94,11 @@ vi.mock('cesium', () => ({
     fromCssColorString: vi.fn((value: string) => ({ css: value })),
   },
   ColorBlendMode: { HIGHLIGHT: 'HIGHLIGHT', MIX: 'MIX' },
+  ScreenSpaceEventHandler: class ScreenSpaceEventHandler {
+    constructor(readonly canvas: unknown) {}
+  },
+  ScreenSpaceEventType: { LEFT_CLICK: 3, MOUSE_MOVE: 15 },
+  defined: (value: unknown) => value !== undefined,
   EllipsoidTerrainProvider: function EllipsoidTerrainProvider() {
     return undefined;
   },

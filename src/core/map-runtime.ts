@@ -6,6 +6,10 @@ import type {
   CameraView,
   CoordinateTransform,
   GeoPosition,
+  PickingController,
+  PickingEvent,
+  PickingEventKind,
+  PickingHit,
   TerrainController,
   TerrainSample,
   TerrainSampleOptions,
@@ -27,6 +31,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly terrain: TerrainController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
+  readonly picking: PickingController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -54,6 +59,24 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       pickGeoPosition: (point: WindowCoordinates): GeoPosition | undefined => {
         this.assertReady('coordinates.pickGeoPosition');
         return adapter.coordinates.pickGeoPosition(point);
+      },
+    });
+    this.picking = Object.freeze({
+      get enabled() {
+        return adapter.picking.enabled;
+      },
+      get lastHit(): PickingHit | undefined {
+        return adapter.picking.lastHit;
+      },
+      on: (kind: PickingEventKind, listener: (event: PickingEvent) => void) =>
+        adapter.picking.on(kind, (event) => {
+          if (this.currentState === 'ready') {
+            listener(event);
+          }
+        }),
+      setEnabled: (enabled: boolean) => {
+        this.assertReady('picking.setEnabled');
+        adapter.picking.setEnabled(enabled);
       },
     });
     this.quality = Object.freeze({

@@ -10,6 +10,7 @@
 | 加载城市模型、倾斜摄影等   | [3D Tiles 图层](./tiles3d-layer.md) | `type: '3d-tiles'`                     |
 | 放置单个 glTF / GLB 模型   | [静态模型图层](./model-layer.md)    | `type: 'model'`                        |
 | 批量渲染点位与 CSV 导入    | [点位图层](./points-layer.md)       | `type: 'points'`、`parseCsv()`         |
+| 点击或悬停拾取地图对象     | [拾取交互](./picking.md)            | `map.picking.on('click' \| 'hover')`   |
 
 所有类型都使用 `map.layers.add()`，但返回的句柄能力不同：GeoJSON 返回 `GeoJsonLayerHandle`，WMS 返回 `WmsLayerHandle`，TMS/WMTS/单图影像返回 `ImageryLayerHandle`，静态模型返回 `ModelLayerHandle`，点位返回 `PointsLayerHandle`（支持 `setData()` 与 `setStyle()`），3D Tiles 返回通用 `LayerHandle`。
 

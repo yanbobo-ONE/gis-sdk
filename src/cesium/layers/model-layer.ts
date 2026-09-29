@@ -1,6 +1,7 @@
 import { Cartesian3, Color, ColorBlendMode, HeadingPitchRoll, Model, Transforms } from 'cesium';
 import type { CustomShader, Matrix4, Viewer } from 'cesium';
 
+import type { PickingMarker } from '../../core/controls.js';
 import { GisError } from '../../core/errors.js';
 import type { EventHub } from '../../core/event-hub.js';
 import type {
@@ -369,6 +370,8 @@ export async function createModelLayer(
       context.signal,
     );
     model = await raceAbort(loading, context.signal);
+    // 拾取标记：Cesium 把 Model.id 声明为 string，运行时允许任意值，这里写入图层标记以便拾取还原。
+    (model as { id?: unknown }).id = { layerId: spec.id } satisfies PickingMarker;
     viewer.scene.primitives.add(model);
     added = true;
     const handle = new CesiumModelLayerHandle(

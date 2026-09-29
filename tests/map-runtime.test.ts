@@ -9,7 +9,7 @@ import type {
 } from '../src/core/controls.js';
 import { GisError } from '../src/core/errors.js';
 import { MapRuntime } from '../src/core/map-runtime.js';
-import type { CoordinateTransform } from '../src/core/controls.js';
+import type { CoordinateTransform, PickingController } from '../src/core/controls.js';
 import type { QualityController } from '../src/core/quality.js';
 import type { LayerManager } from '../src/layers/contracts.js';
 
@@ -63,6 +63,13 @@ const coordinates = {
   pickGeoPosition: vi.fn(() => ({ longitude: 1, latitude: 2, height: 3 })),
 } satisfies CoordinateTransform;
 
+const picking: PickingController = {
+  enabled: true,
+  lastHit: undefined,
+  on: vi.fn(() => () => undefined),
+  setEnabled: vi.fn(),
+};
+
 const quality = {
   current: { resolutionScale: 1, terrainSse: 2, modelLoadConcurrency: 4 },
   snapshot: {
@@ -91,6 +98,7 @@ function createAdapter(): TestAdapter {
     terrain,
     coordinates,
     quality,
+    picking,
     setErrorReporter: (next) => {
       reporter = next;
     },

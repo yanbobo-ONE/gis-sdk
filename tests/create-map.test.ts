@@ -6,6 +6,7 @@ import type {
   BasemapController,
   CameraController,
   CoordinateTransform,
+  PickingController,
   TerrainController,
 } from '../src/core/controls.js';
 import type { QualityController } from '../src/core/quality.js';
@@ -68,6 +69,13 @@ function createFactory() {
     pickGeoPosition: vi.fn(() => ({ longitude: 1, latitude: 2, height: 3 })),
   };
 
+  const picking: PickingController = {
+    enabled: true,
+    lastHit: undefined,
+    on: vi.fn(() => () => undefined),
+    setEnabled: vi.fn(),
+  };
+
   const quality: QualityController = {
     current: { resolutionScale: 1, terrainSse: 2, modelLoadConcurrency: 4 },
     snapshot: {
@@ -94,6 +102,7 @@ function createFactory() {
     terrain,
     coordinates,
     quality,
+    picking,
     resize: vi.fn(),
     destroy: vi.fn(),
   };

@@ -16,6 +16,7 @@
 | 3D Tiles            | 可用 | `type: '3d-tiles'`                                                                         | 加载标准 Tileset、显隐、基础 LOD 配置、取消后的延迟资源清理和释放                                                          |
 | 静态模型            | 可用 | `type: 'model'`、`ModelLayerHandle`、`createMap({ quality })`                              | glTF / GLB 加载、WGS84 位置朝向与朝向补偿、颜色叠加、外观策略（提亮 / 无光照）、就地变换、取消加载、并发上限与统一资源释放 |
 | 点位图层            | 可用 | `type: 'points'`、`PointsLayerHandle`、`MAX_POINT_LAYER_POINTS`                            | PointPrimitive 批量渲染、单层 20 万点、逐点样式覆盖、原子替换点位、整层样式调整与统一资源释放                              |
+| 拾取交互            | 可用 | `map.picking.on('click' \| 'hover')`、`map.picking.setEnabled()`                           | 类型化命中信息（图层 / 对象 / 地球 / 原生对象）、地表经纬高、按帧合并悬停、相机变化期间暂停拾取、点击向下钻取              |
 | 相机控制            | 可用 | `map.camera.setView()`、`flyTo()`、`cancelFlight()`                                        | 使用度和米定位、飞行、取消、切换视角时先取消进行中的飞行、退化旋转与 NaN 位姿兜底                                          |
 | XYZ 底图            | 可用 | `createMap({ basemap })`、`map.basemap`                                                    | 单底图原子替换、透明度与显隐，始终位于业务影像图层下方                                                                     |
 | 地形                | 可用 | `map.terrain.set()`、`TerrainSetOptions`                                                   | 椭球切换和 Cesium Terrain 异步加载，失败或超时（默认 30 秒）时保留旧地形并可立即重试                                       |

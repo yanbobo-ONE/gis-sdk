@@ -1,3 +1,5 @@
+import type { Unsubscribe } from './event-hub.js';
+
 /** 经纬度位置，单位为度和米。 */
 export interface GeoPosition {
   /** 经度，范围 -180 到 180。 */
@@ -58,6 +60,61 @@ export interface CameraView extends GeoPosition {
 export interface CameraFlight extends CameraView {
   /** 飞行时长，单位为秒；省略时由 Cesium 计算。 */
   readonly duration?: number;
+}
+
+/** 拾取事件的种类。 */
+export type PickingEventKind = 'click' | 'hover';
+
+/**
+ * SDK 写入 Cesium 图元 `id` 字段的拾取标记。
+ *
+ * `id` 在 Cesium 里就是给拾取用的语义字段，因此 SDK 拥有单个可拾取对象的图层
+ * （点位图层、静态模型）会写入该标记；拾取控制器据此还原图层与对象。
+ */
+export interface PickingMarker {
+  /** 图层 id。 */
+  readonly layerId: string;
+  /** 图层内对象 id；只有一个对象的图层省略。 */
+  readonly objectId?: string;
+}
+
+/** 一次拾取的命中信息。 */
+export interface PickingHit {
+  /** 命中对象所属的 SDK 图层 id；命中非 SDK 对象时为 `undefined`。 */
+  readonly layerId: string | undefined;
+  /** SDK 图层内的对象 id；没有或不是 SDK 对象时为 `undefined`。 */
+  readonly objectId: string | undefined;
+  /** 命中类别：SDK 图层、地球表面，或无法识别的原生对象。 */
+  readonly kind: 'layer' | 'globe' | 'unknown';
+}
+
+/** 一次拾取事件。 */
+export interface PickingEvent {
+  /** 画布内的屏幕坐标，单位为像素。 */
+  readonly screen: WindowCoordinates;
+  /** 命中信息；什么也没命中时为 `undefined`。 */
+  readonly hit: PickingHit | undefined;
+  /** 屏幕位置对应的 WGS84 经纬高；未命中地球时为 `undefined`。 */
+  readonly position: GeoPosition | undefined;
+  /** 原生拾取结果，供识别 SDK 未标记的对象。 */
+  readonly raw: unknown;
+}
+
+/** 类型化拾取控制器。 */
+export interface PickingController {
+  /** 是否启用拾取。 */
+  readonly enabled: boolean;
+  /** 最近一次拾取的命中信息；没有拾取过时为 `undefined`。 */
+  readonly lastHit: PickingHit | undefined;
+  /**
+   * 订阅拾取事件，返回取消订阅函数。
+   *
+   * `hover` 事件按动画帧合并：一帧内多次移动只做一次场景拾取；相机移动或拖拽
+   * 期间暂停悬停拾取，避免逐帧拾取拖慢渲染。
+   */
+  on(kind: PickingEventKind, listener: (event: PickingEvent) => void): Unsubscribe;
+  /** 开关拾取；关闭后不再执行场景拾取，也不会触发事件。 */
+  setEnabled(enabled: boolean): void;
 }
 
 /** 类型化相机控制器。 */
