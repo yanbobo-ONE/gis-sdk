@@ -22,6 +22,7 @@
 - 轨道与姿态数学：开普勒六根数、二体传播、锚点推导轨道与采样、最近接近预警、四元数姿态积分；
 - CZML 位置采样的生成与解析（支持 ISO 时间戳与包级 epoch，数据源仍走原生出口）；
 - 仿真 / 回放时钟 `SimulationClock`：播放状态机、倍率与方向、seek/step 与水位线限速；
+- 回放时间轴 `ReplayTimeline`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片（不含数据源读取）；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
@@ -175,6 +176,7 @@ async function disposeMap() {
 | 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`（纯计算，零 Cesium） |
 | CZML 生成与解析                                | 可用                   | `czmlFromPositions()` / `czmlFromSamples()` / `positionsFromCzml()`：位置采样与可用区间往返一致                                                                                 |
 | 仿真 / 回放时钟                                | 可用                   | `SimulationClock`：倍率、暂停、倒放、seek/step 与水位线限速，可订阅状态                                                                                                         |
+| 回放时间轴                                     | 可用                   | `ReplayTimeline`：按对象分组、同刻去重、`sampleAt()` 插值、`window()` / `trackAt()` 切片、有界外推                                                                                |
 | Cesium 公共原生能力                            | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                                                                                |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形     | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`（含 `view` / `viewRectangle` 只读快照）、`map.terrain`                                                                     |
 | 数据管线核心                                   | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                                                                                                  |

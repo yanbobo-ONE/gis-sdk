@@ -127,6 +127,12 @@ export type {
   PositionSample,
 } from '../core/position-batch.js';
 export { RealtimeResyncController } from '../core/realtime-resync.js';
+export { ReplayTimeline } from '../core/replay-timeline.js';
+export type {
+  ReplaySample,
+  ReplayTimeRange,
+  ReplayTimelineOptions,
+} from '../core/replay-timeline.js';
 export type {
   RealtimeResyncOptions,
   RealtimeResyncRequestResult,
