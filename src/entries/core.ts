@@ -55,3 +55,81 @@ export type {
   RenderQualityBounds,
   RenderQualityMonitorOptions,
 } from '../core/quality.js';
+
+export type {
+  AnalysisAreaInput,
+  AnalysisBBoxInput,
+  AnalysisBearingInput,
+  AnalysisCenterOfMassInput,
+  AnalysisController,
+  AnalysisDistanceInput,
+  AnalysisInputMap,
+  AnalysisLineOfSightInput,
+  AnalysisLineOfSightResult,
+  AnalysisPointInPolygonInput,
+  AnalysisPointInPolygonResult,
+  AnalysisPointsInPolygonInput,
+  AnalysisResultMap,
+  AnalysisResultMeta,
+  AnalysisRunOptions,
+  AnalysisSlopeAspectInput,
+  AnalysisSlopeAspectResult,
+  AnalysisSurfaceDistanceInput,
+  AnalysisSurfaceDistanceResult,
+  AnalysisTerrainSampleInput,
+  AnalysisToolDescriptor,
+  AnalysisToolId,
+  AnalysisTransformInput,
+  AnalysisViewshedInput,
+  AnalysisViewshedResult,
+} from '../core/analysis.js';
+export {
+  describeCrs,
+  listCrs,
+  registerChinaCrs,
+  registerCrs,
+  transformGeoPath,
+  transformGeoPoint,
+  transformGeoRing,
+} from '../spatial/crs.js';
+export type {
+  ChinaGaussZone,
+  CrsDescriptor,
+  RegisterChinaCrsOptions,
+  RegisterCrsOptions,
+} from '../spatial/crs.js';
+export {
+  measureArea,
+  measureBBox,
+  measureBearing,
+  measureCenterOfMass,
+  measureDestination,
+  measureDistance,
+  measurePathLength,
+  nearestPointOnPath,
+  pointAlongPath,
+} from '../spatial/measure.js';
+export type {
+  AreaMeasurement,
+  BearingMeasurement,
+  DistanceMeasurement,
+  MeasureOptions,
+  MeasureUnit,
+  NearestPointMeasurement,
+} from '../spatial/measure.js';
+export {
+  filterPointsInPolygon,
+  isPointInPolygon,
+  normalizeRingWinding,
+} from '../spatial/predicate.js';
+export type {
+  FilterPointsInPolygonResult,
+  PointInPolygonOptions,
+  RingWinding,
+} from '../spatial/predicate.js';
+export {
+  MAX_BATCH_POINTS,
+  MAX_GEOMETRY_VERTICES,
+  SPATIAL_ALGORITHM_VERSION,
+} from '../spatial/types.js';
+export type { GeoBBox, GeoPoint, GeoPolygon, GeoRing } from '../spatial/types.js';

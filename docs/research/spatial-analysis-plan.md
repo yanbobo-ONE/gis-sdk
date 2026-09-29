@@ -150,6 +150,42 @@ P2 做缓冲区与叠加时，三选一（§9 待确认 4）：
 - **语法与运行时**：`target: es2022`，SDK 不承担消费方的 legacy 转换责任。turf 7.x 是 ESM + `sideEffects: false`；proj4 提供 cjs/umd 双形态；两者都不依赖 Node 专属 API，可在浏览器与 vitest（Node）下直接跑。
 - **lil-gui 不进 `dependencies`**：库不带调试面板。若示例需要调参面板，放 `examples/` 的 devDependency 内动态加载；是否引入由示例需要决定，不阻塞本案。
 
+### 3.5 P0 实测修正：依赖是 external，不会打进 dist（2026-09-29 补记）
+
+§3.4 的前提需要修正。**tsup 默认把 `package.json` 的 `dependencies` 当作 external**，实测 `pnpm build` 后
+`dist/core.js` 的首行就是 `import proj4 from 'proj4';` 与 `import along from '@turf/along';`——
+turf 与 proj4 都**没有**被打进 dist，而是留给消费方的打包器解析。
+
+SDK 自身包体积（gzip -9，基线与含 P0 的构建对比，基线为 `git worktree` 上的 HEAD）：
+
+| 入口             | 基线     | 含 P0    | 增量         |
+| ---------------- | -------- | -------- | ------------ |
+| `dist/core.js`   | 6,160 B  | 10,791 B | **+4,631 B** |
+| `dist/index.js`  | 25,963 B | 30,474 B | **+4,511 B** |
+| `dist/cesium.js` | 22,646 B | 22,646 B | 0            |
+| `dist/layers.js` | 454 B    | 454 B    | 0            |
+
+即 SDK 侧的成本只有本仓库自己的代码（约 4.5 KB gzip），与 §3.1 的 53 KB 预测无关。
+
+消费端成本（esbuild 打包 `dist/core.js`，`--external:cesium`，minify + gzip -9）：
+
+| 探针                                                      | gzip        |
+| --------------------------------------------------------- | ----------- |
+| `import { measureDistance } from '@yanbobo/gis-sdk/core'` | 44,506 B    |
+| 同上，但把 `proj4` 标记为 external                        | **1,418 B** |
+| 仅 `import proj4 from 'proj4'`                            | 43,277 B    |
+
+**结论：只要 CRS 模块与其余代码同处一个 chunk，任何从 `/core` 导入的消费方都会付出约 42 KB gzip 的 proj4，
+即使完全不使用 CRS。** 原因是 `proj4` 的 `package.json` 没有声明 `sideEffects: false`，打包器必须保留其顶层副作用；
+turf 一侧可忽略——`measureDistance` 的完整路径在去掉 proj4 后只有 **1.4 KB** gzip。
+
+由此对 §9 待确认 2 的影响：入口选择不能只按"代码放哪边顺手"决定。可选做法：
+(a) 把 `crs.ts` 单独出口（如 `@yanbobo/gis-sdk/crs`），`/core` 不静态引用 proj4；
+(b) CRS 内部改用动态 `import('proj4')`，由消费方打包器拆成独立 chunk（代价是 `transform*` 变为异步）；
+(c) 接受成本并在使用文档中写明。
+
+P0 按已确认的"并入 `/core`"执行，并在 `docs/guide/spatial-analysis.md` 写明该成本；(a)/(b)/(c) 留待 P1/P2 拍板。
+
 ## 4. 算法清单（工具 → 算法 → 依赖 → 阶段）
 
 | #   | 场景（下游驱动）           | 算法                | 依赖                                     | 阶段  | PRD 一期 |

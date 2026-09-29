@@ -10,7 +10,7 @@
 </div>
 
 ::: tip 当前可用范围
-当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形与地形采样、坐标转换、渲染质量自适应、GeoJSON、WMS/GeoServer、TMS、WMTS、3D Tiles、静态 glTF / GLB 模型、类型化 CQL 过滤、图层资源清理与错误计数，以及有界数据缓冲、批处理、Worker / MessagePort 消息输入转发和帧预算调度。Worker 池、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
+当前源码支持地图生命周期、相机、XYZ 底图、椭球 / Cesium Terrain 地形与地形采样、地图坐标转换、空间量算与 CRS 转换、渲染质量自适应、GeoJSON、WMS/GeoServer、TMS、WMTS、3D Tiles、静态 glTF / GLB 模型、类型化 CQL 过滤、图层资源清理与错误计数，以及有界数据缓冲、批处理、Worker / MessagePort 消息输入转发和帧预算调度。Worker 池、Primitive 大数据渲染、材质与空间分析尚未发布，不应按已完成功能接入。
 :::
 
 ## 为什么使用 gis-sdk
@@ -89,6 +89,7 @@ await map.destroy();
 | 坐标转换             | 可用     | 经纬高与世界坐标互转、投影到像素、屏幕拾取地球表面 |
 | 地形采样             | 可用     | 批量高程采样、分批并发、缓存与取消                 |
 | 渲染质量             | 可用     | 四档预设与按帧率自动降档，联动分辨率/地形/模型并发 |
+| 空间计算             | 可用     | 量算、点面判断、CRS 转换（纯函数层，零 Cesium）    |
 | TMS/WMTS             | 可用     | 类型化瓦片 Provider、显隐、透明度、取消和资源释放  |
 | 原生出口             | 可用     | `map.raw.viewer`，仅承诺 Cesium 公共接口           |
 | 相机/XYZ/地形        | 可用     | `map.camera`、`map.basemap`、`map.terrain`         |

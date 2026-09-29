@@ -7,11 +7,21 @@ import {
   DataPipelineMessageAdapter,
   EventHub,
   GisError,
+  isPointInPolygon,
+  measureDistance,
   qualityProfiles,
+  registerChinaCrs,
   RenderQualityMonitor,
+  transformGeoPoint,
 } from '../src/entries/core.js';
 import type {
+  AnalysisController,
+  AnalysisToolId,
   CoordinateTransform,
+  CrsDescriptor,
+  DistanceMeasurement,
+  GeoPoint,
+  GeoPolygon,
   DataPipelineMessageAdapterOptions,
   DataPipelineMessageSource,
   DataPipelineFrameSchedulerOptions,
@@ -57,6 +67,12 @@ describe('package subpath entrypoints', () => {
       readonly terrainSample: TerrainSample;
       readonly quality: QualityController;
       readonly qualityProfile: RenderQuality;
+      readonly analysis: AnalysisController;
+      readonly analysisTool: AnalysisToolId;
+      readonly crs: CrsDescriptor;
+      readonly distance: DistanceMeasurement;
+      readonly geoPoint: GeoPoint;
+      readonly geoPolygon: GeoPolygon;
       readonly imagery: ImageryLayerHandle;
       readonly pipeline: DataPipeline<{ readonly id: string }>;
       readonly messageAdapter: DataPipelineMessageAdapter<{ readonly id: string }>;
@@ -81,6 +97,10 @@ describe('package subpath entrypoints', () => {
     expect(DataPipelineMessageAdapter).toBeTypeOf('function');
     expect(RenderQualityMonitor).toBeTypeOf('function');
     expect(Object.isFrozen(qualityProfiles.default)).toBe(true);
+    expect(measureDistance).toBeTypeOf('function');
+    expect(isPointInPolygon).toBeTypeOf('function');
+    expect(registerChinaCrs).toBeTypeOf('function');
+    expect(transformGeoPoint).toBeTypeOf('function');
     expect(wmsFilter.eq('status', 'OPEN')).toEqual({
       op: 'eq',
       property: 'status',

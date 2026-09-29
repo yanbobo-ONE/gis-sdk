@@ -4,12 +4,30 @@ import {
   DataPipeline,
   DataPipelineFrameScheduler,
   DataPipelineMessageAdapter,
+  describeCrs,
+  filterPointsInPolygon,
+  isPointInPolygon,
+  listCrs,
+  measureArea,
+  measureBBox,
+  measureDistance,
+  normalizeRingWinding,
   qualityProfiles,
+  registerChinaCrs,
+  registerCrs,
   RenderQualityMonitor,
+  SPATIAL_ALGORITHM_VERSION,
+  transformGeoPoint,
   wmsFilter,
 } from '../src/index.js';
 import type {
+  AnalysisController,
+  AnalysisToolId,
+  AreaMeasurement,
   CoordinateTransform,
+  CrsDescriptor,
+  DistanceMeasurement,
+  FilterPointsInPolygonResult,
   DataPipelineFrameSchedulerOptions,
   DataPipelineMessageAdapterOptions,
   DataPipelineOptions,
@@ -21,9 +39,13 @@ import type {
   ModelLayerHandle,
   ModelLayerSpec,
   ModelTransform,
+  GeoPoint,
+  GeoPolygon,
+  GeoRing,
   QualityController,
   QualityProfileId,
   RenderQuality,
+  RegisterChinaCrsOptions,
   TerrainSample,
   WindowCoordinates,
   WorldCoordinates,
@@ -67,6 +89,16 @@ describe('package public layer interface', () => {
       readonly quality: QualityController;
       readonly qualityProfile: QualityProfileId;
       readonly renderQuality: RenderQuality;
+      readonly geoPoint: GeoPoint;
+      readonly geoRing: GeoRing;
+      readonly geoPolygon: GeoPolygon;
+      readonly distance: DistanceMeasurement;
+      readonly area: AreaMeasurement;
+      readonly filtered: FilterPointsInPolygonResult;
+      readonly crs: CrsDescriptor;
+      readonly crsOptions: RegisterChinaCrsOptions;
+      readonly analysis: AnalysisController;
+      readonly analysisTool: AnalysisToolId;
       readonly imageryHandle: ImageryLayerHandle;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
       readonly frameSchedulerOptions: DataPipelineFrameSchedulerOptions<{ readonly id: string }>;
@@ -86,5 +118,17 @@ describe('package public layer interface', () => {
       modelLoadConcurrency: 2,
     });
     expect(Object.isFrozen(qualityProfiles)).toBe(true);
+    expect(typeof measureDistance).toBe('function');
+    expect(typeof isPointInPolygon).toBe('function');
+    expect(typeof filterPointsInPolygon).toBe('function');
+    expect(typeof measureArea).toBe('function');
+    expect(typeof measureBBox).toBe('function');
+    expect(typeof normalizeRingWinding).toBe('function');
+    expect(typeof registerCrs).toBe('function');
+    expect(typeof registerChinaCrs).toBe('function');
+    expect(typeof transformGeoPoint).toBe('function');
+    expect(typeof listCrs).toBe('function');
+    expect(typeof describeCrs).toBe('function');
+    expect(SPATIAL_ALGORITHM_VERSION).toBe(1);
   });
 });
