@@ -23,6 +23,7 @@
 | 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表 |
 | 消化高频业务消息                                 | [实时数据导航](./data-pipeline.md)          | 有界队列、Worker/MessagePort 输入、帧预算调度                   |
 | 处理乱序实时样本与断流追赶                       | [实时水位线](./realtime-waterline.md)       | `RealtimeWaterline`、`RealtimeTimestampGuard`                   |
+| 过滤无效坐标、按 id 合并高频位置                 | [位置批量归一化](./position-batch.md)       | `normalizePositions()`、可转移的 `Float64Array` 输出            |
 | 丢弃旧会话消息、处理序列断档                     | [会话门禁与重同步](./realtime-session.md)   | `RealtimeSessionGate`、`RealtimeResyncController`               |
 | 判断和处理失败                                   | [错误与原生出口](./errors-and-native.md)    | `GisError`、错误码、`map.raw.viewer` 的边界                     |
 

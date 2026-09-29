@@ -9,6 +9,7 @@
 | 限制单帧处理量                          | `DataPipelineFrameScheduler<T>`                      | [帧预算调度](./data-pipeline-frame-scheduler.md)              | 请求合并、每帧有界消费、取消与帧统计                 |
 | 乱序样本导致实体倒退                    | `RealtimeWaterline<T>`                               | [实时水位线与时间戳守卫](./realtime-waterline.md)             | 按仿真时间发布、精确对象共同覆盖、追赶倍率与断流状态 |
 | 旧会话迟到包夺回状态、序列断档          | `RealtimeSessionGate<T>`、`RealtimeResyncController` | [会话门禁与重同步](./realtime-session.md)                     | 会话切换判定、重复快照请求合并与有界重试             |
+| 高频位置去重与无效坐标过滤              | `normalizePositions()`                               | [位置批量归一化](./position-batch.md)                         | 校验坐标、按 id 合并最新、输出可转移的 Float64Array  |
 
 ## 推荐组合
 

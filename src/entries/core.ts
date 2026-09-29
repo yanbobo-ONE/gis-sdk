@@ -79,6 +79,13 @@ export type {
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
 export { RealtimeTimestampGuard } from '../core/realtime-timestamp-guard.js';
 export type { RealtimeTimestampGuardOptions } from '../core/realtime-timestamp-guard.js';
+export { normalizePositions } from '../core/position-batch.js';
+export type {
+  PositionBatch,
+  PositionBatchMode,
+  PositionBatchOptions,
+  PositionSample,
+} from '../core/position-batch.js';
 export { RealtimeResyncController } from '../core/realtime-resync.js';
 export type {
   RealtimeResyncOptions,
