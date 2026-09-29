@@ -1,5 +1,6 @@
 import type { GeoPosition } from './controls.js';
 import { GisError } from './errors.js';
+import type { Quaternion } from '../spatial/attitude.js';
 
 /** CZML 文档：包数组（首个通常是 `document` 包）。 */
 export type CzmlDocument = readonly Readonly<Record<string, unknown>>[];
@@ -24,6 +25,23 @@ export interface CzmlExportOptions {
   readonly startSeconds?: number;
   /** 是否写入 `availability`（覆盖采样起止），默认 `true`。 */
   readonly availability?: boolean;
+  /**
+   * 写入 `model` 报文，让原生 Cesium 把实体渲染成 glTF / GLB 模型。
+   *
+   * 省略时只写位置，文档交给 SDK 图层消费；与参照实现一致，`minimumPixelSize` 默认 24，
+   * 保证远距离下模型不会缩成不可见的点。
+   */
+  readonly model?: CzmlModelOptions;
+}
+
+/** CZML `model` 报文配置。 */
+export interface CzmlModelOptions {
+  /** glTF / GLB 资源地址。 */
+  readonly url: string;
+  /** 缩放下限（屏幕像素），默认 24。 */
+  readonly minimumPixelSize?: number;
+  /** 统一缩放倍数；省略时不写入。 */
+  readonly scale?: number;
 }
 
 /** 可用区间，单位为相对 epoch 的秒数。 */
@@ -32,6 +50,37 @@ export interface CzmlAvailabilityInterval {
   readonly startSeconds: number;
   /** 结束秒数。 */
   readonly endSeconds: number;
+}
+
+/** 从 CZML 文档解析出的一条轨迹：位置、可选姿态、模型地址与可用区间。 */
+export interface CzmlTrack {
+  /** 实体 id。 */
+  readonly id: string;
+  /** 实体显示名；没有时为 `undefined`。 */
+  readonly name: string | undefined;
+  /** 解析使用的 epoch（ISO 字符串）；所有 `timeSeconds` 都相对它。 */
+  readonly epoch: string;
+  /**
+   * 模型资源地址（`model.gltf`）；文档没有 model 报文时为 `undefined`。
+   *
+   * 注意 CZML 里还可能有 `model.minimumPixelSize`、`scale` 等渲染参数，SDK 只取地址：
+   * 具体怎么渲染由消费方（原生 Cesium 或 SDK 的模型图层）决定。
+   */
+  readonly modelUrl: string | undefined;
+  /** 采样，按时间升序；每条的 `attitude` 为该时刻的姿态（文档没有姿态时为 `undefined`）。 */
+  readonly samples: readonly CzmlTrackSample[];
+  /** 可用区间；没有 `availability` 时为空数组。 */
+  readonly availability: readonly CzmlAvailabilityInterval[];
+}
+
+/** 一条轨迹上的采样。 */
+export interface CzmlTrackSample extends CzmlTimestampedPosition {
+  /**
+   * 姿态四元数（x, y, z, w，与 CZML `unitQuaternion` 顺序一致）。
+   *
+   * 文档没有 `orientation` 时为 `undefined`，不会伪造单位四元数。
+   */
+  readonly attitude: Quaternion | undefined;
 }
 
 /** 从 CZML 文档解析出的一条位置轨迹。 */
@@ -59,6 +108,9 @@ export interface CzmlImportOptions {
 }
 
 /** 默认 epoch。 */
+/** 模型缩放下限默认值（屏幕像素），与参照实现一致。 */
+const DEFAULT_MINIMUM_PIXEL_SIZE = 24;
+
 const DEFAULT_EPOCH = '1970-01-01T00:00:00Z';
 
 function czmlError(message: string, operation: string): GisError {
@@ -280,6 +332,9 @@ export function czmlFromSamples(
   if (options.name !== undefined) {
     entity.name = options.name;
   }
+  if (options.model) {
+    entity.model = buildModelPacket(options.model, operation);
+  }
   if (!staticPosition && options.availability !== false) {
     entity.availability = `${toIsoString(epoch, first.timeSeconds)}/${toIsoString(epoch, last.timeSeconds)}`;
   }
@@ -290,6 +345,100 @@ export function czmlFromSamples(
     document.clock = { interval, currentTime: toIsoString(epoch, first.timeSeconds) };
   }
   return [document, entity];
+}
+
+/** 校验并构造 `model` 报文。 */
+function buildModelPacket(model: CzmlModelOptions, operation: string): Record<string, unknown> {
+  const url = typeof model.url === 'string' ? model.url.trim() : '';
+  if (!url) {
+    throw czmlError('CZML model url must be a non-empty string.', operation);
+  }
+  const minimumPixelSize = model.minimumPixelSize ?? DEFAULT_MINIMUM_PIXEL_SIZE;
+  if (!finiteNumber(minimumPixelSize) || minimumPixelSize <= 0) {
+    throw czmlError('CZML model minimumPixelSize must be a positive finite number.', operation);
+  }
+  const packet: Record<string, unknown> = { gltf: url, minimumPixelSize };
+  if (model.scale !== undefined) {
+    if (!finiteNumber(model.scale) || model.scale <= 0) {
+      throw czmlError('CZML model scale must be a positive finite number.', operation);
+    }
+    packet.scale = model.scale;
+  }
+  return packet;
+}
+
+/**
+ * 读取 `orientation.unitQuaternion`：4 个值为静态姿态，5 的整数倍为 `[时间, x, y, z, w]` 采样。
+ *
+ * 模长过小的四元数视为非法；其余按单位四元数归一化后返回，避免下游姿态积分被非单位四元数污染。
+ */
+function readOrientations(
+  orientation: unknown,
+  epoch: string,
+  operation: string,
+): { timeSeconds: number; quaternion: Quaternion }[] {
+  if (orientation === undefined || !isRecord(orientation)) {
+    return [];
+  }
+  if (orientation.unitQuaternion === undefined) {
+    // velocityReference、unitQuaternion 之外的姿态形式不在最小集内：忽略而不是拒收整份文档。
+    return [];
+  }
+  if (!isArray(orientation.unitQuaternion)) {
+    throw czmlError('CZML orientation.unitQuaternion must be an array.', operation);
+  }
+  const values = orientation.unitQuaternion;
+  const packetEpoch = typeof orientation.epoch === 'string' ? orientation.epoch : epoch;
+  const offsetSeconds = epochOffsetSeconds(packetEpoch, epoch, operation);
+  if (values.length === 4) {
+    return [{ timeSeconds: 0, quaternion: toQuaternion(values, operation) }];
+  }
+  if (values.length === 0 || values.length % 5 !== 0) {
+    throw czmlError('CZML orientation samples must be [time, x, y, z, w] entries.', operation);
+  }
+  const result: { timeSeconds: number; quaternion: Quaternion }[] = [];
+  for (let index = 0; index < values.length; index += 5) {
+    const stamp = values[index];
+    const timeSeconds =
+      typeof stamp === 'string'
+        ? (Date.parse(stamp) - Date.parse(epoch)) / 1000
+        : finiteNumber(stamp)
+          ? stamp + offsetSeconds
+          : Number.NaN;
+    if (!finiteNumber(timeSeconds)) {
+      throw czmlError('CZML orientation sample time is not a finite second value.', operation);
+    }
+    result.push({
+      timeSeconds,
+      quaternion: toQuaternion(values.slice(index + 1, index + 5), operation),
+    });
+  }
+  return result;
+}
+
+/** 归一化一个单位四元数；模长过小时抛错。 */
+function toQuaternion(values: readonly unknown[], operation: string): Quaternion {
+  const [x, y, z, w] = values;
+  if (!finiteNumber(x) || !finiteNumber(y) || !finiteNumber(z) || !finiteNumber(w)) {
+    throw czmlError('CZML quaternion components must be finite numbers.', operation);
+  }
+  const norm = Math.hypot(x, y, z, w);
+  if (!(norm > 1e-6)) {
+    throw czmlError('CZML quaternion has a near-zero norm.', operation);
+  }
+  return { x: x / norm, y: y / norm, z: z / norm, w: w / norm };
+}
+
+/** 计算包级 epoch 与文档 epoch 的秒差。 */
+function epochOffsetSeconds(packetEpoch: string, epoch: string, operation: string): number {
+  if (packetEpoch === epoch) {
+    return 0;
+  }
+  const offset = (Date.parse(packetEpoch) - Date.parse(epoch)) / 1000;
+  if (!finiteNumber(offset)) {
+    throw czmlError(`CZML epoch "${packetEpoch}" is not a valid ISO date.`, operation);
+  }
+  return offset;
 }
 
 /**
@@ -328,10 +477,89 @@ export function czmlFromPositions(
 }
 
 /**
+ * 从 CZML 文档解析轨迹。
+ *
+ * 读取 `position.cartographicDegrees`、`orientation.unitQuaternion`、`model.gltf` 与
+ * `availability`；`billboard`、`label`、`path` 等属性原样忽略，便于用同一份文档驱动 SDK
+ * 自己的图层。没有位置信息的包会被跳过，只有姿态的包同样跳过（姿态要挂在位置上才有意义）。
+ *
+ * @param document - CZML 包数组。
+ * @param options - 覆盖 epoch。
+ * @returns 轨迹，顺序与文档中的实体顺序一致。
+ * @throws `INVALID_CZML` 文档结构、时间戳、位置、姿态或 availability 非法。
+ */
+export function tracksFromCzml(
+  document: unknown,
+  options: CzmlImportOptions = {},
+): readonly CzmlTrack[] {
+  const operation = 'tracksFromCzml';
+  if (!isArray(document)) {
+    throw czmlError('CZML document must be an array of packets.', operation);
+  }
+  const packets = document as readonly Record<string, unknown>[];
+  const epoch = options.epoch ?? resolveEpoch(packets) ?? DEFAULT_EPOCH;
+  if (!Number.isFinite(Date.parse(epoch))) {
+    throw czmlError(`CZML epoch "${epoch}" is not a valid ISO date.`, operation);
+  }
+
+  const tracks: CzmlTrack[] = [];
+  for (const packet of packets) {
+    if (!isRecord(packet) || packet.id === 'document') {
+      continue;
+    }
+    const id = typeof packet.id === 'string' ? packet.id.trim() : '';
+    if (!id) {
+      throw czmlError('CZML entity packets must have a non-empty string id.', operation);
+    }
+    const positions = readPosition(packet.position, epoch, operation);
+    if (positions.length === 0) {
+      continue;
+    }
+    const orientations = readOrientations(packet.orientation, epoch, operation);
+    tracks.push({
+      id,
+      name: typeof packet.name === 'string' ? packet.name : undefined,
+      epoch,
+      modelUrl: readModelUrl(packet.model),
+      samples: positions.map((sample) => ({
+        timeSeconds: sample.timeSeconds,
+        position: sample.position,
+        attitude: attitudeAt(orientations, sample.timeSeconds),
+      })),
+      availability: readAvailability(packet.availability, epoch, operation),
+    });
+  }
+  return tracks;
+}
+
+/**
+ * 取时刻上最接近的姿态采样；没有完全匹配时返回 `undefined`。
+ *
+ * 只做精确匹配：位置与姿态两组采样通常同频写入，做插值会给"姿态来自哪一帧"留下歧义，
+ * 需要插值的调用方可以用 `@yanbobo/gis-sdk/core` 的 `AttitudeDynamics` 自行推进。
+ */
+function attitudeAt(
+  orientations: readonly { timeSeconds: number; quaternion: Quaternion }[],
+  timeSeconds: number,
+): Quaternion | undefined {
+  const match = orientations.find((entry) => Math.abs(entry.timeSeconds - timeSeconds) < 1e-6);
+  return match ? { ...match.quaternion } : undefined;
+}
+
+/** 读取 `model.gltf`；没有 model 报文或地址非字符串时返回 `undefined`。 */
+function readModelUrl(model: unknown): string | undefined {
+  if (!isRecord(model)) {
+    return undefined;
+  }
+  const url = model.gltf;
+  return typeof url === 'string' && url.trim().length > 0 ? url : undefined;
+}
+
+/**
  * 从 CZML 文档解析位置轨迹。
  *
- * 只读取 `position.cartographicDegrees` 与 `availability`：`billboard`、`label`、`model`
- * 等属性原样忽略，便于用同一份文档驱动 SDK 自己的图层。没有位置信息的包会被跳过。
+ * 只保留位置与可用区间；需要姿态或模型地址时用 {@link tracksFromCzml}。
+ * `billboard`、`label`、`model` 的渲染参数等属性原样忽略，便于用同一份文档驱动 SDK 自己的图层。
  *
  * @param document - CZML 包数组。
  * @param options - 覆盖 epoch。
@@ -342,36 +570,14 @@ export function positionsFromCzml(
   document: unknown,
   options: CzmlImportOptions = {},
 ): readonly CzmlPositionTrack[] {
-  const operation = 'positionsFromCzml';
-  if (!isArray(document)) {
-    throw czmlError('CZML document must be an array of packets.', operation);
-  }
-  const packets = document as readonly Record<string, unknown>[];
-  const epoch = options.epoch ?? resolveEpoch(packets) ?? DEFAULT_EPOCH;
-  if (!Number.isFinite(Date.parse(epoch))) {
-    throw czmlError(`CZML epoch "${epoch}" is not a valid ISO date.`, operation);
-  }
-
-  const tracks: CzmlPositionTrack[] = [];
-  for (const packet of packets) {
-    if (!isRecord(packet) || packet.id === 'document') {
-      continue;
-    }
-    const id = typeof packet.id === 'string' ? packet.id.trim() : '';
-    if (!id) {
-      throw czmlError('CZML entity packets must have a non-empty string id.', operation);
-    }
-    const samples = readPosition(packet.position, epoch, operation);
-    if (samples.length === 0) {
-      continue;
-    }
-    tracks.push({
-      id,
-      name: typeof packet.name === 'string' ? packet.name : undefined,
-      epoch,
-      samples,
-      availability: readAvailability(packet.availability, epoch, operation),
-    });
-  }
-  return tracks;
+  return tracksFromCzml(document, options).map((track) => ({
+    id: track.id,
+    name: track.name,
+    epoch: track.epoch,
+    samples: track.samples.map((sample) => ({
+      timeSeconds: sample.timeSeconds,
+      position: sample.position,
+    })),
+    availability: track.availability,
+  }));
 }

@@ -207,7 +207,12 @@ export type {
   AnalysisViewshedInput,
   AnalysisViewshedResult,
 } from '../core/analysis.js';
-export { czmlFromPositions, czmlFromSamples, positionsFromCzml } from '../core/czml.js';
+export {
+  czmlFromPositions,
+  czmlFromSamples,
+  positionsFromCzml,
+  tracksFromCzml,
+} from '../core/czml.js';
 export { SimulationClock } from '../core/simulation-clock.js';
 export type {
   SimulationClockMode,
@@ -220,8 +225,11 @@ export type {
   CzmlDocument,
   CzmlExportOptions,
   CzmlImportOptions,
+  CzmlModelOptions,
   CzmlPositionTrack,
   CzmlTimestampedPosition,
+  CzmlTrack,
+  CzmlTrackSample,
 } from '../core/czml.js';
 export { AttitudeDynamics } from '../spatial/attitude.js';
 export { findClosestApproaches } from '../spatial/closest-approach.js';

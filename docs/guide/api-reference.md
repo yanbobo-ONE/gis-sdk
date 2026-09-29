@@ -25,7 +25,7 @@
 | 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表    |
 | 通视、视域、坡度坡向、地表距离                   | [分析工具](./analysis.md)                   | `map.analysis.run(tool, input)`、13 个内置工具与算法版本           |
 | 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics` |
-| 生成或解析 CZML 位置采样                         | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`czmlFromSamples`、`positionsFromCzml`        |
+| 生成或解析 CZML（位置 / 姿态 / 模型）             | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`positionsFromCzml`、`tracksFromCzml`          |
 | 回放倍率、暂停、倒放与水线限速                   | [仿真 / 回放时钟](./simulation-clock.md)    | `SimulationClock`、`advance()`、`setWatermark()`                   |
 | 按时刻取回放样本、插值与轨迹窗口                 | [回放时间轴](./replay-timeline.md)          | `ReplayTimeline` 的 `sampleAt()` / `window()` / `trackAt()`        |
 | 消化高频业务消息                                 | [实时数据导航](./data-pipeline.md)          | 有界队列、Worker/MessagePort 输入、帧预算调度                      |

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { czmlFromPositions, czmlFromSamples, positionsFromCzml } from '../src/core/czml.js';
+import {
+  czmlFromPositions,
+  czmlFromSamples,
+  positionsFromCzml,
+  tracksFromCzml,
+} from '../src/core/czml.js';
 
 const beijing = { longitude: 116.39, latitude: 39.9, height: 500_000 };
 const shanghai = { longitude: 121.47, latitude: 31.23, height: 500_000 };
@@ -189,5 +194,143 @@ describe('positionsFromCzml', () => {
         epoch: 'nope',
       }),
     ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
+  });
+});
+
+describe('CZML model packet and attitude samples', () => {
+  const epoch = '2026-09-30T00:00:00Z';
+
+  it('writes a model packet with the reference defaults', () => {
+    const document = czmlFromPositions(
+      'platform-1',
+      [
+        { longitude: 1, latitude: 2, height: 3 },
+        { longitude: 1.1, latitude: 2.1, height: 3.2 },
+      ],
+      { epoch, intervalSeconds: 5, model: { url: 'https://example.com/platform.glb' } },
+    );
+
+    expect(document[1]?.model).toEqual({
+      gltf: 'https://example.com/platform.glb',
+      minimumPixelSize: 24,
+    });
+
+    const scaled = czmlFromPositions('p', [{ longitude: 0, latitude: 0 }], {
+      model: { url: 'model.glb', minimumPixelSize: 48, scale: 2 },
+    });
+    expect(scaled[1]?.model).toEqual({ gltf: 'model.glb', minimumPixelSize: 48, scale: 2 });
+  });
+
+  it('rejects an empty model url and non-positive rendering values', () => {
+    const positions = [{ longitude: 0, latitude: 0 }];
+
+    expect(() => czmlFromPositions('p', positions, { model: { url: '  ' } })).toThrow(
+      expect.objectContaining({ code: 'INVALID_CZML' }),
+    );
+    expect(() =>
+      czmlFromPositions('p', positions, { model: { url: 'a.glb', minimumPixelSize: 0 } }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
+    expect(() =>
+      czmlFromPositions('p', positions, { model: { url: 'a.glb', scale: -1 } }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
+  });
+
+  it('reads model url and per-sample attitude from tracks', () => {
+    const document = [
+      { id: 'document', version: '1.0' },
+      {
+        id: 'platform-1',
+        name: '平台一号',
+        model: { gltf: 'platform.glb', minimumPixelSize: 32 },
+        position: { epoch, cartographicDegrees: [0, 10, 20, 30, 5, 11, 21, 31] },
+        orientation: { epoch, unitQuaternion: [0, 0, 0, 0, 1, 5, 0, 0, 0, 1] },
+        availability: `2026-09-30T00:00:00Z/2026-09-30T00:00:05Z`,
+      },
+      { id: 'marker', position: { cartographicDegrees: [0, 1, 2, 3] } },
+    ];
+
+    const tracks = tracksFromCzml(document);
+
+    expect(tracks).toHaveLength(2);
+    const platform = tracks[0];
+    expect(platform?.modelUrl).toBe('platform.glb');
+    expect(platform?.name).toBe('平台一号');
+    expect(platform?.samples).toEqual([
+      {
+        timeSeconds: 0,
+        position: { longitude: 10, latitude: 20, height: 30 },
+        attitude: { x: 0, y: 0, z: 0, w: 1 },
+      },
+      {
+        timeSeconds: 5,
+        position: { longitude: 11, latitude: 21, height: 31 },
+        attitude: { x: 0, y: 0, z: 0, w: 1 },
+      },
+    ]);
+    expect(platform?.availability).toEqual([{ startSeconds: 0, endSeconds: 5 }]);
+    // 没有 model 与 orientation 的包给出 undefined，不伪造默认值。
+    expect(tracks[1]?.modelUrl).toBeUndefined();
+    expect(tracks[1]?.samples[0]?.attitude).toBeUndefined();
+  });
+
+  it('normalizes unit quaternions and rejects degenerate ones', () => {
+    const track = tracksFromCzml([
+      {
+        id: 'a',
+        position: { cartographicDegrees: [0, 1, 2, 3] },
+        orientation: { unitQuaternion: [0, 0, 0, 2] },
+      },
+    ])[0];
+
+    expect(track?.samples[0]?.attitude).toEqual({ x: 0, y: 0, z: 0, w: 1 });
+
+    expect(() =>
+      tracksFromCzml([
+        {
+          id: 'a',
+          position: { cartographicDegrees: [0, 1, 2, 3] },
+          orientation: { unitQuaternion: [0, 0, 0, 0] },
+        },
+      ]),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
+    expect(() =>
+      tracksFromCzml([
+        {
+          id: 'a',
+          position: { cartographicDegrees: [0, 1, 2, 3] },
+          orientation: { unitQuaternion: [0, 0, 0] },
+        },
+      ]),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
+  });
+
+  it('ignores orientation forms outside the minimal set instead of failing', () => {
+    const tracks = tracksFromCzml([
+      {
+        id: 'a',
+        position: { cartographicDegrees: [0, 1, 2, 3] },
+        orientation: { velocityReference: '#position' },
+      },
+    ]);
+
+    expect(tracks[0]?.samples[0]?.attitude).toBeUndefined();
+  });
+
+  it('keeps positionsFromCzml output unchanged', () => {
+    const document = czmlFromPositions(
+      'a',
+      [{ longitude: 1, latitude: 2 }],
+      { model: { url: 'a.glb' } },
+    );
+
+    expect(positionsFromCzml(document)).toEqual([
+      {
+        id: 'a',
+        name: undefined,
+        epoch: '1970-01-01T00:00:00Z',
+        samples: [{ timeSeconds: 0, position: { longitude: 1, latitude: 2, height: 0 } }],
+        availability: [],
+      },
+    ]);
   });
 });
