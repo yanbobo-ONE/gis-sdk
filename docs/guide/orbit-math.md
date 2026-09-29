@@ -81,10 +81,37 @@ attitude.attitude; // 归一化后的四元数
 
 积分是一阶的，**大步长会低估转角**：需要精确角度时用小步长（例如按帧 16ms），不要一次推进一大段时间。
 
+## 最近接近预警
+
+```ts
+import { findClosestApproaches } from '@yanbobo/gis-sdk/core';
+
+const warnings = findClosestApproaches(
+  [
+    { id: 'sat-1', position: { x: -10_000, y: 0, z: 0 }, velocity: { x: 1_000, y: 0, z: 0 } },
+    {
+      id: 'sat-2',
+      position: { x: 10_000, y: 0, z: 0 },
+      velocity: { x: -1_000, y: 0, z: 0 },
+      radiusMeters: 20,
+    },
+  ],
+  { horizonSeconds: 60, thresholdMeters: 100 },
+);
+// → [{ firstId: 'sat-1', secondId: 'sat-2', timeSeconds: 10, distanceMeters: 0 }]
+```
+
+对每一对物体求相对运动的最近点：最近时刻为 `clamp(−(r·v)/|v|², 0, 窗口)`；最近距离不超过 `max(阈值, 两半径之和)` 时给出告警，结果按最近时刻升序。
+
+两点要注意：
+
+- **O(n²) 两两比较**：几百个对象没问题，成千上万时应先按空间分箱裁剪候选对；
+- **窗口内按匀速直线处理**：只适合短窗口预警。长时间推演请先用 `propagateTwoBody` 采样，再对采样序列比较。
+
 ## 当前边界
 
 - **不做轨道预报与时序**：星历、机动与摄动模型不在本模块范围；
 - **不做坐标转换**：六根数来自惯性系状态；要落到经纬高需要 ECI→ECEF 的岁差与自转换算，本 SDK 未提供（可用服务端星历或专业库转换后交给 `map.coordinates`）；
 - **不做参考几何标注**：Plugin-web 的升交点/降交点标记、春分点、赤道圈、倾角弧等展示几何含较多展示参数，未移植；
-- **不做碰撞分析**：最近接近判定需要业务阈值与统计口径，未封装；
+- **不做碰撞规避建议**：只给"何时、多近"的告警，不含规避策略或风险等级口径；
 - **CZML 未发布**：需要交给 Cesium 时，可用 `map.raw.viewer` 自行组装 CZML，或直接用[折线图层](./polyline-layer.md)渲染采样点。

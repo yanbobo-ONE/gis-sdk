@@ -146,6 +146,12 @@ export type {
   AnalysisViewshedResult,
 } from '../core/analysis.js';
 export { AttitudeDynamics } from '../spatial/attitude.js';
+export { findClosestApproaches } from '../spatial/closest-approach.js';
+export type {
+  ApproachOptions,
+  ApproachTrack,
+  ApproachWarning,
+} from '../spatial/closest-approach.js';
 export type { AngularVelocity, Quaternion } from '../spatial/attitude.js';
 export {
   EARTH_RADIUS,
