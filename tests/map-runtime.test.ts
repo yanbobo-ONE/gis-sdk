@@ -104,6 +104,7 @@ function createAdapter(): TestAdapter {
     },
     reportError: (error) => reporter?.(error),
     resize: vi.fn(),
+    capture: vi.fn(() => Promise.resolve(undefined)),
     destroy: vi.fn(),
   };
 }

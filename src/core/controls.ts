@@ -62,6 +62,24 @@ export interface CameraFlight extends CameraView {
   readonly duration?: number;
 }
 
+/** 画布快照；`canvas` 是设备像素分辨率的离屏副本，可直接导出或绘制。 */
+export interface FrameCapture {
+  /** 离屏画布副本。 */
+  readonly canvas: HTMLCanvasElement;
+  /** 画布像素宽度。 */
+  readonly width: number;
+  /** 画布像素高度。 */
+  readonly height: number;
+}
+
+/** 画布快照的等待配置。 */
+export interface CaptureOptions {
+  /** 等待渲染的毫秒上限，默认 400。 */
+  readonly timeoutMs?: number;
+  /** 渲染尝试次数，默认 2；容器尺寸刚变化时首帧可能取不到像素。 */
+  readonly attempts?: number;
+}
+
 /** 拾取事件的种类。 */
 export type PickingEventKind = 'click' | 'hover';
 

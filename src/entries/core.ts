@@ -25,6 +25,8 @@ export type {
 export type {
   BasemapController,
   BasemapType,
+  CaptureOptions,
+  FrameCapture,
   PickingController,
   PickingEvent,
   PickingEventKind,

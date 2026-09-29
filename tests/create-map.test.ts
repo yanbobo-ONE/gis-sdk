@@ -104,6 +104,7 @@ function createFactory() {
     quality,
     picking,
     resize: vi.fn(),
+    capture: vi.fn(() => Promise.resolve(undefined)),
     destroy: vi.fn(),
   };
   const factory: MapAdapterFactory<FakeRawContext> = (options) => {

@@ -23,6 +23,7 @@
 - 类型化拾取交互（`map.picking`）：点击与悬停命中信息、地表经纬高，悬停按帧合并避免卡顿；
 - 实时水位线与时间戳守卫：乱序样本按时间释放、精确对象共同覆盖、双阈值追赶与超前样本隔离；
 - 实时会话门禁与重同步控制器：旧会话迟到包丢弃、序列断档合并请求与有界重试；
+- 画布快照 `map.capture()`：同帧拷贝绘图缓冲区、判空重试与超时语义；
 - 相机退化旋转与 NaN 位姿兜底、切换视角时取消飞行，以及地形加载超时保护；
 - 默认关闭在线底图和可选控件，无需 Cesium ion token 即可启动空白地球。
 
@@ -128,6 +129,7 @@ async function disposeMap() {
 - [拾取交互](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/picking.md)
 - [实时水位线](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/realtime-waterline.md)
 - [会话门禁与重同步](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/realtime-session.md)
+- [画布快照](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capture.md)
 - [功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)
 - [TypeScript 类型索引](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
 - [变更日志](https://github.com/yanbobo-ONE/gis-sdk/blob/main/CHANGELOG.md)
@@ -137,6 +139,7 @@ async function disposeMap() {
 | 能力                                           | 状态                   | 现在怎样使用                                                                                                                                                                 |
 | ---------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 地图创建、尺寸更新、事件与销毁                 | 可用                   | `createMap()`、`map.resize()`、`map.events`、`map.destroy()`                                                                                                                 |
+| 画布快照                                       | 可用                   | `map.capture()`：在 postRender 同帧拷贝（无需 preserveDrawingBuffer），判空重试与超时返回 `undefined`                                                                        |
 | GeoJSON                                        | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                                                                                                  |
 | WMS / GeoServer                                | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()`                                                                       |
 | TMS / WMTS                                     | 可用                   | TMS/WMTS 分别使用 `map.layers.add({ type: 'tms', ... })` 或 `map.layers.add({ type: 'wmts', ... })`，返回 `ImageryLayerHandle`                                               |

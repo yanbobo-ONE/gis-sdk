@@ -7,6 +7,7 @@
 | 模块                | 状态 | 公开入口                                                                                   | 已验证的效果                                                                                                               |
 | ------------------- | ---- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | 地图运行时          | 可用 | `createMap()`、`map.resize()`、`map.destroy()`、`map.state`                                | 创建 Viewer、响应容器尺寸变化、并发幂等销毁与销毁状态保护                                                                  |
+| 画布快照            | 可用 | `map.capture()`、`FrameCapture`、`CaptureOptions`                                          | 在 postRender 同帧拷贝绘图缓冲区（无需 preserveDrawingBuffer）、降采样判空、重试与超时返回 undefined                       |
 | 事件与错误          | 可用 | `map.events`、`EventHub`、`GisError`                                                       | 订阅 `map:error` / `map:destroy`，按稳定错误码处理失败                                                                     |
 | 图层生命周期        | 可用 | `map.layers.add/get/list/remove/clear`                                                     | 图层 ID 预留、加载取消、资源释放和状态快照                                                                                 |
 | GeoJSON             | 可用 | `type: 'geojson'`、`setData()`                                                             | URL 或对象加载、基础样式、取消加载后保留旧数据且不进入错误状态、原子数据替换                                               |

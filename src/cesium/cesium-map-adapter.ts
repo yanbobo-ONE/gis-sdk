@@ -4,7 +4,9 @@ import type { MapEngineAdapter } from '../core/contracts.js';
 import type {
   BasemapController,
   CameraController,
+  CaptureOptions,
   CoordinateTransform,
+  FrameCapture,
   PickingController,
   TerrainController,
 } from '../core/controls.js';
@@ -20,6 +22,7 @@ import { CesiumCameraController } from './camera-controller.js';
 import { guardCameraPose, guardDegenerateCameraRotation } from './camera-guards.js';
 import type { CameraPoseGuard } from './camera-guards.js';
 import { CesiumCoordinateTransform } from './coordinates.js';
+import { captureViewerFrame } from './frame-capture.js';
 import { ModelAppearanceShaders } from './layers/model-appearance.js';
 import { LoadLimiter } from './load-limiter.js';
 import { CesiumPickingController } from './picking-controller.js';
@@ -242,6 +245,10 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
 
   resize(): void {
     this.raw.viewer.resize();
+  }
+
+  capture(options: CaptureOptions = {}): Promise<FrameCapture | undefined> {
+    return captureViewerFrame(this.raw.viewer, options);
   }
 
   async destroy(): Promise<void> {

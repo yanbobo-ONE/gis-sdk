@@ -4,7 +4,9 @@ import type { LayerManager } from '../layers/contracts.js';
 import type {
   BasemapController,
   CameraController,
+  CaptureOptions,
   CoordinateTransform,
+  FrameCapture,
   PickingController,
   TerrainController,
 } from './controls.js';
@@ -64,6 +66,13 @@ export interface GisMap<TRaw = unknown> {
    */
   resize(): void;
   /**
+   * 抓取当前画面。
+   *
+   * 内部会请求一次渲染并在渲染完成的同一帧拷贝绘图缓冲区，因此不需要开启
+   * `preserveDrawingBuffer`；画面为空或超时（默认 400ms）时返回 `undefined`。
+   */
+  capture(options?: CaptureOptions): Promise<FrameCapture | undefined>;
+  /**
    * 释放地图及底层引擎资源。
    *
    * 并发调用共享同一个 Promise；成功后重复调用不会再次释放资源。
@@ -84,5 +93,6 @@ export interface MapEngineAdapter<TRaw> {
   /** 引擎内部异步失败的上报入口；`MapRuntime` 在构造时接入 `map:error`。 */
   setErrorReporter?(reporter: (error: GisError) => void): void;
   resize(): void;
+  capture(options?: CaptureOptions): Promise<FrameCapture | undefined>;
   destroy(): void | Promise<void>;
 }

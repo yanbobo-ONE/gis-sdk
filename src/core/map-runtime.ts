@@ -4,7 +4,9 @@ import type {
   CameraController,
   CameraFlight,
   CameraView,
+  CaptureOptions,
   CoordinateTransform,
+  FrameCapture,
   GeoPosition,
   PickingController,
   PickingEvent,
@@ -179,6 +181,11 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   resize(): void {
     this.assertReady('resize');
     this.adapter.resize();
+  }
+
+  capture(options: CaptureOptions = {}): Promise<FrameCapture | undefined> {
+    this.assertReady('capture');
+    return this.adapter.capture(options);
   }
 
   destroy(): Promise<void> {
