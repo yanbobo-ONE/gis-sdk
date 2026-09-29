@@ -20,6 +20,7 @@
 - 影像图层与底图的远端失败可观测：累计错误计数，并只上报首个失败；
 - 纯计算的空间能力：量算（距离/面积/方位/包围盒/质心/最近点）、点面判断与 CRS 转换（含 CGCS2000 高斯带）；
 - 轨道与姿态数学：开普勒六根数、二体传播、锚点推导轨道与采样、最近接近预警、四元数姿态积分；
+- CZML 位置采样的生成与解析（支持 ISO 时间戳与包级 epoch，数据源仍走原生出口）；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 类型化拾取交互（`map.picking`）：点击与悬停命中信息、地表经纬高，悬停按帧合并避免卡顿；
@@ -131,6 +132,7 @@ async function disposeMap() {
 - [渲染质量与自动降档](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/quality.md)
 - [空间计算与坐标转换](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/spatial-analysis.md)
 - [轨道与姿态数学](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/orbit-math.md)
+- [CZML 生成与解析](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/czml.md)
 - [点位图层与 CSV 导入](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/points-layer.md)
 - [折线图层与内置材质](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/polyline-layer.md)
 - [拾取交互](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/picking.md)
@@ -167,6 +169,7 @@ async function disposeMap() {
 | 远端失败可观测                                 | 可用                   | `layer.events.on('error')`、`layer.errorCount`、`map.basemap.errorCount` 与 `map:error` 上的首个失败                                                                            |
 | 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                     |
 | 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`（纯计算，零 Cesium） |
+| CZML 生成与解析                                | 可用                   | `czmlFromPositions()` / `czmlFromSamples()` / `positionsFromCzml()`：位置采样与可用区间往返一致                                                                                 |
 | Cesium 公共原生能力                            | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                                                                                |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形     | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                                                                                            |
 | 数据管线核心                                   | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                                                                                                  |

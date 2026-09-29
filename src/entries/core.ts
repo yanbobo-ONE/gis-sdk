@@ -145,6 +145,15 @@ export type {
   AnalysisViewshedInput,
   AnalysisViewshedResult,
 } from '../core/analysis.js';
+export { czmlFromPositions, czmlFromSamples, positionsFromCzml } from '../core/czml.js';
+export type {
+  CzmlAvailabilityInterval,
+  CzmlDocument,
+  CzmlExportOptions,
+  CzmlImportOptions,
+  CzmlPositionTrack,
+  CzmlTimestampedPosition,
+} from '../core/czml.js';
 export { AttitudeDynamics } from '../spatial/attitude.js';
 export { findClosestApproaches } from '../spatial/closest-approach.js';
 export type {
