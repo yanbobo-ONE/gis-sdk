@@ -36,6 +36,8 @@ import type {
   GeoJsonLayerSpec,
   ImageryLayerHandle,
   LayerManager,
+  ModelAppearanceMode,
+  ModelAppearanceOptions,
   ModelLayerHandle,
   ModelLayerSpec,
   ModelTransform,
@@ -81,6 +83,8 @@ describe('package public layer interface', () => {
       readonly singleImageSpec: SingleImageLayerSpec;
       readonly modelSpec: ModelLayerSpec;
       readonly modelHandle: ModelLayerHandle;
+      readonly modelAppearance: ModelAppearanceOptions;
+      readonly modelAppearanceMode: ModelAppearanceMode;
       readonly modelTransform: ModelTransform;
       readonly coordinates: CoordinateTransform;
       readonly world: WorldCoordinates;

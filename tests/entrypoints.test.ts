@@ -37,6 +37,7 @@ import type { GisMap, TerrainSetOptions } from '../src/entries/core.js';
 import type {
   ImageryLayerHandle,
   LayerManager,
+  ModelAppearanceOptions,
   ModelLayerHandle,
   ModelLayerSpec,
   ModelTransform,
@@ -62,6 +63,7 @@ describe('package subpath entrypoints', () => {
       readonly singleImage: SingleImageLayerSpec;
       readonly model: ModelLayerSpec;
       readonly modelHandle: ModelLayerHandle;
+      readonly modelAppearance: ModelAppearanceOptions;
       readonly modelTransform: ModelTransform;
       readonly coordinates: CoordinateTransform;
       readonly terrainSample: TerrainSample;

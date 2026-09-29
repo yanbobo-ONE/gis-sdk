@@ -126,28 +126,28 @@ async function disposeMap() {
 
 ## 当前能力与未完成项
 
-| 能力                                           | 状态                   | 现在怎样使用                                                                                                                                |
-| ---------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 地图创建、尺寸更新、事件与销毁                 | 可用                   | `createMap()`、`map.resize()`、`map.events`、`map.destroy()`                                                                                |
-| GeoJSON                                        | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                                                                 |
-| WMS / GeoServer                                | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()`                                      |
-| TMS / WMTS                                     | 可用                   | TMS/WMTS 分别使用 `map.layers.add({ type: 'tms', ... })` 或 `map.layers.add({ type: 'wmts', ... })`，返回 `ImageryLayerHandle`              |
-| 单图影像                                       | 可用                   | `map.layers.add({ type: 'single-image', url, rectangle?, ... })`，范围使用 WGS84 度数，返回 `ImageryLayerHandle`                            |
-| 3D Tiles                                       | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                                                     |
-| 静态模型                                       | 可用                   | `map.layers.add({ type: 'model', url, position, ... })`，支持 `setTransform()`、`setColor()`，并发上限由 `createMap({ quality })` 控制      |
-| 坐标转换                                       | 可用                   | `map.coordinates`：`toWorld`、`toGeoPosition`、`toWindow`、`pickGeoPosition`，未命中返回 `undefined`                                        |
-| 地形采样                                       | 可用                   | `map.terrain.sample(points, options?)`：分批并发、缓存、取消与错误码                                                                        |
-| 渲染质量                                       | 可用                   | `createMap({ quality })`、`map.quality`：四档预设与按帧率自动升降档                                                                         |
-| 远端失败可观测                                 | 可用                   | `layer.events.on('error')`、`layer.errorCount`、`map.basemap.errorCount` 与 `map:error` 上的首个失败                                        |
-| 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖 |
-| Cesium 公共原生能力                            | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                                            |
-| XYZ 底图、相机、椭球 / Cesium Terrain 地形     | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                                                        |
-| 数据管线核心                                   | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                                                              |
-| Worker / MessagePort 消息输入                  | 可用                   | `DataPipelineMessageAdapter`：消息监听、业务解码转发、统计和监听释放                                                                        |
-| 帧预算调度                                     | 可用                   | `DataPipelineFrameScheduler`：请求合并、每帧有界消费、取消和统计                                                                            |
-| CZML、动态实体与模型动画                       | 未完成                 | 静态 glTF / GLB 模型已可用；CZML、动态实体、动画与模型外观策略当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源             |
-| Worker 池、专用动态输入和 Primitive 大数据渲染 | 未完成                 | 当前没有 Worker 池、协议 Adapter、吞吐量、数据规模或性能承诺                                                                                |
-| 绘制编辑、自定义材质、空间分析、插件与诊断     | 未完成                 | 当前没有稳定公开 API                                                                                                                        |
+| 能力                                           | 状态                   | 现在怎样使用                                                                                                                                                                 |
+| ---------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 地图创建、尺寸更新、事件与销毁                 | 可用                   | `createMap()`、`map.resize()`、`map.events`、`map.destroy()`                                                                                                                 |
+| GeoJSON                                        | 可用                   | `map.layers.add({ type: 'geojson', ... })`，并可用 `setData()` 原子替换数据                                                                                                  |
+| WMS / GeoServer                                | 可用                   | `map.layers.add({ type: 'wms', ... })`，并可用 `setOpacity()`、`setStyle()`、`setFilter()`、`reload()`                                                                       |
+| TMS / WMTS                                     | 可用                   | TMS/WMTS 分别使用 `map.layers.add({ type: 'tms', ... })` 或 `map.layers.add({ type: 'wmts', ... })`，返回 `ImageryLayerHandle`                                               |
+| 单图影像                                       | 可用                   | `map.layers.add({ type: 'single-image', url, rectangle?, ... })`，范围使用 WGS84 度数，返回 `ImageryLayerHandle`                                                             |
+| 3D Tiles                                       | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                                                                                      |
+| 静态模型                                       | 可用                   | `map.layers.add({ type: 'model', url, position, ... })`，支持 `setTransform()`、`setColor()`、`setAppearance()` 与 `headingOffset`，并发上限由 `createMap({ quality })` 控制 |
+| 坐标转换                                       | 可用                   | `map.coordinates`：`toWorld`、`toGeoPosition`、`toWindow`、`pickGeoPosition`，未命中返回 `undefined`                                                                         |
+| 地形采样                                       | 可用                   | `map.terrain.sample(points, options?)`：分批并发、缓存、取消与错误码                                                                                                         |
+| 渲染质量                                       | 可用                   | `createMap({ quality })`、`map.quality`：四档预设与按帧率自动升降档                                                                                                          |
+| 远端失败可观测                                 | 可用                   | `layer.events.on('error')`、`layer.errorCount`、`map.basemap.errorCount` 与 `map:error` 上的首个失败                                                                         |
+| 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                  |
+| Cesium 公共原生能力                            | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                                                                             |
+| XYZ 底图、相机、椭球 / Cesium Terrain 地形     | 可用                   | `createMap({ basemap })`、`map.basemap`、`map.camera`、`map.terrain`                                                                                                         |
+| 数据管线核心                                   | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                                                                                               |
+| Worker / MessagePort 消息输入                  | 可用                   | `DataPipelineMessageAdapter`：消息监听、业务解码转发、统计和监听释放                                                                                                         |
+| 帧预算调度                                     | 可用                   | `DataPipelineFrameScheduler`：请求合并、每帧有界消费、取消和统计                                                                                                             |
+| CZML、动态实体与模型动画                       | 未完成                 | 静态 glTF / GLB 模型已可用；CZML、动态实体、动画与模型外观策略当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                              |
+| Worker 池、专用动态输入和 Primitive 大数据渲染 | 未完成                 | 当前没有 Worker 池、协议 Adapter、吞吐量、数据规模或性能承诺                                                                                                                 |
+| 绘制编辑、自定义材质、空间分析、插件与诊断     | 未完成                 | 当前没有稳定公开 API                                                                                                                                                         |
 
 功能完成后会在[功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)将状态改为“可用”，补充可运行示例、API 参数页和变更日志，并以新的 npm alpha 版本发布。规划能力不是已发布 API，不能按名称直接调用。
 

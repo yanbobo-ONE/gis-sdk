@@ -14,6 +14,8 @@ export type {
   LayerSpec,
   LayerState,
   LayerType,
+  ModelAppearanceMode,
+  ModelAppearanceOptions,
   ModelLayerHandle,
   ModelLayerSpec,
   ModelOrientation,

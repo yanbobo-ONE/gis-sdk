@@ -18,19 +18,21 @@ const vehicle = await map.layers.add({
 vehicle.setVisible(false);
 ```
 
-| 字段               | 类型                               | 必填 | 默认值/说明                                                |
-| ------------------ | ---------------------------------- | ---- | ---------------------------------------------------------- |
-| `id`               | `string`                           | 是   | 地图内唯一 ID                                              |
-| `type`             | `'model'`                          | 是   | 固定值                                                     |
-| `url`              | `string`                           | 是   | 非空 `.gltf` 或 `.glb` 地址；首尾空白会被去除              |
-| `position`         | `{ longitude, latitude, height? }` | 是   | WGS84 度数位置，`height` 单位为米并默认 0                  |
-| `orientation`      | `{ heading?, pitch?, roll? }`      | 否   | 角度制，均默认 0                                           |
-| `scale`            | `number`                           | 否   | 必须为正有限数，默认由 Cesium 使用 1                       |
-| `minimumPixelSize` | `number`                           | 否   | 最小屏幕像素尺寸；省略时按真实尺寸渲染                     |
-| `maximumScale`     | `number`                           | 否   | `minimumPixelSize` 生效时的缩放上限                        |
-| `allowPicking`     | `boolean`                          | 否   | 默认 `true`                                                |
-| `color`            | `string`                           | 否   | CSS 颜色；按完全混合叠加到模型材质，省略时保留模型原始外观 |
-| `visible`          | `boolean`                          | 否   | 默认 `true`                                                |
+| 字段               | 类型                               | 必填 | 默认值/说明                                                           |
+| ------------------ | ---------------------------------- | ---- | --------------------------------------------------------------------- |
+| `id`               | `string`                           | 是   | 地图内唯一 ID                                                         |
+| `type`             | `'model'`                          | 是   | 固定值                                                                |
+| `url`              | `string`                           | 是   | 非空 `.gltf` 或 `.glb` 地址；首尾空白会被去除                         |
+| `position`         | `{ longitude, latitude, height? }` | 是   | WGS84 度数位置，`height` 单位为米并默认 0                             |
+| `orientation`      | `{ heading?, pitch?, roll? }`      | 否   | 角度制，均默认 0                                                      |
+| `scale`            | `number`                           | 否   | 必须为正有限数，默认由 Cesium 使用 1                                  |
+| `minimumPixelSize` | `number`                           | 否   | 最小屏幕像素尺寸；省略时按真实尺寸渲染                                |
+| `maximumScale`     | `number`                           | 否   | `minimumPixelSize` 生效时的缩放上限                                   |
+| `allowPicking`     | `boolean`                          | 否   | 默认 `true`                                                           |
+| `color`            | `string`                           | 否   | CSS 颜色；按完全混合叠加到模型材质，省略时保留模型原始外观            |
+| `headingOffset`    | `number`                           | 否   | 模型资源自身的朝向补偿（度），与 `orientation.heading` 相加后进入矩阵 |
+| `appearance`       | `ModelAppearanceOptions`           | 否   | 初始外观策略；与 `setAppearance()` 等价                               |
+| `visible`          | `boolean`                          | 否   | 默认 `true`                                                           |
 
 **返回：** `Promise<ModelLayerHandle>`，成功时模型已加入 `viewer.scene.primitives`。
 
@@ -56,6 +58,18 @@ vehicle.setColor(); // 恢复模型原始材质外观
 ```
 
 `setColor()` 使用 Cesium 的完全混合模式，因此模型贴图仍然可见但会被整体着色。无法解析的颜色字符串会抛出 `INVALID_LAYER_COLOR`。
+
+外观策略与朝向补偿：
+
+```ts
+vehicle.setAppearance({ mode: 'brightness', gain: 1.6 }); // 提亮，倍率 0.2–4
+vehicle.setAppearance({ mode: 'unlit' }); // 无光照，直接使用漫反射颜色
+vehicle.setAppearance(); // 恢复接管前的自定义着色器
+```
+
+`customShader` 是模型级属性，一个模型只允许一个策略：切换策略会整体替换而不是叠加。恢复时只写回本图层接管前记录的值——如果接管期间有人改过该字段，SDK 不会覆盖它。同一策略在同一地图内复用同一个着色器实例。
+
+`headingOffset` 表达模型资源本身的朝向差异（例如 glTF 机头朝向与业务航向不一致），它在添加时确定，`setTransform()` 更新姿态时仍然生效；`orientation.heading` 始终是业务姿态。
 
 ## 并发加载
 
@@ -93,16 +107,23 @@ await loading;
 
 ## 常见异常
 
-| 错误码                      | 原因                                                    |
-| --------------------------- | ------------------------------------------------------- |
-| `INVALID_LAYER_CONFIG`      | URL 为空、位置越界、朝向非有限数，或缩放等参数不合法    |
-| `INVALID_LAYER_COLOR`       | `color` 或 `setColor()` 传入的颜色字符串无法解析        |
-| `INVALID_MODEL_LOAD_CONFIG` | `createMap()` 的 `modelLoad.concurrency` 不是正安全整数 |
-| `LAYER_OPERATION_ABORTED`   | AbortSignal、移除、清空或销毁取消了加载                 |
-| `LAYER_LOAD_FAILED`         | 网络、服务或模型解析失败；可重试                        |
-| `DUPLICATE_LAYER_ID`        | 同一地图已有相同 ID 的加载中或已加载图层                |
-| `LAYER_DISPOSED`            | 图层已释放后继续调用 `setTransform()` 或 `setColor()`   |
+| 错误码                      | 原因                                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `INVALID_LAYER_CONFIG`      | URL 为空、位置越界、朝向或 `headingOffset` 非有限数、缩放等参数不合法、外观模式或提亮倍率不合法 |
+| `INVALID_LAYER_COLOR`       | `color` 或 `setColor()` 传入的颜色字符串无法解析                                                |
+| `INVALID_MODEL_LOAD_CONFIG` | `createMap()` 的 `modelLoad.concurrency` 不是正安全整数                                         |
+| `LAYER_OPERATION_ABORTED`   | AbortSignal、移除、清空或销毁取消了加载                                                         |
+| `LAYER_LOAD_FAILED`         | 网络、服务或模型解析失败；可重试                                                                |
+| `DUPLICATE_LAYER_ID`        | 同一地图已有相同 ID 的加载中或已加载图层                                                        |
+| `LAYER_DISPOSED`            | 图层已释放后继续调用 `setTransform()` 或 `setColor()`                                           |
 
 ## 当前边界
 
-本 alpha 版本只封装静态模型：没有模型动画、属性更新、CZML 或动态实体、拾取事件、分类/裁剪、外观提亮与无光照策略，也没有失败降级（占位点或标记）。需要这些能力时可用 `map.raw.viewer` 调用 Cesium 公共 API，并由业务负责资源所有权和销毁。
+本 alpha 版本封装单个静态模型：加载、位置朝向与朝向补偿、颜色叠加、外观策略、就地变换、显隐与资源释放。
+
+尚未提供：
+
+- **模型动画、属性更新、CZML 与动态实体**：`Model` 的动画集合未封装；
+- **相机高度区间（模型 / 点切换）**：Plugin-web 的 `lod` 语义是"按相机高度在模型与点之间切换、不隐藏业务对象"，SDK 目前没有点回退表示，因此没有照搬；需要时可按 `map.raw.viewer.camera.positionCartographic.height` 自行切换 `setVisible()`；
+- **失败降级**：加载失败会以 `LAYER_LOAD_FAILED` 拒绝 `add()`，SDK 不做后台自动重试，也不保留占位点或标记——失败后保留什么由业务决定；
+- **拾取事件、分类与裁剪**：未封装；临时需求走 `map.raw.viewer`，由业务负责资源所有权和销毁。

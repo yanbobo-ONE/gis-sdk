@@ -36,6 +36,7 @@ vi.mock('../src/cesium/layers/tiled-imagery-layer.js', () => ({
 }));
 
 import { createCesiumLayer } from '../src/cesium/layers/create-cesium-layer.js';
+import { ModelAppearanceShaders } from '../src/cesium/layers/model-appearance.js';
 import { LoadLimiter } from '../src/cesium/load-limiter.js';
 import type { LayerFactoryContext } from '../src/layers/layer-runtime.js';
 
@@ -43,7 +44,10 @@ const context: LayerFactoryContext = {
   signal: new AbortController().signal,
   onDisposed: () => undefined,
 };
-const services = { modelLoad: new LoadLimiter(4) };
+const services = {
+  modelLoad: new LoadLimiter(4),
+  modelAppearance: new ModelAppearanceShaders(),
+};
 
 describe('createCesiumLayer', () => {
   it('dispatches discriminated specs to the matching Cesium adapter', async () => {
@@ -120,6 +124,6 @@ describe('createCesiumLayer', () => {
     expect(adapters.tms).toHaveBeenCalledWith(viewer, tmsSpec, context);
     expect(adapters.wmts).toHaveBeenCalledWith(viewer, wmtsSpec, context);
     expect(adapters.singleImage).toHaveBeenCalledWith(viewer, singleImageSpec, context);
-    expect(adapters.model).toHaveBeenCalledWith(viewer, modelSpec, context, services.modelLoad);
+    expect(adapters.model).toHaveBeenCalledWith(viewer, modelSpec, context, services);
   });
 });

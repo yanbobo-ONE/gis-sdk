@@ -19,6 +19,7 @@ import { CesiumCameraController } from './camera-controller.js';
 import { guardCameraPose, guardDegenerateCameraRotation } from './camera-guards.js';
 import type { CameraPoseGuard } from './camera-guards.js';
 import { CesiumCoordinateTransform } from './coordinates.js';
+import { ModelAppearanceShaders } from './layers/model-appearance.js';
 import { LoadLimiter } from './load-limiter.js';
 import { CesiumQualityController } from './quality-controller.js';
 import { CesiumTerrainController } from './terrain-controller.js';
@@ -186,8 +187,10 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         initial: options.quality,
         adaptive: options.qualityAdaptive,
       });
+      // 外观策略缓存按地图隔离，同一地图内的多个模型共享同一策略实例。
+      const layerServices = { modelLoad, modelAppearance: new ModelAppearanceShaders() };
       const layerRuntime = new LayerRuntime((spec, context) => {
-        return createCesiumLayer(viewerInstance, spec, context, { modelLoad });
+        return createCesiumLayer(viewerInstance, spec, context, layerServices);
       });
       if (options.basemap) {
         basemapRuntime.set(options.basemap);

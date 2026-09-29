@@ -196,6 +196,22 @@ export interface ModelPosition {
   readonly height?: number;
 }
 
+/** 模型外观策略模式。 */
+export type ModelAppearanceMode = 'original' | 'brightness' | 'unlit';
+
+/**
+ * 模型外观策略。
+ *
+ * `customShader` 是模型级属性，一个模型只允许一个策略；切换策略会整体替换，
+ * 不会叠加。
+ */
+export interface ModelAppearanceOptions {
+  /** 外观模式，默认 `'original'`：不写任何外观字段，保持模型原始材质。 */
+  readonly mode?: ModelAppearanceMode;
+  /** `brightness` 模式的提亮倍率，范围 0.2 到 4，默认 1.3。 */
+  readonly gain?: number;
+}
+
 /** 静态模型的航向、俯仰与横滚，单位为度。 */
 export interface ModelOrientation {
   /** 航向角，单位为度，默认 0。 */
@@ -236,6 +252,19 @@ export interface ModelLayerSpec extends BaseLayerSpec {
   readonly allowPicking?: boolean;
   /** 叠加到模型材质上的 CSS 颜色；省略时保留模型原始外观。 */
   readonly color?: string;
+  /**
+   * 模型资源自身的朝向补偿，单位为度。
+   *
+   * 与 `orientation.heading` 相加后参与模型矩阵，用于修正 glTF 资源自带的朝向差异，
+   * 不改变业务姿态本身。
+   */
+  readonly headingOffset?: number;
+  /**
+   * 初始外观策略；省略时保持模型原始材质。
+   *
+   * 与 `setAppearance()` 等价，只是把策略写在配置里。
+   */
+  readonly appearance?: ModelAppearanceOptions;
 }
 
 /** Cesium 3D Tiles 图层配置。 */
@@ -350,6 +379,12 @@ export interface ModelLayerHandle extends LayerHandle {
   setTransform(transform: ModelTransform): void;
   /** 叠加 CSS 颜色；省略时恢复模型原始材质外观。 */
   setColor(color?: string): void;
+  /**
+   * 应用外观策略；省略或 `{ mode: 'original' }` 时恢复接管前的自定义着色器。
+   *
+   * 只还原由本图层写入的字段：模型自己设置的 `customShader` 会被记录并在恢复时写回。
+   */
+  setAppearance(options?: ModelAppearanceOptions): void;
 }
 
 /** 图层管理器返回的只读图层快照。 */

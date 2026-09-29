@@ -8,6 +8,7 @@
 - 增加类型化坐标转换 `map.coordinates`、地形高度采样 `map.terrain.sample()`、渲染质量档与按帧率自动降档（`createMap({ quality })`、`map.quality`），并让模型并发上限统一由质量档控制。
 - 增加影像图层与底图的远端失败可观测性：累计错误计数，只上报首个失败（图层事件 `error` 与 `map:error`）。
 - 增加空间计算层（`/core`，零 Cesium 纯函数）：量算、空间判断与 CRS 坐标转换（含 CGCS2000 高斯带），并定稿 `map.analysis` 契约（尚未挂到地图实例）。
+- 模型图层补完：增加朝向补偿 `headingOffset` 与外观策略 `appearance` / `setAppearance()`（提亮、无光照），并导出 `ModelAppearanceOptions`。
 - 空间计算引入 `proj4` 与 turf 子包：SDK 自身包体积仅 +4.6 KB gzip，但 `proj4` 未声明 `sideEffects`，从 `/core` 导入的消费方会带上约 42 KB gzip；实测数据见 `docs/research/spatial-analysis-plan.md` §3.5。
 - 图层句柄新增 `errorCount`，底图新增 `errorCount`，取消中的 GeoJSON 数据替换不再把图层置为错误状态。
 

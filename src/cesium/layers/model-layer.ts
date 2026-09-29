@@ -1,11 +1,12 @@
 import { Cartesian3, Color, ColorBlendMode, HeadingPitchRoll, Model, Transforms } from 'cesium';
-import type { Matrix4, Viewer } from 'cesium';
+import type { CustomShader, Matrix4, Viewer } from 'cesium';
 
 import { GisError } from '../../core/errors.js';
 import type { EventHub } from '../../core/event-hub.js';
 import type {
   LayerEventMap,
   LayerState,
+  ModelAppearanceOptions,
   ModelLayerHandle,
   ModelLayerSpec,
   ModelOrientation,
@@ -14,7 +15,8 @@ import type {
 } from '../../layers/contracts.js';
 import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
-import type { LoadLimiter } from '../load-limiter.js';
+import type { CesiumLayerServices } from '../layer-services.js';
+import type { ModelAppearanceShaders } from './model-appearance.js';
 
 /** Cesium 在未指定颜色混合时使用的原始外观。 */
 const ORIGINAL_APPEARANCE = {
@@ -102,6 +104,17 @@ function normalizeOrientation(
   return { heading, pitch, roll };
 }
 
+function normalizeHeadingOffset(
+  id: string,
+  headingOffset: number | undefined,
+  operation: string,
+): number {
+  if (headingOffset !== undefined && !finite(headingOffset)) {
+    throw layerError(id, 'headingOffset must be a finite degree value.', operation);
+  }
+  return headingOffset ?? 0;
+}
+
 function normalizeScale(
   id: string,
   scale: number | undefined,
@@ -113,13 +126,20 @@ function normalizeScale(
   return scale;
 }
 
+/**
+ * 由位置、姿态与朝向补偿构造模型矩阵。
+ *
+ * `headingOffset` 是模型资源自身的朝向差异，与业务姿态的 heading 相加后进入矩阵，
+ * 因此业务姿态本身不被改写。
+ */
 function modelMatrixFor(
   position: { readonly longitude: number; readonly latitude: number; readonly height: number },
   orientation: { readonly heading: number; readonly pitch: number; readonly roll: number },
+  headingOffset: number,
 ): Matrix4 {
   const point = Cartesian3.fromDegrees(position.longitude, position.latitude, position.height);
   const headingPitchRoll = HeadingPitchRoll.fromDegrees(
-    orientation.heading,
+    orientation.heading + headingOffset,
     orientation.pitch,
     orientation.roll,
   );
@@ -143,6 +163,7 @@ function parseColor(id: string, value: unknown, operation: string): Color {
 interface NormalizedModelConfig {
   readonly url: string;
   readonly modelMatrix: Matrix4;
+  readonly headingOffset: number;
   readonly scale: number | undefined;
   readonly minimumPixelSize: number | undefined;
   readonly maximumScale: number | undefined;
@@ -158,6 +179,7 @@ function normalizeConfig(spec: ModelLayerSpec): NormalizedModelConfig {
 
   const position = normalizePosition(spec.id, spec.position, 'add');
   const orientation = normalizeOrientation(spec.id, spec.orientation, 'add');
+  const headingOffset = normalizeHeadingOffset(spec.id, spec.headingOffset, 'add');
   const scale = normalizeScale(spec.id, spec.scale, 'add');
 
   if (
@@ -184,7 +206,8 @@ function normalizeConfig(spec: ModelLayerSpec): NormalizedModelConfig {
 
   return {
     url,
-    modelMatrix: modelMatrixFor(position, orientation),
+    modelMatrix: modelMatrixFor(position, orientation, headingOffset),
+    headingOffset,
     scale,
     minimumPixelSize,
     maximumScale,
@@ -222,17 +245,29 @@ function destroyLateModel(loading: Promise<Model>): void {
     .catch(() => undefined);
 }
 
+/** Cesium 1.144 把 `customShader` 声明为必填，运行时默认值其实是 undefined。 */
+interface ModelShaderHost {
+  customShader: CustomShader | undefined;
+}
+
 class CesiumModelLayerHandle implements ModelLayerHandle {
   readonly type = 'model' as const;
   private readonly lifecycle: LayerHandleRuntime;
+  private readonly shaderHost: ModelShaderHost;
+  private appliedShader: CustomShader | undefined;
+  private previousShader: CustomShader | undefined;
+  private recordedShader = false;
 
   constructor(
     private readonly viewer: Viewer,
     readonly id: string,
     private readonly model: Model,
+    private readonly headingOffset: number,
+    private readonly shaders: ModelAppearanceShaders,
     visible: boolean,
     onDisposed: () => void,
   ) {
+    this.shaderHost = model;
     this.lifecycle = new LayerHandleRuntime({
       id,
       type: this.type,
@@ -271,7 +306,7 @@ class CesiumModelLayerHandle implements ModelLayerHandle {
     this.lifecycle.assertUsable('setTransform');
     const position = normalizePosition(this.id, transform?.position, 'setTransform');
     const orientation = normalizeOrientation(this.id, transform?.orientation, 'setTransform');
-    this.model.modelMatrix = modelMatrixFor(position, orientation);
+    this.model.modelMatrix = modelMatrixFor(position, orientation, this.headingOffset);
     const scale = normalizeScale(this.id, transform?.scale, 'setTransform');
     if (scale !== undefined) {
       this.model.scale = scale;
@@ -291,6 +326,25 @@ class CesiumModelLayerHandle implements ModelLayerHandle {
     this.model.colorBlendAmount = 1;
   }
 
+  setAppearance(options?: ModelAppearanceOptions): void {
+    this.lifecycle.assertUsable('setAppearance');
+    const shader = this.shaders.resolve(options, 'setAppearance');
+    if (!this.recordedShader) {
+      // 记录首次接管前的值，恢复时只写回本图层没改过的情况。
+      this.previousShader = this.shaderHost.customShader;
+      this.recordedShader = true;
+    }
+    if (shader === undefined) {
+      if (this.shaderHost.customShader === this.appliedShader) {
+        this.shaderHost.customShader = this.previousShader;
+      }
+      this.appliedShader = undefined;
+      return;
+    }
+    this.shaderHost.customShader = shader;
+    this.appliedShader = shader;
+  }
+
   dispose(): Promise<void> {
     return this.lifecycle.dispose();
   }
@@ -301,7 +355,7 @@ export async function createModelLayer(
   viewer: Viewer,
   spec: ModelLayerSpec,
   context: LayerFactoryContext,
-  limiter: LoadLimiter,
+  services: CesiumLayerServices,
 ): Promise<ModelLayerHandle> {
   let loading: Promise<Model> | undefined;
   let model: Model | undefined;
@@ -310,11 +364,26 @@ export async function createModelLayer(
     if (context.signal.aborted) throw operationAborted(spec.id, context.signal.reason);
     const config = normalizeConfig(spec);
     const visible = spec.visible ?? true;
-    loading = limiter.run(() => Model.fromGltfAsync(modelOptions(config, visible)), context.signal);
+    loading = services.modelLoad.run(
+      () => Model.fromGltfAsync(modelOptions(config, visible)),
+      context.signal,
+    );
     model = await raceAbort(loading, context.signal);
     viewer.scene.primitives.add(model);
     added = true;
-    return new CesiumModelLayerHandle(viewer, spec.id, model, visible, context.onDisposed);
+    const handle = new CesiumModelLayerHandle(
+      viewer,
+      spec.id,
+      model,
+      config.headingOffset,
+      services.modelAppearance,
+      visible,
+      context.onDisposed,
+    );
+    if (spec.appearance) {
+      handle.setAppearance(spec.appearance);
+    }
+    return handle;
   } catch (cause: unknown) {
     if (added && model) removeModel(viewer, model);
     else if (model) model.destroy();

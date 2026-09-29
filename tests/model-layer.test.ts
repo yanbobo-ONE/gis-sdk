@@ -5,6 +5,7 @@ const cesium = vi.hoisted(() => {
     show = true;
     modelMatrix: unknown;
     scale = 1;
+    customShader: { options: Record<string, unknown> } | undefined = undefined;
     color: unknown = undefined;
     colorBlendMode: unknown = undefined;
     colorBlendAmount = 0.5;
@@ -37,6 +38,11 @@ const cesium = vi.hoisted(() => {
       ),
     },
     ColorBlendMode: { HIGHLIGHT: 'HIGHLIGHT', MIX: 'MIX' },
+    CustomShader: class CustomShader {
+      constructor(readonly options: Record<string, unknown>) {}
+    },
+    LightingModel: { UNLIT: 0, PBR: 1 },
+    UniformType: { FLOAT: 'float' },
     FakeModel,
     fromGltfAsync,
     fromDegrees,
@@ -59,9 +65,13 @@ vi.mock('cesium', () => ({
   Transforms: cesium.Transforms,
   Color: cesium.Color,
   ColorBlendMode: cesium.ColorBlendMode,
+  CustomShader: cesium.CustomShader,
+  LightingModel: cesium.LightingModel,
+  UniformType: cesium.UniformType,
 }));
 
 import { createModelLayer } from '../src/cesium/layers/model-layer.js';
+import { ModelAppearanceShaders } from '../src/cesium/layers/model-appearance.js';
 import { LoadLimiter } from '../src/cesium/load-limiter.js';
 import type { LayerFactoryContext } from '../src/layers/layer-runtime.js';
 
@@ -85,6 +95,7 @@ function createContext(signal = new AbortController().signal) {
 }
 
 const limiter = new LoadLimiter(4);
+const services = { modelLoad: limiter, modelAppearance: new ModelAppearanceShaders() };
 
 describe('model layer', () => {
   beforeEach(() => {
@@ -109,7 +120,7 @@ describe('model layer', () => {
         visible: false,
       },
       context,
-      limiter,
+      services,
     );
 
     expect(cesium.fromDegrees).toHaveBeenCalledWith(116.39, 39.9, 12);
@@ -145,7 +156,7 @@ describe('model layer', () => {
         position: { longitude: 0, latitude: 0 },
       },
       createContext().context,
-      limiter,
+      services,
     );
 
     const [options] = cesium.fromGltfAsync.mock.calls[0] ?? [];
@@ -174,7 +185,7 @@ describe('model layer', () => {
         color: '#ff8800',
       },
       createContext().context,
-      limiter,
+      services,
     );
 
     expect(cesium.fromGltfAsync).toHaveBeenCalledWith(
@@ -211,7 +222,7 @@ describe('model layer', () => {
         position: { longitude: 0, latitude: 0 },
       },
       createContext().context,
-      limiter,
+      services,
     );
 
     expect(() => {
@@ -228,7 +239,7 @@ describe('model layer', () => {
           color: 'invalid-color',
         },
         createContext().context,
-        limiter,
+        services,
       ),
     ).rejects.toMatchObject({ code: 'INVALID_LAYER_COLOR' });
   });
@@ -245,7 +256,7 @@ describe('model layer', () => {
         scale: 1,
       },
       createContext().context,
-      limiter,
+      services,
     );
 
     cesium.fromDegrees.mockClear();
@@ -283,7 +294,7 @@ describe('model layer', () => {
         position: { longitude: 0, latitude: 0 },
       },
       createContext().context,
-      limiter,
+      services,
     );
 
     await layer.dispose();
@@ -302,7 +313,7 @@ describe('model layer', () => {
         view.viewer as never,
         { id: 'bad', type: 'model', url: '', position: { longitude: 0, latitude: 0 } },
         createContext().context,
-        limiter,
+        services,
       ),
     ).rejects.toMatchObject({ code: 'INVALID_LAYER_CONFIG' });
     await expect(
@@ -310,7 +321,7 @@ describe('model layer', () => {
         view.viewer as never,
         { id: 'bad', type: 'model', url: '/a.glb', position: { longitude: 0, latitude: 91 } },
         createContext().context,
-        limiter,
+        services,
       ),
     ).rejects.toMatchObject({ code: 'INVALID_LAYER_CONFIG' });
     expect(cesium.fromGltfAsync).not.toHaveBeenCalled();
@@ -329,7 +340,7 @@ describe('model layer', () => {
           position: { longitude: 0, latitude: 0 },
         },
         createContext().context,
-        limiter,
+        services,
       ),
     ).rejects.toMatchObject({ code: 'LAYER_LOAD_FAILED', retryable: true });
 
@@ -346,7 +357,7 @@ describe('model layer', () => {
       view.viewer as never,
       { id: 'late', type: 'model', url: '/late.glb', position: { longitude: 0, latitude: 0 } },
       createContext(controller.signal).context,
-      limiter,
+      services,
     );
     await vi.waitFor(() => {
       expect(cesium.fromGltfAsync).toHaveBeenCalledTimes(2);
@@ -357,5 +368,137 @@ describe('model layer', () => {
     await vi.waitFor(() => {
       expect(lateModel.destroy).toHaveBeenCalledOnce();
     });
+  });
+
+  it('applies headingOffset into the model matrix and keeps it across setTransform', async () => {
+    const view = createViewer();
+    const layer = await createModelLayer(
+      view.viewer as never,
+      {
+        id: 'compensated',
+        type: 'model',
+        url: '/models/a.glb',
+        position: { longitude: 0, latitude: 0 },
+        orientation: { heading: 30, pitch: 5, roll: 0 },
+        headingOffset: 15,
+      },
+      createContext().context,
+      services,
+    );
+
+    // 资源朝向补偿与业务姿态相加后进入矩阵，业务姿态本身不被改写。
+    expect(cesium.hprFromDegrees).toHaveBeenCalledWith(45, 5, 0);
+
+    cesium.hprFromDegrees.mockClear();
+    layer.setTransform({
+      position: { longitude: 1, latitude: 1 },
+      orientation: { heading: 100 },
+    });
+    expect(cesium.hprFromDegrees).toHaveBeenCalledWith(115, 0, 0);
+
+    await expect(
+      createModelLayer(
+        view.viewer as never,
+        {
+          id: 'bad-offset',
+          type: 'model',
+          url: '/models/a.glb',
+          position: { longitude: 0, latitude: 0 },
+          headingOffset: Number.NaN,
+        },
+        createContext().context,
+        services,
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_LAYER_CONFIG' });
+  });
+
+  it('applies appearance policies through a shared shader cache', async () => {
+    const view = createViewer();
+    const first = await createModelLayer(
+      view.viewer as never,
+      {
+        id: 'plain',
+        type: 'model',
+        url: '/models/a.glb',
+        position: { longitude: 0, latitude: 0 },
+      },
+      createContext().context,
+      services,
+    );
+    const firstModel = view.items[0];
+    expect(firstModel?.customShader).toBeUndefined();
+
+    // 亮度策略：写入带 uGain 的 CustomShader，并缓存同一策略实例。
+    first.setAppearance({ mode: 'brightness', gain: 2 });
+    expect(firstModel?.customShader?.options).toMatchObject({
+      uniforms: { uGain: { type: 'float', value: 2 } },
+      fragmentShaderText: expect.stringContaining('material.diffuse *= uGain') as unknown,
+    });
+
+    const second = await createModelLayer(
+      view.viewer as never,
+      {
+        id: 'bright',
+        type: 'model',
+        url: '/models/a.glb',
+        position: { longitude: 0, latitude: 0 },
+        appearance: { mode: 'brightness', gain: 2 },
+      },
+      createContext().context,
+      services,
+    );
+    const secondModel = view.items[1];
+    expect(secondModel?.customShader).toBe(firstModel?.customShader);
+
+    // 无光照策略：整体替换而不是叠加。
+    second.setAppearance({ mode: 'unlit' });
+    expect(secondModel?.customShader?.options).toEqual({ lightingModel: 0 });
+
+    second.setAppearance();
+    expect(secondModel?.customShader).toBeUndefined();
+    first.setAppearance();
+    expect(firstModel?.customShader).toBeUndefined();
+
+    expect(() => {
+      first.setAppearance({ mode: 'glow' as never });
+    }).toThrow(expect.objectContaining({ code: 'INVALID_LAYER_CONFIG' }));
+    expect(() => {
+      first.setAppearance({ mode: 'brightness', gain: 9 });
+    }).toThrow(expect.objectContaining({ code: 'INVALID_LAYER_CONFIG' }));
+  });
+
+  it('records the previous custom shader and only restores what it still owns', async () => {
+    const view = createViewer();
+    const layer = await createModelLayer(
+      view.viewer as never,
+      {
+        id: 'owned',
+        type: 'model',
+        url: '/models/a.glb',
+        position: { longitude: 0, latitude: 0 },
+      },
+      createContext().context,
+      services,
+    );
+    const model = view.items[0];
+    const original = { options: { kind: 'business' } };
+    if (model) {
+      model.customShader = original;
+    }
+
+    layer.setAppearance({ mode: 'unlit' });
+    expect(model?.customShader).not.toBe(original);
+
+    layer.setAppearance();
+    expect(model?.customShader).toBe(original);
+
+    // 第三方在接管期间改写后，恢复不应覆盖它。
+    layer.setAppearance({ mode: 'unlit' });
+    const external = { options: { kind: 'external' } };
+    if (model) {
+      model.customShader = external;
+    }
+    layer.setAppearance();
+    expect(model?.customShader).toBe(external);
   });
 });
