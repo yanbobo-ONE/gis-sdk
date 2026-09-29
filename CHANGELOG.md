@@ -16,6 +16,7 @@
 - 增加交互绘制 `map.drawing`：点 / 折线 / 面绘制、预览、确认与取消，以及框架无关的绘制状态机。
 - 增加绘制编辑 `map.drawing.edit()` / `commitEdit()` / `cancelEdit()`：对几何副本拖动顶点（左键命中屏幕 12 像素内最近顶点、点几何整体移动）、提交与回退，事件 `edit` / `editCommit` / `editCancel`，并导出框架无关的 `DrawingEditMachine` 与几何校验 `isEditableGeometry()`、`isValidDrawPosition()`。
 - 增加相机只读快照 `map.camera.view` 与 `map.camera.viewRectangle`：读取当前位姿（角度为度，字段一定存在，可直接传回 `setView()`）与视口经纬四至；位姿退化抛 `CAMERA_VIEW_UNAVAILABLE`，看不到椭球或覆盖全球时四至为 `undefined`。
+- 增加环境效果 `map.environment.set()`：深度雾、基础雾与雨 / 雪，含参数校验与默认值、二维降级说明、统一资源释放，以及零 Cesium 依赖的 `EnvironmentTimeline` 与 `FieldGuard`；着色器内联，不引用外部纹理资产。
 - 增加位置批量归一化 `normalizePositions()`：坐标校验、按 id 合并最新、可转移的 Float64Array 输出。
 - 增加折线图层与五种内置材质：PolylineCollection 批量渲染、逐条样式覆盖、原子替换与整层样式调整；画布快照契约改为可移植形状，core 层不再依赖 DOM 类型。
 - 增加运行时场景模式切换 `map.scene.setMode()`：形变完成结算、同模式立即结算、被取代语义与销毁处理。

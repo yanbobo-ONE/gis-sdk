@@ -10,6 +10,7 @@ import type {
 import { GisError } from '../src/core/errors.js';
 import { MapRuntime } from '../src/core/map-runtime.js';
 import type { CoordinateTransform, PickingController } from '../src/core/controls.js';
+import type { EnvironmentController } from '../src/core/environment.js';
 import type { QualityController } from '../src/core/quality.js';
 import type { LayerManager } from '../src/layers/contracts.js';
 
@@ -24,6 +25,14 @@ interface TestAdapter extends MapEngineAdapter<RawContext> {
   /** 模拟引擎内部失败上报；调用前需已由 MapRuntime 接入 reporter。 */
   reportError(error: GisError): void;
 }
+
+const environment = {
+  active: [],
+  set: vi.fn(() => undefined),
+  setEnabled: vi.fn(() => undefined),
+  clear: vi.fn(),
+  clearAll: vi.fn(),
+} as unknown as EnvironmentController;
 
 const camera = {
   cancelFlight: vi.fn(),
@@ -96,6 +105,7 @@ function createAdapter(): TestAdapter {
     raw: { name: 'fake' },
     layers: {} as LayerManager,
     camera,
+    environment,
     basemap,
     terrain,
     coordinates,
@@ -230,6 +240,35 @@ describe('MapRuntime', () => {
     expect(map.state).toBe('destroyed');
     expect(listener).toHaveBeenCalledOnce();
     expect(listener).toHaveBeenCalledWith({ id: 'map-1' });
+  });
+
+  it('delegates environment effects and gates them after destroy', async () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+    const state = { kind: 'depthFog' as const, enabled: true, options: { density: 0.4 } };
+    (adapter.environment.set as Mock).mockReturnValue(state);
+
+    expect(map.environment.active).toEqual([]);
+    expect(map.environment.set('depthFog', { density: 0.4 })).toBe(state);
+    map.environment.setEnabled('depthFog', false);
+    map.environment.clear('rain');
+    map.environment.clearAll();
+    expect((adapter.environment.set as Mock).mock.calls[0]).toEqual(['depthFog', { density: 0.4 }]);
+    expect((adapter.environment.setEnabled as Mock).mock.calls[0]).toEqual(['depthFog', false]);
+
+    await map.destroy();
+    expect(() => map.environment.set('depthFog')).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.set' }),
+    );
+    expect(() => map.environment.setEnabled('haze', true)).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.setEnabled' }),
+    );
+    expect(() => {
+      map.environment.clear('haze');
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.clear' }));
+    expect(() => {
+      map.environment.clearAll();
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.clearAll' }));
   });
 
   it('returns the same promise to concurrent destroy callers', async () => {

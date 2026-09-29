@@ -26,6 +26,7 @@
 | 地形                | 可用 | `map.terrain.set()`、`TerrainSetOptions`                                                                                                                           | 椭球切换和 Cesium Terrain 异步加载，失败或超时（默认 30 秒）时保留旧地形并可立即重试                                               |
 | 地形采样            | 可用 | `map.terrain.sample()`                                                                                                                                             | 批量高程采样、分批与并发上限、provider 级缓存、无数据不伪造 0、取消与错误码                                                        |
 | 坐标转换            | 可用 | `map.coordinates`                                                                                                                                                  | 经纬高与世界坐标互转、投影到窗口像素、屏幕拾取地球表面；未命中返回 `undefined`                                                     |
+| 环境效果            | 可用 | `map.environment.set()`、`setEnabled()`、`clear()`、`clearAll()`                                                                                                   | 深度雾（距离与高度双衰减）、基础雾（接管官方 Fog 并可恢复）、雨 / 雪（程序化屏幕粒子、风向与强度）；参数越界抛错、二维降级说明与统一资源释放 |
 | 渲染质量            | 可用 | `map.quality`、`createMap({ quality })`、`RenderQualityMonitor`                                                                                                    | 四档预设、分辨率/地形误差/模型并发联动、按帧率自动升降档与降档诊断                                                                 |
 | 图层错误可观测      | 可用 | `LayerHandle.errorCount`、`layer.events.on('error')`、`map.basemap.errorCount`                                                                                     | 影像瓦片失败累计计数并只上报首个；底图首个失败经 `map:error` 上报                                                                  |
 | 空间量算            | 可用 | `measureDistance`、`measureArea`、`measureBBox`、`nearestPointOnPath` 等（包根或 `/core`）                                                                         | 球面量算：距离、折线长度、面积（含洞）、方位、目标点、包围盒、质心、沿线取点、最近点                                               |
@@ -56,7 +57,7 @@
 | 实时协议与重同步                     | 未发布   | 水位线与时间戳守卫已可用；Worker 池、WebSocket/SSE/二进制协议适配、会话门禁与重连重同步尚未发布                                        |
 | 海量数据渲染（聚合 / 标签 / Worker） | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺                                                                 |
 | 绘制捕捉与顶点增删                   | 未发布   | 绘制与顶点拖动已可用；捕捉、顶点插入与删除尚无 API                                                                                     |
-| 自定义材质与效果                     | 未发布   | 尚无材质注册、着色器、特效或版本兼容策略                                                                                               |
+| 体积类环境效果与自定义材质           | 未发布   | 深度雾、基础雾与降水已可用；体积云、热力图、三维风场、闪电、水面与自定义 GLSL 材质尚无 SDK 方法                                        |
 | `map.analysis` 分析任务              | 未发布   | 量算、判断、CRS 转换与地形采样已可用；`map.analysis` 控制器及其通视 / 视域 / 坡度坡向工具、任务模型、结果图层、Worker 执行接口尚未发布 |
 | 插件、诊断和框架绑定                 | 未发布   | 图层与底图已提供错误计数与首个失败事件；尚无插件协议、完整监控 API 或官方 Vue / React 组件                                             |
 | 多浏览器性能验证                     | 未完成   | 尚未建立真实 WebGL 端到端矩阵、性能阈值和公开压测结果                                                                                  |

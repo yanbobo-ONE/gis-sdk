@@ -79,6 +79,35 @@ export type {
   CsvRejectedRow,
   CsvTable,
 } from '../core/csv.js';
+export { FieldGuard } from '../core/field-guard.js';
+export type { FieldGuardRecord } from '../core/field-guard.js';
+export {
+  DEPTH_FOG_DEFAULTS,
+  ENVIRONMENT_EFFECT_KINDS,
+  EnvironmentTimeline,
+  PRECIPITATION_DEFAULTS,
+  PRECIPITATION_INTENSITY_DENSITY,
+  resolveDepthFogOptions,
+  resolveEnvironmentOptions,
+  resolveHazeOptions,
+  resolvePrecipitationOptions,
+} from '../core/environment.js';
+export type {
+  DepthFogEffectState,
+  DepthFogOptions,
+  EnvironmentController,
+  EnvironmentEffectKind,
+  EnvironmentEffectState,
+  EnvironmentEffectStateMap,
+  EnvironmentOptionsMap,
+  HazeEffectState,
+  HazeOptions,
+  PrecipitationEffectState,
+  PrecipitationIntensity,
+  PrecipitationOptions,
+  ResolvedDepthFogOptions,
+  ResolvedPrecipitationOptions,
+} from '../core/environment.js';
 export { DrawingEditMachine, isEditableGeometry, isValidDrawPosition } from '../core/drawing-edit.js';
 export type {
   DrawEditSnapshot,

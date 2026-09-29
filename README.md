@@ -24,6 +24,7 @@
 - 仿真 / 回放时钟 `SimulationClock`：播放状态机、倍率与方向、seek/step 与水位线限速；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
+- 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
 - 类型化拾取交互（`map.picking`）：点击与悬停命中信息、地表经纬高，悬停按帧合并避免卡顿；
 - 交互绘制与编辑 `map.drawing`：点 / 折线 / 面绘制，完成后可拖动顶点并提交 / 回退，纯状态机 + 可替换端口（不绑定 Cesium）；
 - 实时水位线与时间戳守卫：乱序样本按时间释放、精确对象共同覆盖、双阈值追赶与超前样本隔离；
@@ -168,6 +169,7 @@ async function disposeMap() {
 | 坐标转换                                       | 可用                   | `map.coordinates`：`toWorld`、`toGeoPosition`、`toWindow`、`pickGeoPosition`，未命中返回 `undefined`                                                                            |
 | 地形采样                                       | 可用                   | `map.terrain.sample(points, options?)`：分批并发、缓存、取消与错误码                                                                                                            |
 | 渲染质量                                       | 可用                   | `createMap({ quality })`、`map.quality`：四档预设与按帧率自动升降档                                                                                                             |
+| 环境效果                                       | 可用                   | `map.environment.set('depthFog' \| 'haze' \| 'rain' \| 'snow', options)`：内置参数、降级说明与统一资源释放                                                                       |
 | 远端失败可观测                                 | 可用                   | `layer.events.on('error')`、`layer.errorCount`、`map.basemap.errorCount` 与 `map:error` 上的首个失败                                                                            |
 | 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                     |
 | 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`（纯计算，零 Cesium） |

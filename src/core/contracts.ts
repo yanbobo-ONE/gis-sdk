@@ -12,6 +12,7 @@ import type {
   SceneController,
   TerrainController,
 } from './controls.js';
+import type { EnvironmentController } from './environment.js';
 import type { QualityController } from './quality.js';
 
 /** 地图实例的生命周期状态。 */
@@ -63,6 +64,8 @@ export interface GisMap<TRaw = unknown> {
   readonly scene: SceneController;
   /** 类型化绘制控制器。 */
   readonly drawing: MapDrawingController;
+  /** 类型化环境效果控制器。 */
+  readonly environment: EnvironmentController;
   /** 高级场景使用的引擎原生上下文。 */
   readonly raw: Readonly<TRaw>;
   /**
@@ -98,6 +101,7 @@ export interface MapEngineAdapter<TRaw> {
   readonly picking: PickingController;
   readonly scene: SceneController;
   readonly drawing: MapDrawingController;
+  readonly environment: EnvironmentController;
   /** 引擎内部异步失败的上报入口；`MapRuntime` 在构造时接入 `map:error`。 */
   setErrorReporter?(reporter: (error: GisError) => void): void;
   resize(): void;

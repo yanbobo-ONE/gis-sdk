@@ -23,16 +23,34 @@ const cesium = vi.hoisted(() => {
       right: { x: 0, y: 1, z: 0 },
     };
     readonly frameListeners = new Set<() => void>();
+    readonly preRenderListeners = new Set<() => void>();
     resolutionScale = 1;
     readonly scene = {
-      camera: { changed: { addEventListener: vi.fn(() => () => undefined) } },
+      camera: {
+        changed: { addEventListener: vi.fn(() => () => undefined) },
+        positionCartographic: { height: 1_000 },
+      },
       pick: vi.fn(),
       drillPick: vi.fn(() => []),
       globe: { maximumScreenSpaceError: 2, terrainProvider: undefined as unknown },
+      mode: 3,
+      fog: { enabled: false, density: 6e-4 },
+      drawingBufferWidth: 800,
+      drawingBufferHeight: 600,
+      postProcessStages: {
+        add: (stage: unknown) => stage,
+        remove: vi.fn(() => true),
+      },
       preUpdate: {
         addEventListener: (listener: () => void) => {
           this.frameListeners.add(listener);
           return () => this.frameListeners.delete(listener);
+        },
+      },
+      preRender: {
+        addEventListener: (listener: () => void) => {
+          this.preRenderListeners.add(listener);
+          return () => this.preRenderListeners.delete(listener);
         },
       },
       postRender: {
@@ -376,8 +394,10 @@ describe('CesiumMapAdapter', () => {
     const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
     const adapter = new CesiumMapAdapter(createOptions('map-1'));
     const viewer = cesium.Viewer.instances[0];
-    // 相机位姿兜底与画质控制器各订阅一次 preUpdate，画质控制器再订阅一次 postRender。
+    // 相机位姿兜底与画质控制器各订阅一次 preUpdate，画质控制器再订阅一次 postRender；
+    // 环境效果控制器订阅一次 preRender（降水动画与相机高度）。
     expect(viewer?.frameListeners.size).toBe(3);
+    expect(viewer?.preRenderListeners.size).toBe(1);
 
     const position = viewer?.camera.position;
     if (position) {
@@ -388,5 +408,6 @@ describe('CesiumMapAdapter', () => {
 
     await adapter.destroy();
     expect(viewer?.frameListeners.size).toBe(0);
+    expect(viewer?.preRenderListeners.size).toBe(0);
   });
 });

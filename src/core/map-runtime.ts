@@ -27,6 +27,7 @@ import type {
   XyzBasemapSpec,
 } from './controls.js';
 import { GisError } from './errors.js';
+import type { EnvironmentController, EnvironmentEffectKind, EnvironmentOptionsMap } from './environment.js';
 import { EventHub } from './event-hub.js';
 import type { QualityController, QualityProfileId, RenderQuality } from './quality.js';
 import type { LayerManager } from '../layers/contracts.js';
@@ -41,6 +42,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly picking: PickingController;
   readonly scene: SceneController;
   readonly drawing: MapDrawingController;
+  readonly environment: EnvironmentController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -193,6 +195,27 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       cancelFlight: () => {
         this.assertReady('camera.cancelFlight');
         this.adapter.camera.cancelFlight();
+      },
+    });
+    this.environment = Object.freeze({
+      get active() {
+        return adapter.environment.active;
+      },
+      set: <K extends EnvironmentEffectKind>(kind: K, options?: EnvironmentOptionsMap[K]) => {
+        this.assertReady('environment.set');
+        return adapter.environment.set(kind, options);
+      },
+      setEnabled: (kind: EnvironmentEffectKind, enabled: boolean) => {
+        this.assertReady('environment.setEnabled');
+        return adapter.environment.setEnabled(kind, enabled);
+      },
+      clear: (kind: EnvironmentEffectKind) => {
+        this.assertReady('environment.clear');
+        adapter.environment.clear(kind);
+      },
+      clearAll: () => {
+        this.assertReady('environment.clearAll');
+        adapter.environment.clearAll();
       },
     });
     this.basemap = Object.freeze({

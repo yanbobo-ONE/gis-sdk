@@ -9,6 +9,7 @@ import type {
   PickingController,
   TerrainController,
 } from '../src/core/controls.js';
+import type { EnvironmentController } from '../src/core/environment.js';
 import type { QualityController } from '../src/core/quality.js';
 import { GisError } from '../src/core/errors.js';
 import {
@@ -27,6 +28,14 @@ interface FakeAdapter extends MapEngineAdapter<FakeRawContext> {
   resize: Mock<() => void>;
   destroy: Mock<() => void | Promise<void>>;
 }
+
+const environment = {
+  active: [],
+  set: vi.fn(() => undefined),
+  setEnabled: vi.fn(() => undefined),
+  clear: vi.fn(),
+  clearAll: vi.fn(),
+} as unknown as EnvironmentController;
 
 const camera = {
   cancelFlight: vi.fn(),
@@ -100,6 +109,7 @@ function createFactory() {
     raw: { viewer: { kind: 'fake' } },
     layers: {} as LayerManager,
     camera,
+    environment,
     basemap,
     terrain,
     coordinates,
