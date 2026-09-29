@@ -8,7 +8,8 @@
 | 加载或整体替换业务要素     | [GeoJSON 图层](./geojson-layer.md)  | `type: 'geojson'`、`setData()`         |
 | 接入 WMS、TMS 或 WMTS 服务 | [影像图层](./imagery-layers.md)     | `type: 'wms' \| 'tms' \| 'wmts'`       |
 | 加载城市模型、倾斜摄影等   | [3D Tiles 图层](./tiles3d-layer.md) | `type: '3d-tiles'`                     |
+| 放置单个 glTF / GLB 模型   | [静态模型图层](./model-layer.md)    | `type: 'model'`                        |
 
-所有类型都使用 `map.layers.add()`，但返回的句柄能力不同：GeoJSON 返回 `GeoJsonLayerHandle`，WMS 返回 `WmsLayerHandle`，TMS/WMTS 返回 `ImageryLayerHandle`，3D Tiles 返回通用 `LayerHandle`。
+所有类型都使用 `map.layers.add()`，但返回的句柄能力不同：GeoJSON 返回 `GeoJsonLayerHandle`，WMS 返回 `WmsLayerHandle`，TMS/WMTS/单图影像返回 `ImageryLayerHandle`，静态模型返回 `ModelLayerHandle`，3D Tiles 返回通用 `LayerHandle`。
 
 图层由 SDK 管理资源所有权。不要直接移除 SDK 创建的 Cesium `dataSources`、`imageryLayers` 或 `scene.primitives` 项目；高级原生接入边界见[错误与原生出口](./errors-and-native.md)。

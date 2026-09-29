@@ -1,9 +1,10 @@
 import type { GeoJSON } from 'geojson';
 
 import type { EventHub } from '../core/event-hub.js';
+import type { GisError } from '../core/errors.js';
 
 /** 当前稳定支持的图层类型。 */
-export type LayerType = 'geojson' | 'wms' | 'tms' | 'wmts' | 'single-image' | '3d-tiles';
+export type LayerType = 'geojson' | 'wms' | 'tms' | 'wmts' | 'single-image' | 'model' | '3d-tiles';
 
 /** 图层句柄的生命周期状态。 */
 export type LayerState = 'loading' | 'ready' | 'hidden' | 'disposing' | 'disposed' | 'error';
@@ -185,6 +186,58 @@ export interface SingleImageLayerSpec extends BaseLayerSpec {
   readonly rectangle?: SingleImageRectangle;
 }
 
+/** 静态模型的位置，使用 WGS84 经度/纬度度数与相对椭球高度（米）。 */
+export interface ModelPosition {
+  /** 经度，范围 -180 到 180。 */
+  readonly longitude: number;
+  /** 纬度，范围 -90 到 90。 */
+  readonly latitude: number;
+  /** 相对 WGS84 椭球的高度，单位米。 */
+  readonly height?: number;
+}
+
+/** 静态模型的航向、俯仰与横滚，单位为度。 */
+export interface ModelOrientation {
+  /** 航向角，单位为度，默认 0。 */
+  readonly heading?: number;
+  /** 俯仰角，单位为度，默认 0。 */
+  readonly pitch?: number;
+  /** 横滚角，单位为度，默认 0。 */
+  readonly roll?: number;
+}
+
+/** 不重新加载模型即可应用的位置、朝向与缩放。 */
+export interface ModelTransform {
+  /** 模型锚点位置。 */
+  readonly position: ModelPosition;
+  /** 航向、俯仰、横滚角，单位为度，均默认 0。 */
+  readonly orientation?: ModelOrientation;
+  /** 缩放比例，默认 1。 */
+  readonly scale?: number;
+}
+
+/** 静态 glTF / GLB 模型图层配置。 */
+export interface ModelLayerSpec extends BaseLayerSpec {
+  /** 判别静态模型图层。 */
+  readonly type: 'model';
+  /** `.gltf` 或 `.glb` 文件的可访问 URL。 */
+  readonly url: string;
+  /** 模型锚点位置。 */
+  readonly position: ModelPosition;
+  /** 航向、俯仰、横滚角，单位为度，均默认 0。 */
+  readonly orientation?: ModelOrientation;
+  /** 初始缩放比例，默认 1。 */
+  readonly scale?: number;
+  /** 最小屏幕像素尺寸；省略时由 Cesium 按真实尺寸渲染。 */
+  readonly minimumPixelSize?: number;
+  /** `minimumPixelSize` 生效时允许的最大缩放比例。 */
+  readonly maximumScale?: number;
+  /** 是否允许 Cesium 拾取模型，默认 `true`。 */
+  readonly allowPicking?: boolean;
+  /** 叠加到模型材质上的 CSS 颜色；省略时保留模型原始外观。 */
+  readonly color?: string;
+}
+
 /** Cesium 3D Tiles 图层配置。 */
 export interface Tiles3dLayerSpec extends BaseLayerSpec {
   /** 判别 3D Tiles 图层。 */
@@ -204,6 +257,7 @@ export type LayerSpec =
   | TmsLayerSpec
   | WmtsLayerSpec
   | SingleImageLayerSpec
+  | ModelLayerSpec
   | Tiles3dLayerSpec;
 
 /** 图层自身可订阅的生命周期事件。 */
@@ -216,6 +270,19 @@ export interface LayerEventMap {
     readonly previous: LayerState;
     /** 变化后状态。 */
     readonly state: LayerState;
+  };
+  /**
+   * 图层已加入场景后的异步请求失败，例如影像瓦片持续取不到数据。
+   *
+   * 瓦片级失败会按瓦片触发，因此同一图层只发出首个失败事件；累计次数见
+   * {@link LayerHandle.errorCount}。加载阶段的失败（`add`、`setData`）仍然以 Promise
+   * 拒绝的方式抛出，不通过该事件重复上报。
+   */
+  error: {
+    /** 发生失败的图层 id。 */
+    readonly id: string;
+    /** 结构化的图层错误。 */
+    readonly error: GisError;
   };
 }
 
@@ -231,6 +298,12 @@ export interface LayerHandle {
   readonly visible: boolean;
   /** 图层生命周期事件。 */
   readonly events: EventHub<LayerEventMap>;
+  /**
+   * 加入场景后异步请求失败的累计次数。
+   *
+   * 用来判断"图层在但服务不可用"：为 0 表示没有观察到远端失败。
+   */
+  readonly errorCount: number;
   /** 切换图层显隐；不会重新创建底层 Cesium 对象。 */
   setVisible(visible: boolean): void;
   /** 幂等释放图层拥有的 Cesium 对象和异步任务。 */
@@ -269,6 +342,16 @@ export interface ImageryLayerHandle extends LayerHandle {
   setOpacity(opacity: number): void;
 }
 
+/** 支持不重新加载模型即可更新位置、朝向、缩放与颜色的静态模型图层句柄。 */
+export interface ModelLayerHandle extends LayerHandle {
+  /** 判别静态模型句柄。 */
+  readonly type: 'model';
+  /** 就地更新锚点位置、朝向与缩放；不会重新请求模型资源。 */
+  setTransform(transform: ModelTransform): void;
+  /** 叠加 CSS 颜色；省略时恢复模型原始材质外观。 */
+  setColor(color?: string): void;
+}
+
 /** 图层管理器返回的只读图层快照。 */
 export interface LayerInfo {
   /** 图层 id。 */
@@ -288,9 +371,11 @@ export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayer
     ? WmsLayerHandle
     : TSpec extends TmsLayerSpec | WmtsLayerSpec | SingleImageLayerSpec
       ? ImageryLayerHandle
-      : TSpec extends Tiles3dLayerSpec
-        ? LayerHandle
-        : LayerHandle;
+      : TSpec extends ModelLayerSpec
+        ? ModelLayerHandle
+        : TSpec extends Tiles3dLayerSpec
+          ? LayerHandle
+          : LayerHandle;
 
 /** 地图实例拥有的图层管理接口。 */
 export interface LayerManager {

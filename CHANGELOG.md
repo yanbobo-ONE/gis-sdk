@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0-alpha.10
+
+### Minor Changes
+
+- 增加类型化静态模型图层，支持 glTF / GLB 加载、WGS84 位置朝向、颜色叠加、`setTransform()` 就地变换、取消加载、可配置并发上限和统一资源释放。
+- 增加类型化坐标转换 `map.coordinates`、地形高度采样 `map.terrain.sample()`、渲染质量档与按帧率自动降档（`createMap({ quality })`、`map.quality`），并让模型并发上限统一由质量档控制。
+- 增加影像图层与底图的远端失败可观测性：累计错误计数，只上报首个失败（图层事件 `error` 与 `map:error`）。
+- 图层句柄新增 `errorCount`，底图新增 `errorCount`，取消中的 GeoJSON 数据替换不再把图层置为错误状态。
+
+### Patch Changes
+
+- 加固相机与图层运行稳定性：安装退化旋转与 NaN 位姿兜底、切换视角时取消进行中的飞行、地形加载超时保护，以及 GeoJSON 取消加载后保持旧数据并回到稳定状态。
+
 ## 0.1.0-alpha.9
 
 ### Minor Changes

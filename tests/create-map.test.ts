@@ -5,8 +5,10 @@ import type { MapEngineAdapter } from '../src/core/contracts.js';
 import type {
   BasemapController,
   CameraController,
+  CoordinateTransform,
   TerrainController,
 } from '../src/core/controls.js';
+import type { QualityController } from '../src/core/quality.js';
 import { GisError } from '../src/core/errors.js';
 import {
   createMapWithFactory,
@@ -33,6 +35,7 @@ const camera = {
 
 const basemap = {
   clear: vi.fn(),
+  errorCount: 0,
   opacity: 1,
   set: vi.fn(),
   setOpacity: vi.fn(),
@@ -42,18 +45,55 @@ const basemap = {
 } satisfies BasemapController;
 
 const terrain = {
+  sample: vi.fn(() => Promise.resolve([])),
   set: vi.fn(() => Promise.resolve()),
   type: 'ellipsoid',
 } satisfies TerrainController;
 
 function createFactory() {
   let receivedOptions: NormalizedCreateMapOptions | undefined;
+
+  const coordinates: CoordinateTransform = {
+    toWorld: vi.fn((position: { longitude: number; latitude: number; height?: number }) => ({
+      x: position.longitude,
+      y: position.latitude,
+      z: position.height ?? 0,
+    })),
+    toGeoPosition: vi.fn((world: { x: number; y: number; z: number }) => ({
+      longitude: world.x,
+      latitude: world.y,
+      height: world.z,
+    })),
+    toWindow: vi.fn(() => ({ x: 10, y: 20 })),
+    pickGeoPosition: vi.fn(() => ({ longitude: 1, latitude: 2, height: 3 })),
+  };
+
+  const quality: QualityController = {
+    current: { resolutionScale: 1, terrainSse: 2, modelLoadConcurrency: 4 },
+    snapshot: {
+      resolutionScale: 1,
+      terrainSse: 2,
+      modelLoadConcurrency: 4,
+      fps: 0,
+      frameTimeMs: 0,
+      sampleCount: 0,
+      degraded: false,
+      adaptive: true,
+    },
+    adaptive: true,
+    setProfile: vi.fn(),
+    set: vi.fn(),
+    setAdaptive: vi.fn(),
+  };
+
   const adapter: FakeAdapter = {
     raw: { viewer: { kind: 'fake' } },
     layers: {} as LayerManager,
     camera,
     basemap,
     terrain,
+    coordinates,
+    quality,
     resize: vi.fn(),
     destroy: vi.fn(),
   };
@@ -179,6 +219,50 @@ describe('createMapWithFactory', () => {
       throw new Error('Expected createMapWithFactory to throw.');
     } catch (error: unknown) {
       expect(error).toBeInstanceOf(GisError);
+    }
+  });
+
+  it('normalizes the render quality profile and rejects invalid values', () => {
+    const defaults = createFactory();
+    const defaultMap = createMapWithFactory({ container: 'map', id: 'map-1' }, defaults.factory);
+    void defaultMap.destroy();
+
+    expect(defaults.options?.quality).toEqual({
+      resolutionScale: 1,
+      terrainSse: 2,
+      modelLoadConcurrency: 4,
+    });
+    expect(defaults.options?.qualityAdaptive).toBe(true);
+    expect(Object.isFrozen(defaults.options?.quality)).toBe(true);
+
+    const custom = createFactory();
+    const customMap = createMapWithFactory(
+      {
+        container: 'map',
+        id: 'map-2',
+        quality: { profile: 'low', adaptive: false, modelLoadConcurrency: 6 },
+      },
+      custom.factory,
+    );
+    void customMap.destroy();
+
+    expect(custom.options?.quality).toEqual({
+      resolutionScale: 0.75,
+      terrainSse: 12,
+      modelLoadConcurrency: 6,
+    });
+    expect(custom.options?.qualityAdaptive).toBe(false);
+
+    for (const quality of [
+      { profile: 'unknown' as never },
+      { resolutionScale: 0.1 },
+      { terrainSse: 0 },
+      { modelLoadConcurrency: 1.5 },
+      { adaptive: 'yes' as never },
+    ]) {
+      expect(() =>
+        createMapWithFactory({ container: 'map', quality }, createFactory().factory),
+      ).toThrow(expect.objectContaining({ code: 'INVALID_QUALITY_CONFIG' }));
     }
   });
 });

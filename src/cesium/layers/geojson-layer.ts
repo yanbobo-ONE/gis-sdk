@@ -212,6 +212,10 @@ class CesiumGeoJsonLayerHandle implements GeoJsonLayerHandle {
     return this.lifecycle.events;
   }
 
+  get errorCount(): number {
+    return this.lifecycle.errorCount;
+  }
+
   setVisible(visible: boolean): void {
     this.lifecycle.setVisible(visible);
   }
@@ -237,7 +241,12 @@ class CesiumGeoJsonLayerHandle implements GeoJsonLayerHandle {
         this.lifecycle.completeLoading();
       },
       (error: unknown) => {
-        this.lifecycle.failLoading();
+        // 取消是正常结果：旧数据仍然生效，图层回到稳定状态而不是错误状态。
+        if (error instanceof GisError && error.code === 'LAYER_OPERATION_ABORTED') {
+          this.lifecycle.completeLoading();
+        } else {
+          this.lifecycle.failLoading();
+        }
         throw error;
       },
     );

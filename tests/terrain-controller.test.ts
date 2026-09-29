@@ -16,6 +16,16 @@ vi.mock('cesium', () => ({
 }));
 
 import { CesiumTerrainController } from '../src/cesium/terrain-controller.js';
+import type { CesiumTerrainSampler } from '../src/cesium/terrain-sampling.js';
+
+function createSampler() {
+  return {
+    cacheSize: 0,
+    clearCache: vi.fn(),
+    dispose: vi.fn(),
+    sample: vi.fn(() => Promise.resolve([])),
+  } as unknown as CesiumTerrainSampler;
+}
 
 describe('CesiumTerrainController', () => {
   it('only installs successfully resolved terrain and can reset to ellipsoid', async () => {
@@ -23,7 +33,7 @@ describe('CesiumTerrainController', () => {
     const provider = { id: 'terrain' };
     const viewer = { terrainProvider: previous };
     cesium.fromUrl.mockResolvedValueOnce(provider);
-    const controller = new CesiumTerrainController(viewer as never);
+    const controller = new CesiumTerrainController(viewer as never, createSampler());
 
     await controller.set({ type: 'cesium-terrain', url: '/terrain/' });
 
@@ -40,7 +50,7 @@ describe('CesiumTerrainController', () => {
     const previous = { id: 'previous' };
     const viewer = { terrainProvider: previous };
     cesium.fromUrl.mockRejectedValueOnce(new Error('offline'));
-    const controller = new CesiumTerrainController(viewer as never);
+    const controller = new CesiumTerrainController(viewer as never, createSampler());
 
     await expect(
       controller.set({ type: 'cesium-terrain', url: '/terrain/' }),
@@ -49,5 +59,48 @@ describe('CesiumTerrainController', () => {
     });
     expect(viewer.terrainProvider).toBe(previous);
     expect(controller.type).toBe('ellipsoid');
+  });
+
+  it('fails with a retryable error when terrain metadata never responds', async () => {
+    vi.useFakeTimers();
+    try {
+      const previous = { id: 'previous' };
+      const viewer = { terrainProvider: previous };
+      cesium.fromUrl.mockReturnValueOnce(new Promise(() => undefined));
+      const controller = new CesiumTerrainController(viewer as never, createSampler());
+
+      const observed = controller
+        .set({ type: 'cesium-terrain', url: '/terrain/' }, { timeoutMs: 1000 })
+        .catch((error: unknown) => error);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      await expect(observed).resolves.toMatchObject({
+        code: 'TERRAIN_LOAD_FAILED',
+        retryable: true,
+      });
+      expect(viewer.terrainProvider).toBe(previous);
+      expect(controller.type).toBe('ellipsoid');
+
+      // 超时释放切换状态，不会留下永久 TERRAIN_BUSY。
+      const provider = { id: 'terrain' };
+      cesium.fromUrl.mockResolvedValueOnce(provider);
+      await expect(
+        controller.set({ type: 'cesium-terrain', url: '/terrain/' }),
+      ).resolves.toBeUndefined();
+      expect(viewer.terrainProvider).toBe(provider);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects an invalid timeout without starting a request', async () => {
+    const viewer = { terrainProvider: { id: 'previous' } };
+    const controller = new CesiumTerrainController(viewer as never, createSampler());
+    cesium.fromUrl.mockClear();
+
+    await expect(
+      controller.set({ type: 'cesium-terrain', url: '/terrain/' }, { timeoutMs: -1 }),
+    ).rejects.toMatchObject({ code: 'INVALID_TERRAIN_CONFIG' });
+    expect(cesium.fromUrl).not.toHaveBeenCalled();
   });
 });

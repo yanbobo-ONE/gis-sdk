@@ -54,4 +54,4 @@ await loading;
 
 ## 当前边界
 
-本 alpha 版本不封装变换、样式、裁剪、分类、拾取策略、缓存预算、更多 LOD 参数、glTF/Model、CZML 或动态实体。需要这些能力时可用 `map.raw.viewer` 调用 Cesium 公共 API，并由业务负责资源所有权和销毁。
+本 alpha 版本不封装变换、样式、裁剪、分类、拾取策略、缓存预算和更多 LOD 参数；单个 glTF / GLB 模型请使用[静态模型图层](./model-layer.md)，CZML 与动态实体仍未发布。需要这些能力时可用 `map.raw.viewer` 调用 Cesium 公共 API，并由业务负责资源所有权和销毁。

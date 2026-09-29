@@ -79,7 +79,15 @@ export class CesiumCameraController implements CameraController {
 
   setView(view: CameraView): void {
     this.assertActive('setView');
-    this.camera.setView(optionsFor(view));
+    const options = optionsFor(view);
+    // Cesium 的 setView 不会取消进行中的飞行；不先取消，飞行会继续按帧覆写刚设置的视角。
+    if (this.activeFlight) {
+      this.cancelFlight();
+    } else {
+      // 没有 SDK 飞行时仍可能通过 `map.raw.viewer` 发起了飞行。
+      this.camera.cancelFlight();
+    }
+    this.camera.setView(options);
   }
 
   flyTo(view: CameraFlight): Promise<void> {

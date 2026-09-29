@@ -8,6 +8,42 @@ export interface GeoPosition {
   readonly height?: number;
 }
 
+/** 地心直角坐标（ECEF），单位为米。 */
+export interface WorldCoordinates {
+  /** X 轴分量，单位为米。 */
+  readonly x: number;
+  /** Y 轴分量，单位为米。 */
+  readonly y: number;
+  /** Z 轴分量，单位为米。 */
+  readonly z: number;
+}
+
+/** 窗口像素坐标，原点位于画布左上角。 */
+export interface WindowCoordinates {
+  /** 横坐标，单位为像素。 */
+  readonly x: number;
+  /** 纵坐标，单位为像素。 */
+  readonly y: number;
+}
+
+/**
+ * 类型化坐标转换。
+ *
+ * 与朴素实现不同，这里用 `undefined` 表达"没有结果"：投影到屏幕外和屏幕拾取未命中地球
+ * 都不会返回 `0, 0`，避免调用方把无效坐标当成有效像素使用。输入本身非法（非有限数或
+ * 超出经纬度范围）会抛出 `INVALID_COORDINATES`。
+ */
+export interface CoordinateTransform {
+  /** WGS84 经纬高转地心直角坐标。 */
+  toWorld(position: GeoPosition): WorldCoordinates;
+  /** 地心直角坐标转 WGS84 经纬高。 */
+  toGeoPosition(world: WorldCoordinates): GeoPosition;
+  /** 投影到窗口像素坐标；点在当前视锥外或被地球遮挡时返回 `undefined`。 */
+  toWindow(position: GeoPosition): WindowCoordinates | undefined;
+  /** 从窗口像素拾取地球表面的经纬高；射线未命中地球时返回 `undefined`。 */
+  pickGeoPosition(point: WindowCoordinates): GeoPosition | undefined;
+}
+
 /** 相机视角。角度字段均以度为单位。 */
 export interface CameraView extends GeoPosition {
   /** 朝向，0 度为正北，顺时针增加。 */
@@ -57,6 +93,13 @@ export interface BasemapController {
   readonly visible: boolean;
   /** 当前底图透明度；没有底图时为 1。 */
   readonly opacity: number;
+  /**
+   * 底图瓦片请求失败的累计次数。
+   *
+   * 用于区分"没有配置底图"和"配置了但服务不可用"：瓦片错误不会刷屏事件，只累计计数，
+   * 并在首次失败时通过 `map:error` 上报一次。
+   */
+  readonly errorCount: number;
   /** 设置或原子替换 XYZ 底图。 */
   set(spec: XyzBasemapSpec): void;
   /** 移除 SDK 拥有的当前底图。 */
@@ -88,10 +131,60 @@ export interface CesiumTerrainSpec {
 /** 当前支持的地形配置。 */
 export type TerrainSpec = EllipsoidTerrainSpec | CesiumTerrainSpec;
 
+/** 地形采样输入点，只接受 WGS84 经纬度。 */
+export interface TerrainSamplePoint {
+  /** 经度，范围 -180 到 180。 */
+  readonly longitude: number;
+  /** 纬度，范围 -90 到 90。 */
+  readonly latitude: number;
+}
+
+/** 单点地形采样结果。 */
+export interface TerrainSample extends TerrainSamplePoint {
+  /** 椭球高，单位为米；该点没有可用地形数据时为 `undefined`，不会伪造成 0。 */
+  readonly height: number | undefined;
+  /** `ok` 表示取到地形高度；`no-data` 表示该点没有可用数据。 */
+  readonly status: 'ok' | 'no-data';
+}
+
+/** 地形采样配置。 */
+export interface TerrainSampleOptions {
+  /**
+   * 采样策略，默认 `most-detailed`。
+   *
+   * 当前地形服务不提供可用层级时自动退化为 `level`。
+   */
+  readonly strategy?: 'most-detailed' | 'level';
+  /** `level` 策略使用的层级，默认 0。 */
+  readonly level?: number;
+  /** 取消尚未完成的采样；已发出的批次无法撤回，但结果不会再返回。 */
+  readonly signal?: AbortSignal;
+}
+
 /** 地形控制器。 */
 export interface TerrainController {
   /** 当前已安装地形的类型。 */
   readonly type: TerrainSpec['type'];
   /** 异步加载并在成功后切换地形。 */
-  set(spec: TerrainSpec): Promise<void>;
+  set(spec: TerrainSpec, options?: TerrainSetOptions): Promise<void>;
+  /**
+   * 批量采样地形高度，结果顺序与输入一致。
+   *
+   * 相同位置、策略和层级会命中缓存，因此重复采样近似同一位置的代价很低。
+   */
+  sample(
+    points: readonly TerrainSamplePoint[],
+    options?: TerrainSampleOptions,
+  ): Promise<readonly TerrainSample[]>;
+}
+
+/** 地形切换的超时配置。 */
+export interface TerrainSetOptions {
+  /**
+   * 地形元数据请求的超时时间，单位为毫秒，默认 30000。
+   *
+   * 设为 0 表示不限制，完全沿用 Cesium 的请求行为。超时后当前地形保持不变，
+   * 并抛出可重试的 `TERRAIN_LOAD_FAILED`，因此不会出现永久 `TERRAIN_BUSY` 的状态。
+   */
+  readonly timeoutMs?: number;
 }

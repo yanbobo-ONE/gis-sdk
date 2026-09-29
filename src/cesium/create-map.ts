@@ -1,12 +1,16 @@
 import type { GisMap, MapEngineAdapter } from '../core/contracts.js';
 import { GisError } from '../core/errors.js';
+import { resolveRenderQuality } from '../core/quality.js';
+import type { RenderQuality } from '../core/quality.js';
 import { MapRuntime } from '../core/map-runtime.js';
 import { CesiumMapAdapter } from './cesium-map-adapter.js';
+import type { QualityOptions } from './types.js';
 import type {
   CesiumMap,
   CesiumSceneMode,
   CesiumWidgetOptions,
   CreateMapOptions,
+  NormalizedQualityOptions,
   XyzBasemapSpec,
 } from './types.js';
 
@@ -19,6 +23,8 @@ export interface NormalizedCreateMapOptions {
   readonly cesiumBaseUrl?: string;
   readonly scene: Readonly<{ mode: CesiumSceneMode }>;
   readonly widgets: NormalizedWidgetOptions;
+  readonly quality: Readonly<RenderQuality>;
+  readonly qualityAdaptive: boolean;
   readonly basemap?: Readonly<XyzBasemapSpec>;
 }
 
@@ -112,6 +118,25 @@ function normalizeBasemap(spec: XyzBasemapSpec): Readonly<XyzBasemapSpec> {
   return Object.freeze({ ...spec, url });
 }
 
+function normalizeQuality(options: QualityOptions | undefined): NormalizedQualityOptions {
+  const quality = resolveRenderQuality(options?.profile ?? 'default', {
+    ...(options?.resolutionScale === undefined ? {} : { resolutionScale: options.resolutionScale }),
+    ...(options?.terrainSse === undefined ? {} : { terrainSse: options.terrainSse }),
+    ...(options?.modelLoadConcurrency === undefined
+      ? {}
+      : { modelLoadConcurrency: options.modelLoadConcurrency }),
+  });
+  const adaptive = options?.adaptive ?? true;
+  if (typeof adaptive !== 'boolean') {
+    throw new GisError('Quality adaptive must be a boolean.', {
+      code: 'INVALID_QUALITY_CONFIG',
+      module: 'quality',
+      operation: 'createMap',
+    });
+  }
+  return { quality, qualityAdaptive: adaptive };
+}
+
 function normalizeOptions(options: CreateMapOptions): NormalizedCreateMapOptions {
   const cesiumBaseUrl = normalizeBaseUrl(options.cesiumBaseUrl);
   const basemap = options.basemap ? normalizeBasemap(options.basemap) : undefined;
@@ -120,6 +145,7 @@ function normalizeOptions(options: CreateMapOptions): NormalizedCreateMapOptions
     id: options.id ?? globalThis.crypto.randomUUID(),
     scene: Object.freeze({ mode: options.scene?.mode ?? '3d' }),
     widgets: Object.freeze({ ...defaultWidgets, ...options.widgets }),
+    ...normalizeQuality(options.quality),
     ...(basemap ? { basemap } : {}),
   } satisfies Omit<NormalizedCreateMapOptions, 'cesiumBaseUrl'>;
 

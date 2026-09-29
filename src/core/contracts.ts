@@ -1,7 +1,13 @@
 import type { GisError } from './errors.js';
 import type { EventHub } from './event-hub.js';
 import type { LayerManager } from '../layers/contracts.js';
-import type { BasemapController, CameraController, TerrainController } from './controls.js';
+import type {
+  BasemapController,
+  CameraController,
+  CoordinateTransform,
+  TerrainController,
+} from './controls.js';
+import type { QualityController } from './quality.js';
 
 /** 地图实例的生命周期状态。 */
 export type MapState = 'ready' | 'destroying' | 'destroyed';
@@ -42,6 +48,10 @@ export interface GisMap<TRaw = unknown> {
   readonly basemap: BasemapController;
   /** 类型化地形控制器。 */
   readonly terrain: TerrainController;
+  /** 类型化坐标转换。 */
+  readonly coordinates: CoordinateTransform;
+  /** 类型化渲染质量控制。 */
+  readonly quality: QualityController;
   /** 高级场景使用的引擎原生上下文。 */
   readonly raw: Readonly<TRaw>;
   /**
@@ -65,6 +75,10 @@ export interface MapEngineAdapter<TRaw> {
   readonly camera: CameraController;
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
+  readonly coordinates: CoordinateTransform;
+  readonly quality: QualityController;
+  /** 引擎内部异步失败的上报入口；`MapRuntime` 在构造时接入 `map:error`。 */
+  setErrorReporter?(reporter: (error: GisError) => void): void;
   resize(): void;
   destroy(): void | Promise<void>;
 }

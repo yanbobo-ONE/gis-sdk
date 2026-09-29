@@ -4,12 +4,20 @@ import type {
   CameraController,
   CameraFlight,
   CameraView,
+  CoordinateTransform,
+  GeoPosition,
   TerrainController,
+  TerrainSample,
+  TerrainSampleOptions,
+  TerrainSamplePoint,
   TerrainSpec,
+  WindowCoordinates,
+  WorldCoordinates,
   XyzBasemapSpec,
 } from './controls.js';
 import { GisError } from './errors.js';
 import { EventHub } from './event-hub.js';
+import type { QualityController, QualityProfileId, RenderQuality } from './quality.js';
 import type { LayerManager } from '../layers/contracts.js';
 
 export class MapRuntime<TRaw> implements GisMap<TRaw> {
@@ -17,6 +25,8 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly camera: CameraController;
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
+  readonly coordinates: CoordinateTransform;
+  readonly quality: QualityController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -25,6 +35,50 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
     readonly id: string,
     private readonly adapter: MapEngineAdapter<TRaw>,
   ) {
+    adapter.setErrorReporter?.((error) => {
+      this.emitError(error);
+    });
+    this.coordinates = Object.freeze({
+      toWorld: (position: GeoPosition): WorldCoordinates => {
+        this.assertReady('coordinates.toWorld');
+        return adapter.coordinates.toWorld(position);
+      },
+      toGeoPosition: (world: WorldCoordinates): GeoPosition => {
+        this.assertReady('coordinates.toGeoPosition');
+        return adapter.coordinates.toGeoPosition(world);
+      },
+      toWindow: (position: GeoPosition): WindowCoordinates | undefined => {
+        this.assertReady('coordinates.toWindow');
+        return adapter.coordinates.toWindow(position);
+      },
+      pickGeoPosition: (point: WindowCoordinates): GeoPosition | undefined => {
+        this.assertReady('coordinates.pickGeoPosition');
+        return adapter.coordinates.pickGeoPosition(point);
+      },
+    });
+    this.quality = Object.freeze({
+      get current() {
+        return adapter.quality.current;
+      },
+      get snapshot() {
+        return adapter.quality.snapshot;
+      },
+      get adaptive() {
+        return adapter.quality.adaptive;
+      },
+      setProfile: (profile: QualityProfileId) => {
+        this.assertReady('quality.setProfile');
+        adapter.quality.setProfile(profile);
+      },
+      set: (quality: Partial<RenderQuality>) => {
+        this.assertReady('quality.set');
+        adapter.quality.set(quality);
+      },
+      setAdaptive: (enabled: boolean) => {
+        this.assertReady('quality.setAdaptive');
+        adapter.quality.setAdaptive(enabled);
+      },
+    });
     this.camera = Object.freeze({
       setView: (view: CameraView) => {
         this.assertReady('camera.setView');
@@ -42,6 +96,9 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
     this.basemap = Object.freeze({
       get type() {
         return adapter.basemap.type;
+      },
+      get errorCount() {
+        return adapter.basemap.errorCount;
       },
       get visible() {
         return adapter.basemap.visible;
@@ -73,6 +130,13 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       set: (spec: TerrainSpec) => {
         this.assertReady('terrain.set');
         return this.adapter.terrain.set(spec);
+      },
+      sample: (
+        points: readonly TerrainSamplePoint[],
+        options?: TerrainSampleOptions,
+      ): Promise<readonly TerrainSample[]> => {
+        this.assertReady('terrain.sample');
+        return this.adapter.terrain.sample(points, options);
       },
     });
   }

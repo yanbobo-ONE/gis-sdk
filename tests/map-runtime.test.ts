@@ -9,6 +9,8 @@ import type {
 } from '../src/core/controls.js';
 import { GisError } from '../src/core/errors.js';
 import { MapRuntime } from '../src/core/map-runtime.js';
+import type { CoordinateTransform } from '../src/core/controls.js';
+import type { QualityController } from '../src/core/quality.js';
 import type { LayerManager } from '../src/layers/contracts.js';
 
 interface RawContext {
@@ -19,6 +21,8 @@ interface TestAdapter extends MapEngineAdapter<RawContext> {
   readonly layers: LayerManager;
   resize: Mock<() => void>;
   destroy: Mock<() => void | Promise<void>>;
+  /** 模拟引擎内部失败上报；调用前需已由 MapRuntime 接入 reporter。 */
+  reportError(error: GisError): void;
 }
 
 const camera = {
@@ -29,6 +33,7 @@ const camera = {
 
 const basemap = {
   clear: vi.fn(),
+  errorCount: 0,
   opacity: 1,
   set: vi.fn(),
   setOpacity: vi.fn(),
@@ -38,17 +43,58 @@ const basemap = {
 } satisfies BasemapController;
 
 const terrain = {
+  sample: vi.fn(() => Promise.resolve([])),
   set: vi.fn(() => Promise.resolve()),
   type: 'ellipsoid',
 } satisfies TerrainController;
 
+const coordinates = {
+  toWorld: vi.fn((position: { longitude: number; latitude: number; height?: number }) => ({
+    x: position.longitude,
+    y: position.latitude,
+    z: position.height ?? 0,
+  })),
+  toGeoPosition: vi.fn((world: { x: number; y: number; z: number }) => ({
+    longitude: world.x,
+    latitude: world.y,
+    height: world.z,
+  })),
+  toWindow: vi.fn(() => ({ x: 10, y: 20 })),
+  pickGeoPosition: vi.fn(() => ({ longitude: 1, latitude: 2, height: 3 })),
+} satisfies CoordinateTransform;
+
+const quality = {
+  current: { resolutionScale: 1, terrainSse: 2, modelLoadConcurrency: 4 },
+  snapshot: {
+    resolutionScale: 1,
+    terrainSse: 2,
+    modelLoadConcurrency: 4,
+    fps: 0,
+    frameTimeMs: 0,
+    sampleCount: 0,
+    degraded: false,
+    adaptive: true,
+  },
+  adaptive: true,
+  setProfile: vi.fn(),
+  set: vi.fn(),
+  setAdaptive: vi.fn(),
+} satisfies QualityController;
+
 function createAdapter(): TestAdapter {
+  let reporter: ((error: GisError) => void) | undefined;
   return {
     raw: { name: 'fake' },
     layers: {} as LayerManager,
     camera,
     basemap,
     terrain,
+    coordinates,
+    quality,
+    setErrorReporter: (next) => {
+      reporter = next;
+    },
+    reportError: (error) => reporter?.(error),
     resize: vi.fn(),
     destroy: vi.fn(),
   };
@@ -208,5 +254,61 @@ describe('MapRuntime', () => {
       cause: failure,
     });
     expect(map.state).toBe('ready');
+  });
+
+  it('delegates coordinates and quality while ready and blocks them after destroy', async () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+
+    expect(map.coordinates.toWorld({ longitude: 1, latitude: 2 })).toEqual({ x: 1, y: 2, z: 0 });
+    expect(map.coordinates.toWindow({ longitude: 1, latitude: 2 })).toEqual({ x: 10, y: 20 });
+    expect(map.coordinates.toGeoPosition({ x: 1, y: 2, z: 3 })).toEqual({
+      longitude: 1,
+      latitude: 2,
+      height: 3,
+    });
+    expect(map.coordinates.pickGeoPosition({ x: 1, y: 2 })).toEqual({
+      longitude: 1,
+      latitude: 2,
+      height: 3,
+    });
+
+    expect(map.quality.current.resolutionScale).toBe(1);
+    expect(map.quality.adaptive).toBe(true);
+    map.quality.setProfile('low');
+    map.quality.set({ resolutionScale: 0.8 });
+    map.quality.setAdaptive(false);
+    expect(quality.setProfile).toHaveBeenCalledWith('low');
+    expect(quality.set).toHaveBeenCalledWith({ resolutionScale: 0.8 });
+    expect(quality.setAdaptive).toHaveBeenCalledWith(false);
+
+    await map.destroy();
+
+    expect(() => map.coordinates.toWorld({ longitude: 1, latitude: 2 })).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED' }),
+    );
+    expect(() => {
+      map.quality.setAdaptive(true);
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED' }));
+  });
+
+  it('forwards engine level failures to map:error once the adapter is connected', () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+    const errors: unknown[] = [];
+    map.events.on('map:error', (event) => {
+      errors.push(event);
+    });
+
+    adapter.reportError(
+      new GisError('tile failed', {
+        code: 'BASEMAP_LOAD_FAILED',
+        module: 'basemap',
+        operation: 'set',
+      }),
+    );
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({ id: 'map-1' });
   });
 });

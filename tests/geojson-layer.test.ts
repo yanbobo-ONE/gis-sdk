@@ -212,6 +212,10 @@ describe('createGeoJsonLayer', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
+    const states: string[] = [];
+    layer.events.on('state:changed', (event) => {
+      states.push(event.state);
+    });
     const replacing = layer.setData('/data/slow.geojson', { signal: controller.signal });
     controller.abort('route changed');
 
@@ -220,6 +224,8 @@ describe('createGeoJsonLayer', () => {
       operation: 'setData',
     });
     expect(view.items.map((item) => item.id)).toEqual([1]);
+    expect(layer.state).toBe('ready');
+    expect(states).not.toContain('error');
   });
 
   it('removes a replacement data source when Cesium finishes adding it after cancellation', async () => {

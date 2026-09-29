@@ -7,20 +7,29 @@ import {
   DataPipelineMessageAdapter,
   EventHub,
   GisError,
+  qualityProfiles,
+  RenderQualityMonitor,
 } from '../src/entries/core.js';
 import type {
+  CoordinateTransform,
   DataPipelineMessageAdapterOptions,
   DataPipelineMessageSource,
   DataPipelineFrameSchedulerOptions,
   DataPipelineOptions,
   DataPipelineStats,
+  QualityController,
+  RenderQuality,
+  TerrainSample,
 } from '../src/entries/core.js';
 import { wmsFilter } from '../src/entries/layers.js';
-import type { CreateMapOptions } from '../src/entries/cesium.js';
-import type { GisMap } from '../src/entries/core.js';
+import type { CreateMapOptions, QualityOptions } from '../src/entries/cesium.js';
+import type { GisMap, TerrainSetOptions } from '../src/entries/core.js';
 import type {
   ImageryLayerHandle,
   LayerManager,
+  ModelLayerHandle,
+  ModelLayerSpec,
+  ModelTransform,
   SingleImageLayerSpec,
   Tiles3dLayerSpec,
   TmsLayerSpec,
@@ -32,6 +41,8 @@ describe('package subpath entrypoints', () => {
   it('exposes independent core, Cesium, and layer entrypoints', () => {
     interface SubpathTypes {
       readonly options: CreateMapOptions;
+      readonly qualityOptions: QualityOptions;
+      readonly terrainSetOptions: TerrainSetOptions;
       readonly map: GisMap;
       readonly layers: LayerManager;
       readonly tileset: Tiles3dLayerSpec;
@@ -39,6 +50,13 @@ describe('package subpath entrypoints', () => {
       readonly tms: TmsLayerSpec;
       readonly wmts: WmtsLayerSpec;
       readonly singleImage: SingleImageLayerSpec;
+      readonly model: ModelLayerSpec;
+      readonly modelHandle: ModelLayerHandle;
+      readonly modelTransform: ModelTransform;
+      readonly coordinates: CoordinateTransform;
+      readonly terrainSample: TerrainSample;
+      readonly quality: QualityController;
+      readonly qualityProfile: RenderQuality;
       readonly imagery: ImageryLayerHandle;
       readonly pipeline: DataPipeline<{ readonly id: string }>;
       readonly messageAdapter: DataPipelineMessageAdapter<{ readonly id: string }>;
@@ -61,6 +79,8 @@ describe('package subpath entrypoints', () => {
     expect(DataPipeline).toBeTypeOf('function');
     expect(DataPipelineFrameScheduler).toBeTypeOf('function');
     expect(DataPipelineMessageAdapter).toBeTypeOf('function');
+    expect(RenderQualityMonitor).toBeTypeOf('function');
+    expect(Object.isFrozen(qualityProfiles.default)).toBe(true);
     expect(wmsFilter.eq('status', 'OPEN')).toEqual({
       op: 'eq',
       property: 'status',

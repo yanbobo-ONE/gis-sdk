@@ -37,6 +37,8 @@ export default defineConfig({
           items: [
             { text: '地图生命周期', link: '/guide/map-lifecycle' },
             { text: '地图控制', link: '/guide/map-controls' },
+            { text: '坐标转换', link: '/guide/coordinates' },
+            { text: '渲染质量与自动降档', link: '/guide/quality' },
           ],
         },
         {
@@ -47,6 +49,7 @@ export default defineConfig({
             { text: 'GeoJSON 图层', link: '/guide/geojson-layer' },
             { text: 'WMS、TMS、WMTS 与单图影像', link: '/guide/imagery-layers' },
             { text: '3D Tiles 图层', link: '/guide/tiles3d-layer' },
+            { text: '静态模型图层', link: '/guide/model-layer' },
           ],
         },
         {
@@ -77,11 +80,14 @@ export default defineConfig({
             { text: 'API 使用参考', link: '/guide/api-reference' },
             { text: '地图生命周期', link: '/guide/map-lifecycle' },
             { text: '地图控制', link: '/guide/map-controls' },
+            { text: '坐标转换', link: '/guide/coordinates' },
+            { text: '渲染质量与自动降档', link: '/guide/quality' },
             { text: '图层使用导航', link: '/guide/layers' },
             { text: '图层管理', link: '/guide/layer-management' },
             { text: 'GeoJSON 图层', link: '/guide/geojson-layer' },
             { text: 'WMS、TMS、WMTS 与单图影像', link: '/guide/imagery-layers' },
             { text: '3D Tiles 图层', link: '/guide/tiles3d-layer' },
+            { text: '静态模型图层', link: '/guide/model-layer' },
             { text: '实时数据导航', link: '/guide/data-pipeline' },
             { text: '有界数据管线', link: '/guide/data-pipeline-core' },
             { text: 'Worker / MessagePort 输入', link: '/guide/data-pipeline-message-input' },

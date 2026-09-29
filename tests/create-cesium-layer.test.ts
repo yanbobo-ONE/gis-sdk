@@ -4,6 +4,7 @@ const adapters = vi.hoisted(() => ({
   geojson: vi.fn(() => Promise.resolve({ id: 'geojson-handle' })),
   tiles3d: vi.fn(() => Promise.resolve({ id: 'tileset-handle' })),
   singleImage: vi.fn(() => Promise.resolve({ id: 'single-image-handle' })),
+  model: vi.fn(() => Promise.resolve({ id: 'model-handle' })),
   tms: vi.fn(() => Promise.resolve({ id: 'tms-handle' })),
   wmts: vi.fn(() => Promise.resolve({ id: 'wmts-handle' })),
   wms: vi.fn(() => Promise.resolve({ id: 'wms-handle' })),
@@ -25,18 +26,24 @@ vi.mock('../src/cesium/layers/single-image-layer.js', () => ({
   createSingleImageLayer: adapters.singleImage,
 }));
 
+vi.mock('../src/cesium/layers/model-layer.js', () => ({
+  createModelLayer: adapters.model,
+}));
+
 vi.mock('../src/cesium/layers/tiled-imagery-layer.js', () => ({
   createTmsLayer: adapters.tms,
   createWmtsLayer: adapters.wmts,
 }));
 
 import { createCesiumLayer } from '../src/cesium/layers/create-cesium-layer.js';
+import { LoadLimiter } from '../src/cesium/load-limiter.js';
 import type { LayerFactoryContext } from '../src/layers/layer-runtime.js';
 
 const context: LayerFactoryContext = {
   signal: new AbortController().signal,
   onDisposed: () => undefined,
 };
+const services = { modelLoad: new LoadLimiter(4) };
 
 describe('createCesiumLayer', () => {
   it('dispatches discriminated specs to the matching Cesium adapter', async () => {
@@ -71,30 +78,48 @@ describe('createCesiumLayer', () => {
       tileMatrixSetID: 'WebMercatorQuad',
     };
     const singleImageSpec = { id: 'survey', type: 'single-image' as const, url: '/survey.png' };
+    const modelSpec = {
+      id: 'vehicle',
+      type: 'model' as const,
+      url: '/vehicle.glb',
+      position: { longitude: 116, latitude: 40 },
+    };
 
-    await expect(createCesiumLayer(viewer as never, geojsonSpec, context)).resolves.toEqual({
+    await expect(
+      createCesiumLayer(viewer as never, geojsonSpec, context, services),
+    ).resolves.toEqual({
       id: 'geojson-handle',
     });
-    await expect(createCesiumLayer(viewer as never, wmsSpec, context)).resolves.toEqual({
+    await expect(createCesiumLayer(viewer as never, wmsSpec, context, services)).resolves.toEqual({
       id: 'wms-handle',
     });
-    await expect(createCesiumLayer(viewer as never, tilesetSpec, context)).resolves.toEqual({
+    await expect(
+      createCesiumLayer(viewer as never, tilesetSpec, context, services),
+    ).resolves.toEqual({
       id: 'tileset-handle',
     });
-    await expect(createCesiumLayer(viewer as never, tmsSpec, context)).resolves.toEqual({
+    await expect(createCesiumLayer(viewer as never, tmsSpec, context, services)).resolves.toEqual({
       id: 'tms-handle',
     });
-    await expect(createCesiumLayer(viewer as never, wmtsSpec, context)).resolves.toEqual({
+    await expect(createCesiumLayer(viewer as never, wmtsSpec, context, services)).resolves.toEqual({
       id: 'wmts-handle',
     });
-    await expect(createCesiumLayer(viewer as never, singleImageSpec, context)).resolves.toEqual({
+    await expect(
+      createCesiumLayer(viewer as never, singleImageSpec, context, services),
+    ).resolves.toEqual({
       id: 'single-image-handle',
     });
+    await expect(createCesiumLayer(viewer as never, modelSpec, context, services)).resolves.toEqual(
+      {
+        id: 'model-handle',
+      },
+    );
     expect(adapters.geojson).toHaveBeenCalledWith(viewer, geojsonSpec, context);
     expect(adapters.wms).toHaveBeenCalledWith(viewer, wmsSpec, context);
     expect(adapters.tiles3d).toHaveBeenCalledWith(viewer, tilesetSpec, context);
     expect(adapters.tms).toHaveBeenCalledWith(viewer, tmsSpec, context);
     expect(adapters.wmts).toHaveBeenCalledWith(viewer, wmtsSpec, context);
     expect(adapters.singleImage).toHaveBeenCalledWith(viewer, singleImageSpec, context);
+    expect(adapters.model).toHaveBeenCalledWith(viewer, modelSpec, context, services.modelLoad);
   });
 });

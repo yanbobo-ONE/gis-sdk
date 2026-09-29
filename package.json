@@ -1,6 +1,6 @@
 {
   "name": "@yanbobo/gis-sdk",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "description": "Framework-neutral Cesium GIS SDK with typed map and layer APIs",
   "license": "UNLICENSED",
   "repository": {

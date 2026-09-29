@@ -1,5 +1,5 @@
 import { Rectangle, SingleTileImageryProvider } from 'cesium';
-import type { ImageryLayer, ImageryProvider, Viewer } from 'cesium';
+import type { ImageryLayer, Viewer } from 'cesium';
 
 import { GisError } from '../../core/errors.js';
 import type { EventHub } from '../../core/event-hub.js';
@@ -12,6 +12,8 @@ import type {
 } from '../../layers/contracts.js';
 import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
+import { watchImageryErrors } from './imagery-error-watch.js';
+import type { ImageryErrorWatch } from './imagery-error-watch.js';
 
 function operationAborted(id: string, cause?: unknown): GisError {
   return new GisError(`Layer "${id}" operation was aborted.`, {
@@ -32,9 +34,13 @@ function raceAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   }
 
   return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(abortReason(signal.reason));
+    const onAbort = () => {
+      reject(abortReason(signal.reason));
+    };
     signal.addEventListener('abort', onAbort, { once: true });
-    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+    promise.then(resolve, reject).finally(() => {
+      signal.removeEventListener('abort', onAbort);
+    });
   });
 }
 
@@ -92,6 +98,7 @@ function createRectangle(
 
 class CesiumSingleImageLayerHandle implements ImageryLayerHandle {
   private readonly lifecycle: LayerHandleRuntime;
+  private readonly errorWatch: ImageryErrorWatch;
   private currentOpacity: number;
 
   constructor(
@@ -111,15 +118,17 @@ class CesiumSingleImageLayerHandle implements ImageryLayerHandle {
         this.currentLayer.show = nextVisible;
       },
       onDispose: () => {
+        this.errorWatch.dispose();
         this.viewer.imageryLayers.remove(this.currentLayer, true);
       },
       onDisposed,
     });
+    this.errorWatch = watchImageryErrors(currentLayer, (cause: unknown) => {
+      this.lifecycle.recordError(cause);
+    });
   }
 
-  get type(): 'single-image' {
-    return 'single-image';
-  }
+  readonly type = 'single-image' as const;
 
   get state(): LayerState {
     return this.lifecycle.state;
@@ -135,6 +144,10 @@ class CesiumSingleImageLayerHandle implements ImageryLayerHandle {
 
   get events(): EventHub<LayerEventMap> {
     return this.lifecycle.events;
+  }
+
+  get errorCount(): number {
+    return this.lifecycle.errorCount;
   }
 
   setVisible(visible: boolean): void {
@@ -170,7 +183,7 @@ export async function createSingleImageLayer(
       SingleTileImageryProvider.fromUrl(url, rectangle === undefined ? {} : { rectangle }),
       context.signal,
     );
-    const imageryLayer = viewer.imageryLayers.addImageryProvider(provider as ImageryProvider);
+    const imageryLayer = viewer.imageryLayers.addImageryProvider(provider);
     imageryLayer.show = spec.visible ?? true;
     imageryLayer.alpha = opacity;
     return new CesiumSingleImageLayerHandle(

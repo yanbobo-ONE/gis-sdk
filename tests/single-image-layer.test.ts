@@ -8,9 +8,7 @@ const cesium = vi.hoisted(() => {
     east,
     north,
   }));
-  class SingleTileImageryProvider {
-    static fromUrl = fromUrl;
-  }
+  const SingleTileImageryProvider = { fromUrl };
   return {
     SingleTileImageryProvider,
     Rectangle: { fromDegrees },
@@ -32,7 +30,7 @@ import { createSingleImageLayer } from '../src/cesium/layers/single-image-layer.
 import type { LayerFactoryContext } from '../src/layers/layer-runtime.js';
 
 function createViewer() {
-  const items: Array<{ provider: unknown; show: boolean; alpha: number }> = [];
+  const items: { provider: unknown; show: boolean; alpha: number }[] = [];
   const addImageryProvider = vi.fn((provider: unknown) => {
     const layer = { provider, show: true, alpha: 1 };
     items.push(layer);
@@ -53,7 +51,9 @@ function createContext(signal = new AbortController().signal) {
 }
 
 describe('single image imagery layer', () => {
-  beforeEach(() => cesium.reset());
+  beforeEach(() => {
+    cesium.reset();
+  });
 
   it('loads a geographic image with typed degree bounds and visual state', async () => {
     const provider = { kind: 'single-image' };
@@ -113,9 +113,9 @@ describe('single image imagery layer', () => {
 
     layer.setOpacity(0.25);
     expect(view.items[0]?.alpha).toBe(0.25);
-    expect(() => layer.setOpacity(-0.1)).toThrow(
-      expect.objectContaining({ code: 'INVALID_LAYER_OPACITY' }),
-    );
+    expect(() => {
+      layer.setOpacity(-0.1);
+    }).toThrow(expect.objectContaining({ code: 'INVALID_LAYER_OPACITY' }));
     await layer.dispose();
     await layer.dispose();
     expect(view.remove).toHaveBeenCalledOnce();

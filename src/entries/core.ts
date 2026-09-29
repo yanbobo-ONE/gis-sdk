@@ -29,13 +29,29 @@ export type {
   CameraFlight,
   CameraView,
   CesiumTerrainSpec,
+  CoordinateTransform,
   EllipsoidTerrainSpec,
   GeoPosition,
   TerrainController,
+  TerrainSample,
+  TerrainSampleOptions,
+  TerrainSamplePoint,
+  TerrainSetOptions,
   TerrainSpec,
+  WindowCoordinates,
+  WorldCoordinates,
   XyzBasemapSpec,
 } from '../core/controls.js';
 export { GisError } from '../core/errors.js';
 export type { GisErrorCode, GisErrorOptions } from '../core/errors.js';
 export { EventHub } from '../core/event-hub.js';
 export type { Unsubscribe } from '../core/event-hub.js';
+export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
+export type {
+  QualityController,
+  QualityProfileId,
+  QualitySnapshot,
+  RenderQuality,
+  RenderQualityBounds,
+  RenderQualityMonitorOptions,
+} from '../core/quality.js';

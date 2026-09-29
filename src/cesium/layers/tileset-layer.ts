@@ -138,6 +138,10 @@ class CesiumTiles3dLayerHandle implements LayerHandle {
     return this.lifecycle.events;
   }
 
+  get errorCount(): number {
+    return this.lifecycle.errorCount;
+  }
+
   setVisible(visible: boolean): void {
     this.lifecycle.setVisible(visible);
   }

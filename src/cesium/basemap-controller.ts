@@ -1,5 +1,5 @@
 import { UrlTemplateImageryProvider } from 'cesium';
-import type { ImageryLayer, Viewer } from 'cesium';
+import type { ImageryLayer, ImageryProvider, Viewer } from 'cesium';
 
 import type { BasemapController, BasemapType, XyzBasemapSpec } from '../core/controls.js';
 import { GisError } from '../core/errors.js';
@@ -39,12 +39,19 @@ function normalize(
   };
 }
 
+interface ProviderErrorEvent {
+  addEventListener(listener: (error: unknown) => void): (() => void) | undefined;
+}
+
 /** @internal */
 export class CesiumBasemapController implements BasemapController {
   private currentLayer: ImageryLayer | undefined;
   private currentOpacity = 1;
   private currentType: BasemapType = 'none';
   private currentVisible = false;
+  private observedErrors = 0;
+  private removeErrorListener: (() => void) | undefined;
+  private reporter: ((error: GisError) => void) | undefined;
   private disposed = false;
 
   constructor(private readonly viewer: Pick<Viewer, 'imageryLayers'>) {}
@@ -61,6 +68,15 @@ export class CesiumBasemapController implements BasemapController {
     return this.currentOpacity;
   }
 
+  get errorCount(): number {
+    return this.observedErrors;
+  }
+
+  /** 接入引擎级错误上报入口；由地图适配器在运行时建立后调用。 */
+  setErrorReporter(reporter: (error: GisError) => void): void {
+    this.reporter = reporter;
+  }
+
   set(spec: XyzBasemapSpec): void {
     this.assertActive('set');
     const config = normalize(spec, {
@@ -73,6 +89,7 @@ export class CesiumBasemapController implements BasemapController {
     );
     candidate.alpha = config.opacity;
     candidate.show = config.visible;
+    this.watchProvider(candidate.imageryProvider, config.url);
 
     const previous = this.currentLayer;
     this.currentLayer = candidate;
@@ -86,6 +103,7 @@ export class CesiumBasemapController implements BasemapController {
 
   clear(): void {
     this.assertActive('clear');
+    this.unwatchProvider();
     if (this.currentLayer) {
       this.viewer.imageryLayers.remove(this.currentLayer, true);
     }
@@ -119,6 +137,41 @@ export class CesiumBasemapController implements BasemapController {
       this.clear();
       this.disposed = true;
     }
+  }
+
+  /** 订阅瓦片错误：累计计数，并只在首个失败时上报一次，避免瓦片级错误刷屏。 */
+  private watchProvider(provider: ImageryProvider, url: string): void {
+    this.unwatchProvider();
+    const event = (provider as { errorEvent?: ProviderErrorEvent } | undefined)?.errorEvent;
+    if (!event || typeof event.addEventListener !== 'function') {
+      return;
+    }
+    const onError = (cause: unknown) => {
+      this.observedErrors += 1;
+      if (this.observedErrors > 1) {
+        return;
+      }
+      this.reporter?.(
+        new GisError(`Basemap tiles from "${url}" are failing to load.`, {
+          code: 'BASEMAP_LOAD_FAILED',
+          module: 'basemap',
+          operation: 'set',
+          retryable: true,
+          cause,
+        }),
+      );
+    };
+    try {
+      this.removeErrorListener = event.addEventListener(onError);
+    } catch {
+      this.removeErrorListener = undefined;
+    }
+  }
+
+  private unwatchProvider(): void {
+    const remove = this.removeErrorListener;
+    this.removeErrorListener = undefined;
+    remove?.();
   }
 
   private assertActive(operation: string): void {

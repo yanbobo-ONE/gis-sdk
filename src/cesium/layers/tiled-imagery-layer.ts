@@ -12,6 +12,8 @@ import type {
 } from '../../layers/contracts.js';
 import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
+import { watchImageryErrors } from './imagery-error-watch.js';
+import type { ImageryErrorWatch } from './imagery-error-watch.js';
 
 type TmsProviderOptions = NonNullable<Parameters<typeof TileMapServiceImageryProvider.fromUrl>[1]>;
 type WmtsProviderOptions = ConstructorParameters<typeof WebMapTileServiceImageryProvider>[0];
@@ -184,6 +186,7 @@ function normalizeWmts(spec: WmtsLayerSpec): {
 
 class CesiumTiledImageryLayerHandle implements ImageryLayerHandle {
   private readonly lifecycle: LayerHandleRuntime;
+  private readonly errorWatch: ImageryErrorWatch;
   private currentOpacity: number;
 
   constructor(
@@ -204,9 +207,13 @@ class CesiumTiledImageryLayerHandle implements ImageryLayerHandle {
         this.currentLayer.show = nextVisible;
       },
       onDispose: () => {
+        this.errorWatch.dispose();
         this.viewer.imageryLayers.remove(this.currentLayer, true);
       },
       onDisposed,
+    });
+    this.errorWatch = watchImageryErrors(currentLayer, (cause: unknown) => {
+      this.lifecycle.recordError(cause);
     });
   }
 
@@ -224,6 +231,10 @@ class CesiumTiledImageryLayerHandle implements ImageryLayerHandle {
 
   get events(): EventHub<LayerEventMap> {
     return this.lifecycle.events;
+  }
+
+  get errorCount(): number {
+    return this.lifecycle.errorCount;
   }
 
   setVisible(visible: boolean): void {

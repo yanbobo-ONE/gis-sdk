@@ -2,6 +2,7 @@ import type { Viewer } from 'cesium';
 
 import type { GisMap } from '../core/contracts.js';
 import type { XyzBasemapSpec } from '../core/controls.js';
+import type { QualityProfileId, RenderQuality } from '../core/quality.js';
 
 export type { XyzBasemapSpec } from '../core/controls.js';
 
@@ -32,6 +33,30 @@ export interface CesiumWidgetOptions {
   readonly timeline?: boolean;
 }
 
+/** 渲染质量配置。 */
+export interface QualityOptions {
+  /**
+   * 初始质量档，默认 `'default'`。
+   *
+   * `default` 保持 Cesium 的默认渲染参数；`quality`、`balanced`、`low` 逐级降低分辨率
+   * 与地形精度、并收紧模型并发，是 Plugin-web 生产验证过的三档。
+   */
+  readonly profile?: QualityProfileId;
+  /**
+   * 是否按帧率自动升降档，默认 `true`。
+   *
+   * 自动画质只会在质量档给定的参数基础上降低或回升，不会超过该档的分辨率与模型并发，
+   * 也不会低于各参数的下界（分辨率 0.5、地形误差 12、模型并发 2）。
+   */
+  readonly adaptive?: boolean;
+  /** 覆盖质量档中的分辨率缩放，范围 0.5 到 2。 */
+  readonly resolutionScale?: number;
+  /** 覆盖质量档中的地形最大屏幕空间误差，范围 1 到 64。 */
+  readonly terrainSse?: number;
+  /** 覆盖质量档中的模型并发上限，范围 1 到 32 的整数。 */
+  readonly modelLoadConcurrency?: number;
+}
+
 /** 创建 Cesium 地图实例的配置。 */
 export interface CreateMapOptions {
   /** Viewer 容器元素或元素 id。字符串会去除首尾空白。 */
@@ -54,6 +79,8 @@ export interface CreateMapOptions {
   readonly basemap?: XyzBasemapSpec;
   /** Viewer 控件开关。 */
   readonly widgets?: CesiumWidgetOptions;
+  /** 渲染质量与模型并发策略；省略时使用 `default` 档并开启自动画质。 */
+  readonly quality?: QualityOptions;
 }
 
 /** SDK 为高级需求保留的 Cesium 原生上下文。 */
@@ -64,3 +91,11 @@ export interface CesiumRawContext {
 
 /** 使用 Cesium 原生上下文的地图实例。 */
 export type CesiumMap = GisMap<CesiumRawContext>;
+
+/** 规范化后的质量配置。 @internal */
+export interface NormalizedQualityOptions {
+  /** 初始生效的质量参数。 */
+  readonly quality: RenderQuality;
+  /** 是否开启按帧率自动升降档。 */
+  readonly qualityAdaptive: boolean;
+}

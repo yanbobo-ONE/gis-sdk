@@ -13,6 +13,8 @@ import type {
 } from '../../layers/contracts.js';
 import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
+import { watchImageryErrors } from './imagery-error-watch.js';
+import type { ImageryErrorWatch } from './imagery-error-watch.js';
 import { serializeWmsFilter } from './wms-filter.js';
 
 const reservedParameterNames = new Set(['cql_filter', 'layers', 'styles']);
@@ -92,6 +94,7 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
   readonly type = 'wms' as const;
 
   private readonly lifecycle: LayerHandleRuntime;
+  private errorWatch: ImageryErrorWatch;
   private currentLayer: ImageryLayer;
   private currentOpacity: number;
   private currentStyle: string | undefined;
@@ -122,9 +125,13 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
         this.currentLayer.show = nextVisible;
       },
       onDispose: () => {
+        this.errorWatch.dispose();
         this.viewer.imageryLayers.remove(this.currentLayer, true);
       },
       onDisposed,
+    });
+    this.errorWatch = watchImageryErrors(initialLayer, (cause: unknown) => {
+      this.lifecycle.recordError(cause);
     });
   }
 
@@ -142,6 +149,10 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
 
   get events(): EventHub<LayerEventMap> {
     return this.lifecycle.events;
+  }
+
+  get errorCount(): number {
+    return this.lifecycle.errorCount;
   }
 
   setVisible(visible: boolean): void {
@@ -188,7 +199,11 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
           : this.viewer.imageryLayers.addImageryProvider(provider);
       candidate.show = this.visible;
       candidate.alpha = this.currentOpacity;
+      this.errorWatch.dispose();
       this.currentLayer = candidate;
+      this.errorWatch = watchImageryErrors(candidate, (cause: unknown) => {
+        this.lifecycle.recordError(cause);
+      });
       this.currentStyle = style;
       this.currentFilter = filter;
       this.viewer.imageryLayers.remove(previousLayer, true);

@@ -12,6 +12,29 @@ const cesium = vi.hoisted(() => {
       cancelFlight: vi.fn(),
       flyTo: vi.fn(),
       setView: vi.fn(),
+      position: { x: 1, y: 2, z: 3 },
+      direction: { x: 1, y: 0, z: 0 },
+      up: { x: 0, y: 0, z: 1 },
+      right: { x: 0, y: 1, z: 0 },
+    };
+    readonly frameListeners = new Set<() => void>();
+    resolutionScale = 1;
+    readonly scene = {
+      globe: { maximumScreenSpaceError: 2, terrainProvider: undefined as unknown },
+      preUpdate: {
+        addEventListener: (listener: () => void) => {
+          this.frameListeners.add(listener);
+          return () => this.frameListeners.delete(listener);
+        },
+      },
+      postRender: {
+        addEventListener: (listener: () => void) => {
+          this.frameListeners.add(listener);
+          return () => this.frameListeners.delete(listener);
+        },
+      },
+      requestRender: vi.fn(),
+      screenSpaceCameraController: { update: vi.fn() },
     };
     readonly imageryLayers = {
       addImageryProvider: vi.fn(() => {
@@ -58,6 +81,11 @@ vi.mock('cesium', () => ({
   buildModuleUrl: cesium.buildModuleUrl,
   CesiumTerrainProvider: { fromUrl: vi.fn() },
   Cartesian3: { fromDegrees: vi.fn() },
+  Color: {
+    WHITE: { css: 'white' },
+    fromCssColorString: vi.fn((value: string) => ({ css: value })),
+  },
+  ColorBlendMode: { HIGHLIGHT: 'HIGHLIGHT', MIX: 'MIX' },
   EllipsoidTerrainProvider: function EllipsoidTerrainProvider() {
     return undefined;
   },
@@ -94,6 +122,8 @@ function createOptions(
     id,
     scene: Object.freeze({ mode }),
     widgets,
+    quality: Object.freeze({ resolutionScale: 1, terrainSse: 2, modelLoadConcurrency: 4 }),
+    qualityAdaptive: true,
   };
 
   return Object.freeze(cesiumBaseUrl ? { ...options, cesiumBaseUrl } : options);
@@ -327,5 +357,23 @@ describe('CesiumMapAdapter', () => {
     await expect(adapter.destroy()).resolves.toBeUndefined();
     expect(destroyLayers).toHaveBeenCalledTimes(2);
     expect(cesium.Viewer.instances[0]?.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('installs the camera pose guard and releases every frame listener before destroying the Viewer', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const adapter = new CesiumMapAdapter(createOptions('map-1'));
+    const viewer = cesium.Viewer.instances[0];
+    // 相机位姿兜底与画质控制器各订阅一次 preUpdate，画质控制器再订阅一次 postRender。
+    expect(viewer?.frameListeners.size).toBe(3);
+
+    const position = viewer?.camera.position;
+    if (position) {
+      position.x = Number.NaN;
+    }
+    for (const listener of [...(viewer?.frameListeners ?? [])]) listener();
+    expect(viewer?.camera.position).toEqual({ x: 1, y: 2, z: 3 });
+
+    await adapter.destroy();
+    expect(viewer?.frameListeners.size).toBe(0);
   });
 });

@@ -4,9 +4,12 @@ import {
   DataPipeline,
   DataPipelineFrameScheduler,
   DataPipelineMessageAdapter,
+  qualityProfiles,
+  RenderQualityMonitor,
   wmsFilter,
 } from '../src/index.js';
 import type {
+  CoordinateTransform,
   DataPipelineFrameSchedulerOptions,
   DataPipelineMessageAdapterOptions,
   DataPipelineOptions,
@@ -15,6 +18,15 @@ import type {
   GeoJsonLayerSpec,
   ImageryLayerHandle,
   LayerManager,
+  ModelLayerHandle,
+  ModelLayerSpec,
+  ModelTransform,
+  QualityController,
+  QualityProfileId,
+  RenderQuality,
+  TerrainSample,
+  WindowCoordinates,
+  WorldCoordinates,
   SingleImageLayerSpec,
   Tiles3dLayerSpec,
   TmsLayerSpec,
@@ -45,6 +57,16 @@ describe('package public layer interface', () => {
       readonly tmsSpec: TmsLayerSpec;
       readonly wmtsSpec: WmtsLayerSpec;
       readonly singleImageSpec: SingleImageLayerSpec;
+      readonly modelSpec: ModelLayerSpec;
+      readonly modelHandle: ModelLayerHandle;
+      readonly modelTransform: ModelTransform;
+      readonly coordinates: CoordinateTransform;
+      readonly world: WorldCoordinates;
+      readonly window: WindowCoordinates;
+      readonly terrainSamples: readonly TerrainSample[];
+      readonly quality: QualityController;
+      readonly qualityProfile: QualityProfileId;
+      readonly renderQuality: RenderQuality;
       readonly imageryHandle: ImageryLayerHandle;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
       readonly frameSchedulerOptions: DataPipelineFrameSchedulerOptions<{ readonly id: string }>;
@@ -57,5 +79,12 @@ describe('package public layer interface', () => {
     expect(DataPipeline).toBeTypeOf('function');
     expect(DataPipelineFrameScheduler).toBeTypeOf('function');
     expect(DataPipelineMessageAdapter).toBeTypeOf('function');
+    expect(RenderQualityMonitor).toBeTypeOf('function');
+    expect(qualityProfiles.low).toEqual({
+      resolutionScale: 0.75,
+      terrainSse: 12,
+      modelLoadConcurrency: 2,
+    });
+    expect(Object.isFrozen(qualityProfiles)).toBe(true);
   });
 });

@@ -61,14 +61,41 @@ await map.layers.clear();
 
 ## 所有图层共有的 LayerHandle
 
-| 成员                  | 类型                                                  | 运行效果                                                         |
-| --------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| `id`                  | `string`                                              | 地图内唯一 ID                                                    |
-| `type`                | `'geojson' \| 'wms' \| 'tms' \| 'wmts' \| '3d-tiles'` | 图层判别字段                                                     |
-| `state`               | `LayerState`                                          | `loading`、`ready`、`hidden`、`disposing`、`disposed` 或 `error` |
-| `visible`             | `boolean`                                             | 当前显隐状态                                                     |
-| `events`              | `EventHub<LayerEventMap>`                             | 订阅 `state:changed`                                             |
-| `setVisible(visible)` | `void`                                                | 修改底层对象显隐，不重建数据或 Provider                          |
-| `dispose()`           | `Promise<void>`                                       | 幂等释放并从所属管理器移除                                       |
+| 成员                  | 类型                      | 运行效果                                                         |
+| --------------------- | ------------------------- | ---------------------------------------------------------------- |
+| `id`                  | `string`                  | 地图内唯一 ID                                                    |
+| `type`                | 见[图层导航](./layers.md) | 图层判别字段                                                     |
+| `state`               | `LayerState`              | `loading`、`ready`、`hidden`、`disposing`、`disposed` 或 `error` |
+| `visible`             | `boolean`                 | 当前显隐状态                                                     |
+| `events`              | `EventHub<LayerEventMap>` | 订阅 `state:changed` 与 `error`                                  |
+| `errorCount`          | `number`                  | 加入场景后异步请求失败的累计次数（瓦片级失败只计数不刷屏）       |
+| `setVisible(visible)` | `void`                    | 修改底层对象显隐，不重建数据或 Provider                          |
+| `dispose()`           | `Promise<void>`           | 幂等释放并从所属管理器移除                                       |
 
 图层释放后调用修改方法会抛出 `LAYER_DISPOSED`。直接调用 `handle.dispose()` 与 `map.layers.remove(id)` 的资源结果一致。
+
+## 远端请求失败的可观测性
+
+影像图层（WMS、TMS、WMTS、单图影像）加入场景后，瓦片请求失败不会打断调用方，也不会重复抛异常：SDK 累计失败次数，并且只在首个失败时向图层事件发出一次 `error`，避免瓦片级错误刷屏。
+
+```ts
+const layer = await map.layers.add({ id: 'roads', type: 'wms', url, layers: 'city:roads' });
+
+layer.events.on('error', ({ error }) => {
+  console.warn('图层远端请求失败', error.code, error.retryable);
+});
+
+layer.errorCount; // 累计失败次数；0 表示没有观察到远端失败
+```
+
+底图（`createMap({ basemap })`）没有图层句柄，同样的失败会通过 `map:error` 上报首个，并可用 `map.basemap.errorCount` 读取累计次数——这样业务可以区分"没有配置底图"和"配置了但服务不可用"：
+
+```ts
+map.events.on('map:error', ({ error }) => {
+  if (error.code === 'BASEMAP_LOAD_FAILED') {
+    // 提示底图服务不可用，或切换到备用底图
+  }
+});
+```
+
+加载阶段（`add()`、`setData()`）的失败仍然以 Promise 拒绝的方式抛出，不会通过上面的事件重复上报。

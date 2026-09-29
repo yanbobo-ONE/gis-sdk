@@ -64,6 +64,32 @@ describe('CesiumCameraController', () => {
     expect(camera.cancelFlight).toHaveBeenCalledOnce();
   });
 
+  it('cancels an in-flight flight before setting a view', async () => {
+    const camera = createCamera();
+    const controller = new CesiumCameraController(camera);
+    const observed = controller
+      .flyTo({ longitude: 116.39, latitude: 39.9, duration: 3 })
+      .catch((error: unknown) => error);
+
+    controller.setView({ longitude: 10, latitude: 20 });
+
+    await expect(observed).resolves.toMatchObject({ code: 'CAMERA_FLIGHT_CANCELLED' });
+    expect(camera.cancelFlight).toHaveBeenCalledOnce();
+    expect(camera.setView).toHaveBeenCalledWith({
+      destination: { longitude: 10, latitude: 20, height: 0 },
+    });
+  });
+
+  it('cancels a flight started outside the SDK before setting a view', () => {
+    const camera = createCamera();
+    const controller = new CesiumCameraController(camera);
+
+    controller.setView({ longitude: 10, latitude: 20 });
+
+    expect(camera.cancelFlight).toHaveBeenCalledOnce();
+    expect(camera.setView).toHaveBeenCalledOnce();
+  });
+
   it('rejects invalid geographic coordinates before calling Cesium', () => {
     const camera = createCamera();
     const controller = new CesiumCameraController(camera);
@@ -82,6 +108,9 @@ describe('CesiumCameraController', () => {
 
     expect(() => {
       void controller.flyTo({ longitude: 181, latitude: 39.9 });
+    }).toThrow(expect.objectContaining({ code: 'INVALID_CAMERA_VIEW' }));
+    expect(() => {
+      controller.setView({ longitude: 181, latitude: 39.9 });
     }).toThrow(expect.objectContaining({ code: 'INVALID_CAMERA_VIEW' }));
     expect(camera.cancelFlight).not.toHaveBeenCalled();
 

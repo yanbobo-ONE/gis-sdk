@@ -19,6 +19,7 @@ export class LayerHandleRuntime implements LayerHandle {
   private currentState: LayerState;
   private currentVisible: boolean;
   private disposePromise: Promise<void> | undefined;
+  private observedErrors = 0;
 
   readonly id: string;
   readonly type: LayerType;
@@ -36,6 +37,10 @@ export class LayerHandleRuntime implements LayerHandle {
 
   get visible(): boolean {
     return this.currentVisible;
+  }
+
+  get errorCount(): number {
+    return this.observedErrors;
   }
 
   setVisible(visible: boolean): void {
@@ -91,6 +96,32 @@ export class LayerHandleRuntime implements LayerHandle {
   completeLoading(): void {
     if (this.currentState !== 'disposing' && this.currentState !== 'disposed') {
       this.transition(this.currentVisible ? 'ready' : 'hidden');
+    }
+  }
+
+  /**
+   * Records an asynchronous request failure observed after the layer joined the scene.
+   *
+   * 瓦片级失败会连续触发，这里只累计计数，并且只在首个失败时发出 `error` 事件。
+   */
+  recordError(cause: unknown, operation = 'request'): void {
+    this.observedErrors += 1;
+    if (this.observedErrors > 1) {
+      return;
+    }
+    try {
+      this.events.emit('error', {
+        id: this.id,
+        error: new GisError(`Layer "${this.id}" failed to load remote resources.`, {
+          code: 'LAYER_LOAD_FAILED',
+          module: 'layer',
+          operation,
+          retryable: true,
+          cause,
+        }),
+      });
+    } catch {
+      // Consumer listeners must not change lifecycle outcomes.
     }
   }
 
