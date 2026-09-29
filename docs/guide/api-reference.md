@@ -19,6 +19,7 @@
 | 调分辨率、地形精度或按帧率自动降档     | [渲染质量](./quality.md)                    | `map.quality`、`createMap({ quality })`、内置质量档             |
 | 量算距离面积、判断点在区内、转换坐标系 | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表 |
 | 消化高频业务消息                       | [实时数据导航](./data-pipeline.md)          | 有界队列、Worker/MessagePort 输入、帧预算调度                   |
+| 处理乱序实时样本与断流追赶             | [实时水位线](./realtime-waterline.md)       | `RealtimeWaterline`、`RealtimeTimestampGuard`                   |
 | 判断和处理失败                         | [错误与原生出口](./errors-and-native.md)    | `GisError`、错误码、`map.raw.viewer` 的边界                     |
 
 ## 统一调用规则
@@ -42,4 +43,4 @@ await map.destroy();
 
 ## 已发布范围
 
-当前 alpha 包已发布地图生命周期、GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles、静态模型、点位图层、拾取交互、XYZ 底图、相机、地形与地形采样、地图坐标转换、渲染质量、空间计算（量算 / 判断 / CRS 转换）、CSV 解析、数据管线。动态实体、CZML、Worker 池、大数据渲染器、绘制、材质和空间分析尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。
+当前 alpha 包已发布地图生命周期、GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles、静态模型、点位图层、拾取交互、实时水位线、XYZ 底图、相机、地形与地形采样、地图坐标转换、渲染质量、空间计算（量算 / 判断 / CRS 转换）、CSV 解析、数据管线。动态实体、CZML、Worker 池、大数据渲染器、绘制、材质和空间分析尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。

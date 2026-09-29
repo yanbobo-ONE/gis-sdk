@@ -72,6 +72,15 @@ export type {
   CsvTable,
 } from '../core/csv.js';
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
+export { RealtimeTimestampGuard } from '../core/realtime-timestamp-guard.js';
+export type { RealtimeTimestampGuardOptions } from '../core/realtime-timestamp-guard.js';
+export { RealtimeWaterline } from '../core/realtime-waterline.js';
+export type {
+  RealtimeWaterlineOptions,
+  RealtimeWaterlineReason,
+  RealtimeWaterlineSnapshot,
+  RealtimeWaterlineState,
+} from '../core/realtime-waterline.js';
 export type {
   QualityController,
   QualityProfileId,

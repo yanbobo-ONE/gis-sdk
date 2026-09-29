@@ -21,6 +21,7 @@
 - 纯计算的空间能力：量算（距离/面积/方位/包围盒/质心/最近点）、点面判断与 CRS 转换（含 CGCS2000 高斯带）；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
 - 类型化拾取交互（`map.picking`）：点击与悬停命中信息、地表经纬高，悬停按帧合并避免卡顿；
+- 实时水位线与时间戳守卫：乱序样本按时间释放、精确对象共同覆盖、双阈值追赶与超前样本隔离；
 - 相机退化旋转与 NaN 位姿兜底、切换视角时取消飞行，以及地形加载超时保护；
 - 默认关闭在线底图和可选控件，无需 Cesium ion token 即可启动空白地球。
 
@@ -124,6 +125,7 @@ async function disposeMap() {
 - [空间计算与坐标转换](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/spatial-analysis.md)
 - [点位图层与 CSV 导入](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/points-layer.md)
 - [拾取交互](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/picking.md)
+- [实时水位线](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/realtime-waterline.md)
 - [功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)
 - [TypeScript 类型索引](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
 - [变更日志](https://github.com/yanbobo-ONE/gis-sdk/blob/main/CHANGELOG.md)
@@ -151,6 +153,7 @@ async function disposeMap() {
 | 数据管线核心                                   | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                                                                                               |
 | Worker / MessagePort 消息输入                  | 可用                   | `DataPipelineMessageAdapter`：消息监听、业务解码转发、统计和监听释放                                                                                                         |
 | 帧预算调度                                     | 可用                   | `DataPipelineFrameScheduler`：请求合并、每帧有界消费、取消和统计                                                                                                             |
+| 实时水位线                                     | 可用                   | `RealtimeWaterline` 与 `RealtimeTimestampGuard`：乱序样本按时间释放、双阈值追赶、超前样本隔离与诊断统计                                                                      |
 | CZML、动态实体与模型动画                       | 未完成                 | 静态 glTF / GLB 模型已可用；CZML、动态实体、动画与模型外观策略当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                              |
 | Worker 池、专用动态输入和 Primitive 大数据渲染 | 未完成                 | 当前没有 Worker 池、协议 Adapter、吞吐量、数据规模或性能承诺                                                                                                                 |
 | 绘制编辑、自定义材质、空间分析、插件与诊断     | 未完成                 | 当前没有稳定公开 API                                                                                                                                                         |

@@ -2,11 +2,12 @@
 
 实时数据能力按职责拆成三个可独立使用的对象。它们不依赖 Vue、React 或 Cesium，业务可以把最终批次应用到任意渲染对象。
 
-| 你要解决的问题                          | 使用对象                        | 页面                                                          | 负责什么                                |
-| --------------------------------------- | ------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
-| 高频更新不能无限堆积                    | `DataPipeline<T>`               | [有界数据管线](./data-pipeline-core.md)                       | 同键合并、容量限制、FIFO 批量读取与统计 |
-| 将 Worker 或 `MessagePort` 消息接入队列 | `DataPipelineMessageAdapter<T>` | [Worker / MessagePort 输入](./data-pipeline-message-input.md) | 监听、业务解码、转发、输入统计与解绑    |
-| 限制单帧处理量                          | `DataPipelineFrameScheduler<T>` | [帧预算调度](./data-pipeline-frame-scheduler.md)              | 请求合并、每帧有界消费、取消与帧统计    |
+| 你要解决的问题                          | 使用对象                        | 页面                                                          | 负责什么                                             |
+| --------------------------------------- | ------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| 高频更新不能无限堆积                    | `DataPipeline<T>`               | [有界数据管线](./data-pipeline-core.md)                       | 同键合并、容量限制、FIFO 批量读取与统计              |
+| 将 Worker 或 `MessagePort` 消息接入队列 | `DataPipelineMessageAdapter<T>` | [Worker / MessagePort 输入](./data-pipeline-message-input.md) | 监听、业务解码、转发、输入统计与解绑                 |
+| 限制单帧处理量                          | `DataPipelineFrameScheduler<T>` | [帧预算调度](./data-pipeline-frame-scheduler.md)              | 请求合并、每帧有界消费、取消与帧统计                 |
+| 乱序样本导致实体倒退                    | `RealtimeWaterline<T>`          | [实时水位线与时间戳守卫](./realtime-waterline.md)             | 按仿真时间发布、精确对象共同覆盖、追赶倍率与断流状态 |
 
 ## 推荐组合
 

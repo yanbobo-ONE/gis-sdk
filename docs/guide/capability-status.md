@@ -31,6 +31,7 @@
 | 数据管线核心        | 可用 | `DataPipeline`（包根或 `/core`）                                                           | 有界队列、同键最新值合并、溢出策略、批量读取和统计快照                                                                     |
 | 消息输入适配器      | 可用 | `DataPipelineMessageAdapter`（包根或 `/core`）                                             | Worker / MessagePort 监听、业务解码转发、拒绝/丢弃统计与监听释放                                                           |
 | 帧预算调度器        | 可用 | `DataPipelineFrameScheduler`（包根或 `/core`）                                             | 动画帧请求合并、每帧有界消费、自动续帧、取消、失败事件与统计                                                               |
+| 实时水位线          | 可用 | `RealtimeWaterline`、`RealtimeTimestampGuard`（包根或 `/core`）                            | 乱序样本按时间释放、精确对象共同覆盖、过期/超限/窗口丢弃统计、双阈值追赶与倍率上限、断流与失活状态、超前样本隔离           |
 | Cesium 公共原生访问 | 可用 | `map.raw.viewer`                                                                           | 调用 Cesium 文档中的公共成员；资源归业务代码所有                                                                           |
 | 按需导入            | 可用 | `/core`、`/cesium`、`/layers`、`/styles.css`                                               | 将核心工具、Cesium 创建入口和图层工具拆分为独立子路径                                                                      |
 
@@ -43,6 +44,7 @@
 | 企业影像服务                         | 未发布   | 当前未封装企业鉴权、服务专属参数或凭证更新策略；可临时使用原生出口                                                                     |
 | CZML、动态实体与模型动画             | 未发布   | 静态 glTF / GLB 已通过 `type: 'model'` 发布；CZML、动态实体、动画、拾取事件与外观策略仍无 SDK 方法                                     |
 | Worker 池与专用动态输入 Adapter      | 未发布   | 尚无 Worker 池、WebSocket/SSE/CZML/二进制协议适配、校验和标准化                                                                        |
+| 实时协议与重同步                     | 未发布   | 水位线与时间戳守卫已可用；Worker 池、WebSocket/SSE/二进制协议适配、会话门禁与重连重同步尚未发布                                        |
 | 海量数据渲染（聚合 / 标签 / Worker） | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺                                                                 |
 | 绘制与编辑                           | 未发布   | 尚无 `map.drawing`、编辑状态、捕捉或交互事件 API                                                                                       |
 | 自定义材质与效果                     | 未发布   | 尚无材质注册、着色器、特效或版本兼容策略                                                                                               |
