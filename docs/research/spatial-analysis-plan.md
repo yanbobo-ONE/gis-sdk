@@ -62,7 +62,7 @@
 
 缺什么（`capability-status.md` 原文）：
 
-> 空间分析 | 未发布 | 坐标转换与地形采样已可用；尚无 `map.analysis`、任务模型、结果图层或 Worker 执行接口
+> 分析任务模型与结果图层 | 未发布 | `map.analysis` 已可用；任务队列、进度上报、结果图层与 Worker 执行接口尚无
 
 源码搜索确认：全仓库无 `measure` / `distance` / `area` / `buffer` / `intersect` / `point-in-polygon` / `convexHull` / `simplify` / `turf` / `proj4` 的实现或依赖；`dependencies` 目前只有 `cesium@1.144.0` 与 `@types/geojson`。
 
@@ -343,6 +343,13 @@ await map.analysis.run('transform', {
 退出条件：`pnpm typecheck`、`pnpm lint`、`pnpm test` 全绿；`pnpm build` 后核对新增 gzip 体积与 §3.1 同量级；`pnpm pack:check` 通过。
 
 ### P1：公开 `map.analysis`（PRD 一期工具）
+
+> **已落地（2026-09-29）**：控制器没有按原计划放在 `src/cesium/`，而是拆成两层——纯算法在
+> `src/spatial/terrain-profile.ts`（通视、地平线、坡度坡向、地表折线长度、曲率修正），
+> 路由与取数在 `src/core/analysis-runner.ts`（`createAnalysisController(port)`，只依赖一个地形采样端口），
+> `MapRuntime` 把它接到 `map.terrain.sample()`。因此 `map.analysis` 全链路零 Cesium 依赖，
+> 同一份实现可直接在 Worker 或其它终端复用。13 个内置工具全部可用；任务模型、结果图层与
+> Worker 执行接口仍留待 P2。
 
 1. `src/cesium/analysis-controller.ts` + `GisMap.analysis`（PRD §8.2）
 2. 工具：`distance` / `surface-distance` / `area` / `bearing` / `terrain-sample`（接现有地形采样）/ `line-of-sight` / `transform`；点面判断类是否同期见 §9 待确认 5

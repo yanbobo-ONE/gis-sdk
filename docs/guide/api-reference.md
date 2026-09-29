@@ -23,6 +23,7 @@
 | 经纬度、世界坐标与屏幕坐标互转                   | [坐标转换](./coordinates.md)                | `map.coordinates` 的四个转换方法及返回值语义                       |
 | 调分辨率、地形精度或按帧率自动降档               | [渲染质量](./quality.md)                    | `map.quality`、`createMap({ quality })`、内置质量档                |
 | 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表    |
+| 通视、视域、坡度坡向、地表距离                   | [分析工具](./analysis.md)                   | `map.analysis.run(tool, input)`、13 个内置工具与算法版本           |
 | 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics` |
 | 生成或解析 CZML 位置采样                         | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`czmlFromSamples`、`positionsFromCzml`        |
 | 回放倍率、暂停、倒放与水线限速                   | [仿真 / 回放时钟](./simulation-clock.md)    | `SimulationClock`、`advance()`、`setWatermark()`                   |
@@ -54,4 +55,4 @@ await map.destroy();
 
 ## 已发布范围
 
-当前 alpha 包已发布地图生命周期、画布快照、环境效果、场景模式切换、折线图层、交互绘制与顶点编辑、CZML 生成与解析、GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles、静态模型、点位图层、拾取交互、实时水位线、XYZ 底图、相机、地形与地形采样、地图坐标转换、渲染质量、空间计算（量算 / 判断 / CRS 转换）、CSV 解析、数据管线。动态实体、Worker 池、大数据渲染器、自定义材质与体积类环境效果尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。
+当前 alpha 包已发布地图生命周期、画布快照、环境效果、分析工具、场景模式切换、折线图层、交互绘制与顶点编辑、CZML 生成与解析、GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles、静态模型、点位图层、拾取交互、实时水位线、XYZ 底图、相机、地形与地形采样、地图坐标转换、渲染质量、空间计算（量算 / 判断 / CRS 转换）、CSV 解析、数据管线。动态实体、Worker 池、大数据渲染器、自定义材质、体积类环境效果与分析结果图层尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。

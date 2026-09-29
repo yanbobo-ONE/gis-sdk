@@ -128,6 +128,26 @@ export type {
 } from '../core/position-batch.js';
 export { RealtimeResyncController } from '../core/realtime-resync.js';
 export { ReplayTimeline } from '../core/replay-timeline.js';
+export { createAnalysisController } from '../core/analysis-runner.js';
+export type { AnalysisControllerOptions, AnalysisTerrainPort } from '../core/analysis-runner.js';
+export {
+  curvatureDropMeters,
+  evaluateHorizon,
+  evaluateLineOfSight,
+  normalizeBearing,
+  slopeAspectFromPlane,
+  surfacePathLength,
+} from '../spatial/terrain-profile.js';
+export type {
+  HorizonEvaluation,
+  HorizonInput,
+  LineOfSightEvaluation,
+  LineOfSightInput,
+  PlanePoint,
+  SlopeAspect,
+  TerrainProfilePoint,
+} from '../spatial/terrain-profile.js';
+
 export type {
   ReplaySample,
   ReplayTimeRange,

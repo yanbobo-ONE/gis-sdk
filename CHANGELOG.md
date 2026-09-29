@@ -18,6 +18,7 @@
 - 增加相机只读快照 `map.camera.view` 与 `map.camera.viewRectangle`：读取当前位姿（角度为度，字段一定存在，可直接传回 `setView()`）与视口经纬四至；位姿退化抛 `CAMERA_VIEW_UNAVAILABLE`，看不到椭球或覆盖全球时四至为 `undefined`。
 - 增加环境效果 `map.environment.set()`：深度雾、基础雾与雨 / 雪，含参数校验与默认值、二维降级说明、统一资源释放，以及零 Cesium 依赖的 `EnvironmentTimeline` 与 `FieldGuard`；着色器内联，不引用外部纹理资产。
 - 增加回放时间轴 `ReplayTimeline`（`/core`）：按对象分组、时间排序与同刻去重、容量上限、按时刻插值查询、窗口与轨迹切片、有界外推；插值函数由调用方注入，不读数据源。
+- 增加分析工具 `map.analysis`：13 个内置工具（量算 / 判断 / CRS / 地形采样 / 通视 / 视域 / 坡度坡向），算法与控制器都在 `/core` 零 Cesium 依赖，结果带算法版本，支持 `signal` 取消。
 - 增加位置批量归一化 `normalizePositions()`：坐标校验、按 id 合并最新、可转移的 Float64Array 输出。
 - 增加折线图层与五种内置材质：PolylineCollection 批量渲染、逐条样式覆盖、原子替换与整层样式调整；画布快照契约改为可移植形状，core 层不再依赖 DOM 类型。
 - 增加运行时场景模式切换 `map.scene.setMode()`：形变完成结算、同模式立即结算、被取代语义与销毁处理。

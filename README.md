@@ -22,6 +22,7 @@
 - 轨道与姿态数学：开普勒六根数、二体传播、锚点推导轨道与采样、最近接近预警、四元数姿态积分；
 - CZML 位置采样的生成与解析（支持 ISO 时间戳与包级 epoch，数据源仍走原生出口）；
 - 仿真 / 回放时钟 `SimulationClock`：播放状态机、倍率与方向、seek/step 与水位线限速；
+- 分析工具 `map.analysis`：距离 / 地表距离 / 面积 / 方位角 / 地形采样 / 通视 / 视域 / 坡度坡向 / CRS 转换 / 点在面内 / 包围盒 / 质心，算法全部在 `/core`；
 - 回放时间轴 `ReplayTimeline`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片（不含数据源读取）；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
@@ -173,6 +174,7 @@ async function disposeMap() {
 | 环境效果                                       | 可用                   | `map.environment.set('depthFog' \| 'haze' \| 'rain' \| 'snow', options)`：内置参数、降级说明与统一资源释放                                                                       |
 | 远端失败可观测                                 | 可用                   | `layer.events.on('error')`、`layer.errorCount`、`map.basemap.errorCount` 与 `map:error` 上的首个失败                                                                            |
 | 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                     |
+| 分析工具                                       | 可用                   | `map.analysis.run('distance' \| 'line-of-sight' \| 'viewshed' \| 'slope-aspect' \| ...)`：13 个内置工具、算法版本与 `signal` 取消                                  |
 | 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`（纯计算，零 Cesium） |
 | CZML 生成与解析                                | 可用                   | `czmlFromPositions()` / `czmlFromSamples()` / `positionsFromCzml()`：位置采样与可用区间往返一致                                                                                 |
 | 仿真 / 回放时钟                                | 可用                   | `SimulationClock`：倍率、暂停、倒放、seek/step 与水位线限速，可订阅状态                                                                                                         |
@@ -187,7 +189,7 @@ async function disposeMap() {
 | 实时会话门禁与重同步                           | 可用                   | `RealtimeSessionGate`（丢弃旧会话迟到包）与 `RealtimeResyncController`（序列断档→有界快照请求）                                                                                 |
 | CZML、动态实体与模型动画                       | 未完成                 | 静态 glTF / GLB 模型已可用；CZML、动态实体、动画与模型外观策略当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                                 |
 | Worker 池、专用动态输入和 Primitive 大数据渲染 | 未完成                 | 当前没有 Worker 池、协议 Adapter、吞吐量、数据规模或性能承诺                                                                                                                    |
-| 绘制捕捉、自定义材质、空间分析、插件与诊断     | 未完成                 | 绘制与顶点编辑已可用；捕捉、顶点增删、自定义材质、`map.analysis`、插件与诊断当前没有稳定公开 API                                                                                |
+| 绘制捕捉、自定义材质、插件与诊断               | 未完成                 | 绘制与顶点编辑、分析工具已可用；捕捉、顶点增删、自定义材质、分析结果图层、插件与诊断当前没有稳定公开 API                                                                          |
 
 功能完成后会在[功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)将状态改为“可用”，补充可运行示例、API 参数页和变更日志，并以新的 npm alpha 版本发布。规划能力不是已发布 API，不能按名称直接调用。
 

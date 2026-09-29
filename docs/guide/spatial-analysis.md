@@ -2,7 +2,7 @@
 
 `@yanbobo/gis-sdk/core` 导出一层**纯计算**的空间能力：量算、空间判断与坐标参考系转换。这一层不依赖 Cesium、不触碰 DOM，接收普通对象、返回普通对象，可以直接在 Node、Worker 或任意前端框架里调用。
 
-`map.analysis` 分析控制器属于下一阶段，当前**尚未发布**；下面这些函数就是它的算法底座，也可以单独使用。
+下面这些函数是[分析工具](./analysis.md)（`map.analysis`）的算法底座，也可以单独使用：控制器只负责按工具 ID 路由与取地形高度，计算全部在这里。
 
 ## 量算
 
@@ -104,6 +104,10 @@ transformGeoPath(csvPoints, 'EPSG:4547', 'EPSG:4490'); // 批量转换，顺序�
 | 错误码                   | 场景                                                    |
 | ------------------------ | ------------------------------------------------------- |
 | `INVALID_COORDINATES`    | 坐标非有限数，或地理坐标超出 `±180 / ±90`               |
+| `INVALID_ANALYSIS_INPUT` | 分析工具半径非正等参数问题                              |
+| `ANALYSIS_TERRAIN_UNAVAILABLE` | 分析所需的地形高度不可用（可重试）                |
+| `ANALYSIS_ABORTED`       | 分析调用被 `signal` 中止                                |
+| `UNKNOWN_ANALYSIS_TOOL`  | 请求了未注册的分析工具 ID                               |
 | `INVALID_SPATIAL_INPUT`  | 顶点不足、形状不是数组、单位/绕向取值不受支持、超过限额 |
 | `INVALID_CRS_DEFINITION` | 标识或定义为空、重复注册、带号越界、宽度不是 3 或 6     |
 | `UNSUPPORTED_CRS`        | 转换用到的 CRS 既未注册、也不是 proj4 内置定义          |
@@ -118,8 +122,9 @@ transformGeoPath(csvPoints, 'EPSG:4547', 'EPSG:4490'); // 批量转换，顺序�
 
 ## 当前边界
 
-- `map.analysis` 分析控制器、地形通视、视域、坡度坡向、地表距离**尚未发布**（P1）。
-- 缓冲区、叠加分析、凸包、抽稀、Delaunay/Voronoi、Worker 执行接口尚未提供（P2）。
+- [分析工具](./analysis.md)（`map.analysis`）已可用：量算、判断、CRS 转换、地形采样、通视、视域与坡度坡向。
+- 分析结果图层、任务模型与 Worker 执行接口尚未提供：`run()` 直接返回数值，渲染与后台编排由业务自己做。
+- 缓冲区、叠加分析、凸包、抽稀、Delaunay/Voronoi 尚未提供（P2）。
 - 不提供任何交互 UI：点选量算面板、结果标注样式属于应用层。
 - 多边形合法性校验（自交诊断）依赖 `@turf/boolean-valid`，排在 P2。
 - CGCS2000 与 WGS84 在现有业务尺度按恒等处理；厘米级基准转换需要七参数或格网改正，本 SDK 不承诺。

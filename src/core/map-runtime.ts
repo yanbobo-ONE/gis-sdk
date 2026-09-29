@@ -1,3 +1,10 @@
+import type {
+  AnalysisController,
+  AnalysisInputMap,
+  AnalysisRunOptions,
+  AnalysisToolId,
+} from './analysis.js';
+import { createAnalysisController } from './analysis-runner.js';
 import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { GisMap, MapEngineAdapter, MapEventMap, MapState } from './contracts.js';
 import type {
@@ -43,6 +50,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly scene: SceneController;
   readonly drawing: MapDrawingController;
   readonly environment: EnvironmentController;
+  readonly analysis: AnalysisController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -195,6 +203,21 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       cancelFlight: () => {
         this.assertReady('camera.cancelFlight');
         this.adapter.camera.cancelFlight();
+      },
+    });
+    const analysisRuntime = createAnalysisController({
+      // 地形取数走适配器；分析算法本身与引擎无关。
+      sample: (points, sampleOptions) => adapter.terrain.sample(points, sampleOptions),
+    });
+    this.analysis = Object.freeze({
+      list: () => analysisRuntime.list(),
+      run: <T extends AnalysisToolId>(
+        tool: T,
+        input: AnalysisInputMap[T],
+        runOptions?: AnalysisRunOptions,
+      ) => {
+        this.assertReady('analysis.run');
+        return analysisRuntime.run(tool, input, runOptions);
       },
     });
     this.environment = Object.freeze({

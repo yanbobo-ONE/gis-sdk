@@ -271,6 +271,36 @@ describe('MapRuntime', () => {
     }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.clearAll' }));
   });
 
+  it('exposes analysis on the terrain port and gates it after destroy', async () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+    (adapter.terrain.sample as Mock).mockResolvedValue([{ longitude: 1, latitude: 2, height: 30, status: 'ok' }]);
+
+    expect(map.analysis.list().length).toBeGreaterThan(0);
+    const samples = await map.analysis.run('terrain-sample', {
+      points: [{ longitude: 1, latitude: 2 }],
+    });
+    expect(samples).toEqual([{ longitude: 1, latitude: 2, height: 30, status: 'ok' }]);
+    expect((adapter.terrain.sample as Mock).mock.calls[0]?.[0]).toEqual([
+      { longitude: 1, latitude: 2 },
+    ]);
+
+    const distance = await map.analysis.run('distance', {
+      from: { longitude: 0, latitude: 0 },
+      to: { longitude: 0.01, latitude: 0 },
+    });
+    expect(distance.meters).toBeGreaterThan(1_000);
+
+    await map.destroy();
+    // 就绪门禁在派发前同步抛出，不会返回 Promise。
+    expect(() =>
+      map.analysis.run('distance', {
+        from: { longitude: 0, latitude: 0 },
+        to: { longitude: 0, latitude: 1 },
+      }),
+    ).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'analysis.run' }));
+  });
+
   it('returns the same promise to concurrent destroy callers', async () => {
     const adapter = createAdapter();
     let finishDestroy: (() => void) | undefined;

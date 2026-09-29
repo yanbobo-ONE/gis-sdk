@@ -12,6 +12,7 @@ import type {
   SceneController,
   TerrainController,
 } from './controls.js';
+import type { AnalysisController } from './analysis.js';
 import type { EnvironmentController } from './environment.js';
 import type { QualityController } from './quality.js';
 
@@ -66,6 +67,12 @@ export interface GisMap<TRaw = unknown> {
   readonly drawing: MapDrawingController;
   /** 类型化环境效果控制器。 */
   readonly environment: EnvironmentController;
+  /**
+   * 类型化分析控制器。
+   *
+   * 需要地形高度的工具走 `map.terrain.sample()`；其余工具是纯计算，不依赖渲染引擎。
+   */
+  readonly analysis: AnalysisController;
   /** 高级场景使用的引擎原生上下文。 */
   readonly raw: Readonly<TRaw>;
   /**

@@ -151,10 +151,12 @@ export interface AnalysisSlopeAspectInput {
 export interface AnalysisSlopeAspectResult {
   /** 坡度，单位为度，`0` 表示水平。 */
   readonly slopeDegrees: number;
-  /** 坡向，单位为度，正北为 0，顺时针为正。 */
+  /** 坡向，单位为度，正北为 0，顺时针为正，指向下坡方向。 */
   readonly aspectDegrees: number;
-  /** 实际采样点数。 */
+  /** 实际参与拟合的采样点数（不含中心点本身）。 */
   readonly sampleCount: number;
+  /** 中心点的椭球高，单位为米；取自输入或地形采样。 */
+  readonly centerHeightMeters: number;
 }
 
 /** CRS 转换工具输入。 */
