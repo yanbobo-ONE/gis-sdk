@@ -43,6 +43,31 @@ const next = propagateTwoBody(state, 600);
 
 开普勒方程用二分法求解（椭圆轨道上该函数单调），高偏心率下也不会发散。逃逸轨道（比能量非负）会以 `INVALID_SPATIAL_INPUT` 拒绝。
 
+## 由锚点生成轨道并采样
+
+交互上最常见的需求是"点一下地图，得到一条过该点的轨道"：
+
+```ts
+import { orbitalElementsFromAnchor, sampleOrbitPositions } from '@yanbobo/gis-sdk/core';
+
+const elements = orbitalElementsFromAnchor(116.39, 39.9, 500_000); // 经度、纬度、高度（米）
+const positions = sampleOrbitPositions(elements); // 361 个经纬高点，首尾重合
+
+await map.layers.add({
+  id: 'orbit',
+  type: 'polyline',
+  material: 'glow',
+  polylines: [{ positions }],
+});
+```
+
+- `orbitalElementsFromAnchor()` 用锚点径向与当地东向的叉积确定轨道面，因此轨道一定穿过锚点，倾角与锚点纬度相适应（赤道锚点给出赤道轨道，极点锚点给出极轨）；返回的根数与 `calculateOrbitalElements` 一致，角度单位为**弧度**。
+- `sampleOrbitPositions()` 生成可渲染的经纬高序列（默认 361 点、首尾重合），**可以直接交给折线图层**；`samples` 必须是不小于 36 的整数。
+
+**与 Plugin-web 的一处差异**：参考实现为了滑块交互会对越界的半长轴、偏心率与锚点做静默收敛（clamp）；SDK 改成**校验并抛错**（`INVALID_SPATIAL_INPUT`），避免调用方拿到与输入不符的几何却毫无察觉。需要滑块体验时在业务侧自行钳制取值。
+
+**坐标简化**：采样把惯性系方向直接当作地固系方向，没有做 ECI→ECEF 的岁差与自转转换。对"看轨道形状与倾角"足够，但不能用来判断某时刻卫星在哪个城市上方。
+
 ## 姿态积分
 
 ```ts
@@ -60,5 +85,6 @@ attitude.attitude; // 归一化后的四元数
 
 - **不做轨道预报与时序**：星历、机动与摄动模型不在本模块范围；
 - **不做坐标转换**：六根数来自惯性系状态；要落到经纬高需要 ECI→ECEF 的岁差与自转换算，本 SDK 未提供（可用服务端星历或专业库转换后交给 `map.coordinates`）；
+- **不做参考几何标注**：Plugin-web 的升交点/降交点标记、春分点、赤道圈、倾角弧等展示几何含较多展示参数，未移植；
 - **不做碰撞分析**：最近接近判定需要业务阈值与统计口径，未封装；
 - **CZML 未发布**：需要交给 Cesium 时，可用 `map.raw.viewer` 自行组装 CZML，或直接用[折线图层](./polyline-layer.md)渲染采样点。

@@ -147,6 +147,12 @@ export type {
 } from '../core/analysis.js';
 export { AttitudeDynamics } from '../spatial/attitude.js';
 export type { AngularVelocity, Quaternion } from '../spatial/attitude.js';
+export {
+  EARTH_RADIUS,
+  orbitalElementsFromAnchor,
+  sampleOrbitPositions,
+} from '../spatial/orbit-geometry.js';
+export type { OrbitElementsInput, OrbitSamplingOptions } from '../spatial/orbit-geometry.js';
 export { calculateOrbitalElements, EARTH_MU, propagateTwoBody } from '../spatial/orbit.js';
 export type { OrbitState, OrbitalElements, Vector3 } from '../spatial/orbit.js';
 export {
