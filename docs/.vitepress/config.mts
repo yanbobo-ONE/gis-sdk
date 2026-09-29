@@ -71,6 +71,7 @@ export default defineConfig({
             { text: '实时水位线与时间戳守卫', link: '/guide/realtime-waterline' },
             { text: '会话门禁与重同步', link: '/guide/realtime-session' },
             { text: '位置批量归一化', link: '/guide/position-batch' },
+            { text: '仿真 / 回放时钟', link: '/guide/simulation-clock' },
           ],
         },
         {
@@ -116,6 +117,7 @@ export default defineConfig({
             { text: '实时水位线与时间戳守卫', link: '/guide/realtime-waterline' },
             { text: '会话门禁与重同步', link: '/guide/realtime-session' },
             { text: '位置批量归一化', link: '/guide/position-batch' },
+            { text: '仿真 / 回放时钟', link: '/guide/simulation-clock' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: 'TypeScript 类型索引', link: '/api/' },

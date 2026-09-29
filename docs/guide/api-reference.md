@@ -24,6 +24,7 @@
 | 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表    |
 | 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics` |
 | 生成或解析 CZML 位置采样                         | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`czmlFromSamples`、`positionsFromCzml`        |
+| 回放倍率、暂停、倒放与水线限速                   | [仿真 / 回放时钟](./simulation-clock.md)    | `SimulationClock`、`advance()`、`setWatermark()`                   |
 | 消化高频业务消息                                 | [实时数据导航](./data-pipeline.md)          | 有界队列、Worker/MessagePort 输入、帧预算调度                      |
 | 处理乱序实时样本与断流追赶                       | [实时水位线](./realtime-waterline.md)       | `RealtimeWaterline`、`RealtimeTimestampGuard`                      |
 | 过滤无效坐标、按 id 合并高频位置                 | [位置批量归一化](./position-batch.md)       | `normalizePositions()`、可转移的 `Float64Array` 输出               |

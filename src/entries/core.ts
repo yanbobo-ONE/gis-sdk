@@ -146,6 +146,13 @@ export type {
   AnalysisViewshedResult,
 } from '../core/analysis.js';
 export { czmlFromPositions, czmlFromSamples, positionsFromCzml } from '../core/czml.js';
+export { SimulationClock } from '../core/simulation-clock.js';
+export type {
+  SimulationClockMode,
+  SimulationClockOptions,
+  SimulationClockSnapshot,
+  SimulationClockState,
+} from '../core/simulation-clock.js';
 export type {
   CzmlAvailabilityInterval,
   CzmlDocument,
