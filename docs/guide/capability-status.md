@@ -32,6 +32,7 @@
 | 消息输入适配器      | 可用 | `DataPipelineMessageAdapter`（包根或 `/core`）                                             | Worker / MessagePort 监听、业务解码转发、拒绝/丢弃统计与监听释放                                                           |
 | 帧预算调度器        | 可用 | `DataPipelineFrameScheduler`（包根或 `/core`）                                             | 动画帧请求合并、每帧有界消费、自动续帧、取消、失败事件与统计                                                               |
 | 实时水位线          | 可用 | `RealtimeWaterline`、`RealtimeTimestampGuard`（包根或 `/core`）                            | 乱序样本按时间释放、精确对象共同覆盖、过期/超限/窗口丢弃统计、双阈值追赶与倍率上限、断流与失活状态、超前样本隔离           |
+| 会话门禁与重同步    | 可用 | `RealtimeSessionGate`、`RealtimeResyncController`（包根或 `/core`）                        | 会话切换只认首条消息与显式控制消息、旧会话迟到包丢弃、序列断档自动转入快照等待、重复请求合并与请求上限                     |
 | Cesium 公共原生访问 | 可用 | `map.raw.viewer`                                                                           | 调用 Cesium 文档中的公共成员；资源归业务代码所有                                                                           |
 | 按需导入            | 可用 | `/core`、`/cesium`、`/layers`、`/styles.css`                                               | 将核心工具、Cesium 创建入口和图层工具拆分为独立子路径                                                                      |
 

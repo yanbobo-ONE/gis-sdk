@@ -63,6 +63,7 @@ export default defineConfig({
             { text: 'Worker / MessagePort 输入', link: '/guide/data-pipeline-message-input' },
             { text: '帧预算调度', link: '/guide/data-pipeline-frame-scheduler' },
             { text: '实时水位线与时间戳守卫', link: '/guide/realtime-waterline' },
+            { text: '会话门禁与重同步', link: '/guide/realtime-session' },
           ],
         },
         {
@@ -100,6 +101,7 @@ export default defineConfig({
             { text: 'Worker / MessagePort 输入', link: '/guide/data-pipeline-message-input' },
             { text: '帧预算调度', link: '/guide/data-pipeline-frame-scheduler' },
             { text: '实时水位线与时间戳守卫', link: '/guide/realtime-waterline' },
+            { text: '会话门禁与重同步', link: '/guide/realtime-session' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: 'TypeScript 类型索引', link: '/api/' },

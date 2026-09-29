@@ -74,6 +74,18 @@ export type {
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
 export { RealtimeTimestampGuard } from '../core/realtime-timestamp-guard.js';
 export type { RealtimeTimestampGuardOptions } from '../core/realtime-timestamp-guard.js';
+export { RealtimeResyncController } from '../core/realtime-resync.js';
+export type {
+  RealtimeResyncOptions,
+  RealtimeResyncRequestResult,
+  RealtimeResyncSnapshot,
+  RealtimeResyncState,
+} from '../core/realtime-resync.js';
+export { RealtimeSessionGate } from '../core/realtime-session-gate.js';
+export type {
+  RealtimeSessionDecision,
+  RealtimeSessionGateOptions,
+} from '../core/realtime-session-gate.js';
 export { RealtimeWaterline } from '../core/realtime-waterline.js';
 export type {
   RealtimeWaterlineOptions,
