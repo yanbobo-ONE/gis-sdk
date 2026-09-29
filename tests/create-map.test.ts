@@ -103,6 +103,11 @@ function createFactory() {
     coordinates,
     quality,
     picking,
+    scene: {
+      mode: '3d' as const,
+      morphing: false,
+      setMode: vi.fn(() => Promise.resolve()),
+    },
     resize: vi.fn(),
     capture: vi.fn(() => Promise.resolve(undefined)),
     destroy: vi.fn(),

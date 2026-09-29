@@ -103,6 +103,11 @@ function createAdapter(): TestAdapter {
       reporter = next;
     },
     reportError: (error) => reporter?.(error),
+    scene: {
+      mode: '3d' as const,
+      morphing: false,
+      setMode: vi.fn(() => Promise.resolve()),
+    },
     resize: vi.fn(),
     capture: vi.fn(() => Promise.resolve(undefined)),
     destroy: vi.fn(),

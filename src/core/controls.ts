@@ -62,6 +62,29 @@ export interface CameraFlight extends CameraView {
   readonly duration?: number;
 }
 
+/** SDK 支持的地图场景模式。 */
+export type MapSceneMode = '2d' | '3d';
+
+/** 类型化场景模式控制器。 */
+export interface SceneController {
+  /**
+   * 当前场景模式。
+   *
+   * 形变过程中返回**目标模式**，而不是"正在形变"这一中间态。
+   */
+  readonly mode: MapSceneMode;
+  /** 是否有形变在途。 */
+  readonly morphing: boolean;
+  /**
+   * 切换 2D / 3D 场景。
+   *
+   * @param mode - 目标模式。
+   * @param duration - 形变时长，单位为秒；省略时由 Cesium 决定（默认 2 秒）。
+   * @returns 形变完成时结算；被新的切换取代时以 `SCENE_MORPH_SUPERSEDED` 拒绝。
+   */
+  setMode(mode: MapSceneMode, duration?: number): Promise<void>;
+}
+
 /** 画布快照；`canvas` 是设备像素分辨率的离屏副本，可直接导出或绘制。 */
 export interface FrameCapture {
   /** 离屏画布副本。 */

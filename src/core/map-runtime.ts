@@ -8,8 +8,10 @@ import type {
   CoordinateTransform,
   FrameCapture,
   GeoPosition,
+  MapSceneMode,
   PickingController,
   PickingEvent,
+  SceneController,
   PickingEventKind,
   PickingHit,
   TerrainController,
@@ -34,6 +36,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
   readonly picking: PickingController;
+  readonly scene: SceneController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -79,6 +82,18 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       setEnabled: (enabled: boolean) => {
         this.assertReady('picking.setEnabled');
         adapter.picking.setEnabled(enabled);
+      },
+    });
+    this.scene = Object.freeze({
+      get mode(): MapSceneMode {
+        return adapter.scene.mode;
+      },
+      get morphing() {
+        return adapter.scene.morphing;
+      },
+      setMode: (mode: MapSceneMode, duration?: number) => {
+        this.assertReady('scene.setMode');
+        return adapter.scene.setMode(mode, duration);
       },
     });
     this.quality = Object.freeze({
