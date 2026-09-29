@@ -116,6 +116,10 @@ function createAdapter(): TestAdapter {
       cancel: vi.fn(),
       removeLatestCompleted: vi.fn(),
       clearCompleted: vi.fn(),
+      edit: vi.fn(() => true),
+      editing: undefined,
+      commitEdit: vi.fn(() => undefined),
+      cancelEdit: vi.fn(),
       on: vi.fn(() => () => undefined),
     },
     resize: vi.fn(),
@@ -168,6 +172,38 @@ describe('MapRuntime', () => {
     expect(() => {
       void map.terrain.set({ type: 'ellipsoid' });
     }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'terrain.set' }));
+  });
+
+  it('delegates drawing edit calls and gates them after destroy', async () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+    const geometry = {
+      mode: 'polyline' as const,
+      positions: [
+        { longitude: 1, latitude: 2 },
+        { longitude: 3, latitude: 4 },
+      ],
+    };
+    (adapter.drawing.commitEdit as Mock).mockReturnValue(geometry);
+
+    expect(map.drawing.edit(geometry)).toBe(true);
+    expect(map.drawing.editing).toBeUndefined();
+    expect(map.drawing.commitEdit()).toEqual(geometry);
+    map.drawing.cancelEdit();
+    expect((adapter.drawing.edit as Mock).mock.calls[0]?.[0]).toBe(geometry);
+    expect((adapter.drawing.commitEdit as Mock).mock.calls).toHaveLength(1);
+    expect((adapter.drawing.cancelEdit as Mock).mock.calls).toHaveLength(1);
+
+    await map.destroy();
+    expect(() => map.drawing.edit(geometry)).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'drawing.edit' }),
+    );
+    expect(() => map.drawing.commitEdit()).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'drawing.commitEdit' }),
+    );
+    expect(() => {
+      map.drawing.cancelEdit();
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'drawing.cancelEdit' }));
   });
 
   it('destroys the adapter and emits map:destroy exactly once', async () => {

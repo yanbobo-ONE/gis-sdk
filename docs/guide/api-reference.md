@@ -16,7 +16,7 @@
 | 批量渲染点位或导入 CSV                           | [点位图层](./points-layer.md)               | `type: 'points'`、`setData()`、`parseCsv()`、`readPointCsv()`      |
 | 画航线、轨迹、链路等批量线要素                   | [折线图层](./polyline-layer.md)             | `type: 'polyline'`、内置材质、`setData()` / `setStyle()`           |
 | 点击 / 悬停拾取地图对象                          | [拾取交互](./picking.md)                    | `map.picking.on()`、`PickingHit`、拾取标记与悬停节流               |
-| 交互绘制点、折线与面                             | [绘制](./drawing.md)                        | `map.drawing.start()`、`DrawingStateMachine` 渲染端口              |
+| 交互绘制点、折线与面，或拖动已有顶点             | [绘制与编辑](./drawing.md)                  | `map.drawing.start()`、`edit()` / `commitEdit()`、`DrawingStateMachine` |
 | 设置 XYZ 底图、相机、地形或采样高程              | [地图控制](./map-controls.md)               | `map.basemap`、`map.camera`、`map.terrain`、`sample()`             |
 | 运行时切换 2D / 3D 场景                          | [2D / 3D 场景切换](./scene-mode.md)         | `map.scene.setMode()`、`mode`、`morphing`                          |
 | 经纬度、世界坐标与屏幕坐标互转                   | [坐标转换](./coordinates.md)                | `map.coordinates` 的四个转换方法及返回值语义                       |

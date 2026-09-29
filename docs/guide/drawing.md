@@ -57,6 +57,46 @@ const machine = new DrawingStateMachine(
 );
 ```
 
+## 完成后的顶点编辑
+
+完成的几何还可以再进入一次**编辑会话**，拖动顶点或整体移动点：
+
+```ts
+// 进入编辑：SDK 复制一份几何，不回写调用方传入的对象
+map.drawing.edit({ mode: 'polyline', positions });
+map.drawing.editing; // 编辑中的几何（拖动时实时更新）
+
+// 左键按在顶点附近开始拖动，松开左键结束这次拖动，会话仍在
+map.drawing.commitEdit(); // 提交，返回最终几何
+map.drawing.cancelEdit(); // 放弃，几何回到 edit() 时的快照
+
+map.drawing.on('edit', (geometry) => {}); // 每次拖动更新
+map.drawing.on('editCommit', (geometry) => {}); // 提交
+map.drawing.on('editCancel', (geometry) => {}); // 取消，参数为还原后的几何
+```
+
+| 动作          | 行为                                              |
+| ------------- | ------------------------------------------------- |
+| 左键按下      | 命中屏幕 12 像素内最近的顶点开始拖动；点几何无需命中 |
+| 拖动          | 持续更新几何并抛出 `edit`；非法落点被忽略         |
+| 左键松开      | 结束本次拖动，编辑会话保留                        |
+| Esc（拖动中） | 只回退本次拖动，会话继续                          |
+| Esc（未拖动） | 取消整个编辑会话，几何还原并抛出 `editCancel`     |
+
+编辑与绘制互斥：`edit()` 会取消进行中的绘制，`start()` 会结束编辑会话。编辑中的几何用**品红实线**渲染，与黄色虚线预览、青色完成图形区分。
+
+需要把编辑接到自己的数据上时，用纯状态机 `DrawingEditMachine` 传入 `DrawingEditPort`（`get`/`update`）即可，不依赖 Cesium：
+
+```ts
+import { DrawingEditMachine, isEditableGeometry } from '@yanbobo/gis-sdk/core';
+
+const machine = new DrawingEditMachine(
+  { get: (id) => store.get(id), update: (geometry) => store.set(geometry) },
+  (geometry) => rerender(geometry),
+);
+if (isEditableGeometry(candidate)) machine.begin({ id: 'shape-1', vertexIndex: 2 });
+```
+
 ## 已完成图形的管理
 
 完成的图形由控制器持有（默认样式：青色实线 + 顶点，预览为黄色虚线）：
@@ -70,7 +110,7 @@ map.drawing.clearCompleted(); // 全部清除
 
 ## 当前边界
 
-- **不做编辑**：绘制完成后不能拖动顶点、增删顶点（Plugin-web 的 `GisDrawEditController` 未移植）；需要编辑时业务自行实现，或删除后重画。
-- **不做吸附与捕捉**：不吸附到已有图形顶点、边或地形表面。
+- **不做顶点增删**：编辑会话只能拖动已有顶点、整体移动点；插入与删除顶点仍需删除后重画。
+- **不做吸附与捕捉**：拖动与绘制都不吸附到已有图形顶点、边或地形表面。
 - **不做贴地绘制**：预览与结果都用椭球高（`height` 默认 0）；需要贴地时先把几何交给地形采样（`map.terrain.sample()`）再渲染。
-- **不拦截相机操作**：绘制期间相机仍可拖动缩放；如需锁定，用 `map.raw.viewer.scene.screenSpaceCameraController.enableInputs = false`。
+- **不拦截相机操作**：绘制与编辑期间相机仍可拖动缩放；如需锁定，用 `map.raw.viewer.scene.screenSpaceCameraController.enableInputs = false`。

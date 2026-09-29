@@ -92,6 +92,12 @@ export interface DrawingEventMap {
   readonly complete: DrawGeometry;
   /** 一次绘制被取消。 */
   readonly cancel: undefined;
+  /** 编辑会话中几何发生变化（拖动过程中持续触发）。 */
+  readonly edit: DrawGeometry;
+  /** 编辑提交，附最终几何。 */
+  readonly editCommit: DrawGeometry;
+  /** 编辑取消，几何已恢复为开始编辑前的快照。 */
+  readonly editCancel: DrawGeometry;
 }
 
 /**
@@ -116,6 +122,19 @@ export interface MapDrawingController {
   removeLatestCompleted(): void;
   /** 移除全部已完成图形。 */
   clearCompleted(): void;
+  /**
+   * 进入编辑会话，对给定几何的**副本**做顶点编辑。
+   *
+   * 点几何整体移动；折线与面按顶点拖动（左键按下时命中最近的顶点）。编辑不会写回
+   * 调用方传入的对象，最终结果由 `commitEdit()` 返回或 `editCommit` 事件给出。
+   */
+  edit(geometry: DrawGeometry): boolean;
+  /** 编辑中的几何；没有会话时为 `undefined`。 */
+  readonly editing: DrawGeometry | undefined;
+  /** 提交编辑并返回最终几何；没有会话时为 `undefined`。 */
+  commitEdit(): DrawGeometry | undefined;
+  /** 取消编辑并丢弃改动。 */
+  cancelEdit(): void;
   /** 订阅绘制事件，返回取消订阅函数。 */
   on<TKey extends keyof DrawingEventMap>(
     kind: TKey,

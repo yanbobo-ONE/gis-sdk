@@ -78,6 +78,12 @@ export type {
   CsvRejectedRow,
   CsvTable,
 } from '../core/csv.js';
+export { DrawingEditMachine, isEditableGeometry, isValidDrawPosition } from '../core/drawing-edit.js';
+export type {
+  DrawEditSnapshot,
+  DrawEditTarget,
+  DrawingEditPort,
+} from '../core/drawing-edit.js';
 export { DrawingStateMachine } from '../core/drawing.js';
 export type { DrawGeometry, DrawMode, DrawRendererPort, DrawRenderValue } from '../core/drawing.js';
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';

@@ -40,6 +40,8 @@ const cesium = vi.hoisted(() => {
     MOUSE_MOVE: 15,
     RIGHT_CLICK: 4,
     LEFT_DOUBLE_CLICK: 6,
+    LEFT_DOWN: 8,
+    LEFT_UP: 9,
   };
 });
 
@@ -62,11 +64,23 @@ vi.mock('cesium', () => ({
     MOUSE_MOVE: cesium.MOUSE_MOVE,
     RIGHT_CLICK: cesium.RIGHT_CLICK,
     LEFT_DOUBLE_CLICK: cesium.LEFT_DOUBLE_CLICK,
+    LEFT_DOWN: cesium.LEFT_DOWN,
+    LEFT_UP: cesium.LEFT_UP,
   },
 }));
 
 import { CesiumDrawingController } from '../src/cesium/drawing-controller.js';
 import type { CoordinateTransform } from '../src/core/controls.js';
+import type { DrawGeometry } from '../src/core/drawing.js';
+
+const polylineGeometry = (): DrawGeometry => ({
+  mode: 'polyline',
+  positions: [
+    { longitude: 10, latitude: 0 },
+    { longitude: 11, latitude: 0 },
+    { longitude: 12, latitude: 0 },
+  ],
+});
 
 function createHarness() {
   const items: unknown[] = [];
@@ -99,6 +113,8 @@ function createHarness() {
   };
   const coordinates = {
     pickGeoPosition: vi.fn(({ x }: { x: number; y: number }) => ({ longitude: x, latitude: 0 })),
+    // 顶点在地图上的屏幕横坐标等于其经度，便于构造命中与不命中的落点。
+    toWindow: vi.fn(({ longitude }: { longitude: number }) => ({ x: longitude, y: 0 })),
   } as unknown as CoordinateTransform;
   return {
     viewer,
@@ -208,14 +224,20 @@ describe('CesiumDrawingController', () => {
       harness.documentRef as never,
     );
 
-    expect(cesium.actions.size).toBe(4);
+    expect(cesium.actions.size).toBe(6);
     expect(harness.keyListenerCount()).toBe(1);
+    controller.edit(polylineGeometry());
+    expect(harness.items.length).toBeGreaterThan(0);
+
     controller.dispose();
 
     expect(cesium.actions.size).toBe(0);
     expect(harness.keyListenerCount()).toBe(0);
     expect(harness.items).toHaveLength(0);
     expect(() => controller.start('point')).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED' }),
+    );
+    expect(() => controller.edit(polylineGeometry())).toThrow(
       expect.objectContaining({ code: 'MAP_DISPOSED' }),
     );
   });
@@ -234,5 +256,199 @@ describe('CesiumDrawingController', () => {
 
     controller.clearCompleted();
     expect(harness.items).toHaveLength(0);
+  });
+
+  it('edits a copy of the geometry and drags the nearest vertex', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+    const input = polylineGeometry();
+    const edits: DrawGeometry[] = [];
+    const commits: DrawGeometry[] = [];
+    controller.on('edit', (geometry) => edits.push(geometry));
+    controller.on('editCommit', (geometry) => commits.push(geometry));
+
+    expect(controller.edit(input)).toBe(true);
+    expect(controller.editing).toEqual(input);
+    expect(controller.editing).not.toBe(input);
+    expect(controller.editing?.positions[0]).not.toBe(input.positions[0]);
+
+    // 左键按在最接近的顶点（屏幕横坐标 = 经度）上开始拖动。
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(11.4));
+    expect(edits).toHaveLength(0);
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(50));
+    expect(controller.editing?.positions).toEqual([
+      { longitude: 10, latitude: 0 },
+      { longitude: 50, latitude: 0 },
+      { longitude: 12, latitude: 0 },
+    ]);
+    expect(edits).toHaveLength(1);
+    // 调用方传入的几何不受影响。
+    expect(input.positions[1]).toEqual({ longitude: 11, latitude: 0 });
+
+    // 松开左键结束拖动，但会话保留：此后移动鼠标不再改变几何。
+    cesium.actions.get(cesium.LEFT_UP)?.();
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(70));
+    expect(controller.editing?.positions[1]).toEqual({ longitude: 50, latitude: 0 });
+
+    const committed = controller.commitEdit();
+    expect(commits).toHaveLength(1);
+    expect(committed?.positions[1]).toEqual({ longitude: 50, latitude: 0 });
+    expect(controller.editing).toBeUndefined();
+    expect(controller.commitEdit()).toBeUndefined();
+  });
+
+  it('moves the whole point geometry without a hit test', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+
+    expect(controller.edit({ mode: 'point', positions: [{ longitude: 5, latitude: 0 }] })).toBe(
+      true,
+    );
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(300));
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(7));
+
+    expect(controller.editing?.positions).toEqual([{ longitude: 7, latitude: 0 }]);
+  });
+
+  it('restores the snapshot when the edit session is cancelled', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+    const input = polylineGeometry();
+    const cancels: DrawGeometry[] = [];
+    controller.on('editCancel', (geometry) => cancels.push(geometry));
+
+    controller.edit(input);
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(10));
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(80));
+    cesium.actions.get(cesium.LEFT_UP)?.();
+    expect(controller.editing?.positions[0]).toEqual({ longitude: 80, latitude: 0 });
+
+    harness.pressEscape();
+
+    expect(cancels).toEqual([input]);
+    expect(controller.editing).toBeUndefined();
+    expect(harness.items).toHaveLength(0);
+  });
+
+  it('reverts only the drag when Escape is pressed mid-drag', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+    const cancels: DrawGeometry[] = [];
+    controller.on('editCancel', (geometry) => cancels.push(geometry));
+
+    controller.edit(polylineGeometry());
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(11));
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(60));
+    expect(controller.editing?.positions[1]).toEqual({ longitude: 60, latitude: 0 });
+
+    harness.pressEscape();
+
+    expect(controller.editing?.positions[1]).toEqual({ longitude: 11, latitude: 0 });
+    expect(controller.editing).toBeDefined();
+    expect(cancels).toHaveLength(0);
+  });
+
+  it('ignores drag starts that miss every vertex', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+    const edits: DrawGeometry[] = [];
+    controller.on('edit', (geometry) => edits.push(geometry));
+
+    const spread: DrawGeometry = {
+      mode: 'polyline',
+      positions: [
+        { longitude: 0, latitude: 0 },
+        { longitude: 100, latitude: 0 },
+      ],
+    };
+    controller.edit(spread);
+    // 第 1 个顶点被视锥剔除：屏幕同一位置不再命中。
+    (harness.coordinates.toWindow as unknown as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+      undefined,
+    );
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(0));
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(40));
+    expect(edits).toHaveLength(0);
+    expect(controller.editing?.positions).toEqual(spread.positions);
+
+    // 被剔除的是视锥外的顶点，其余顶点照常命中。
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(100));
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(60));
+    expect(controller.editing?.positions[1]).toEqual({ longitude: 60, latitude: 0 });
+
+    // 超出命中半径的落点同样不开始拖动。
+    const near = { ...controller.editing };
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(240));
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(300));
+    expect(edits).toHaveLength(1);
+    expect(controller.editing).toEqual(near);
+  });
+
+  it('rejects geometry that cannot be edited', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+
+    expect(controller.edit({ mode: 'polyline', positions: [] })).toBe(false);
+    expect(
+      controller.edit({ mode: 'point', positions: [{ longitude: Number.NaN, latitude: 0 }] }),
+    ).toBe(false);
+    expect(controller.editing).toBeUndefined();
+    expect(harness.items).toHaveLength(0);
+  });
+
+  it('keeps drawing and editing sessions mutually exclusive', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+    const cancels: DrawGeometry[] = [];
+    controller.on('editCancel', (geometry) => cancels.push(geometry));
+
+    controller.start('polyline');
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(1));
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(2));
+    expect(controller.mode).toBe('polyline');
+
+    // 进入编辑会先取消进行中的绘制。
+    controller.edit(polylineGeometry());
+    expect(controller.mode).toBeUndefined();
+    expect(controller.vertexCount).toBe(0);
+
+    // 编辑会话期间左键不再累积绘制顶点。
+    const before = harness.items.length;
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(30));
+    expect(harness.items.length).toBe(before);
+
+    // 重新开始绘制会结束编辑会话。
+    controller.start('point');
+    expect(cancels).toEqual([polylineGeometry()]);
+    expect(controller.editing).toBeUndefined();
+    expect(controller.mode).toBe('point');
   });
 });

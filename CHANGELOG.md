@@ -14,6 +14,7 @@
 - 增加轨道几何：锚点推导圆轨道与可渲染采样点（首尾重合、可直接交折线图层），越界取值校验抛错。
 - 增加轨道与姿态数学：开普勒六根数求解、二体传播（二分法解开普勒方程）与四元数姿态积分。
 - 增加交互绘制 `map.drawing`：点 / 折线 / 面绘制、预览、确认与取消，以及框架无关的绘制状态机。
+- 增加绘制编辑 `map.drawing.edit()` / `commitEdit()` / `cancelEdit()`：对几何副本拖动顶点（左键命中屏幕 12 像素内最近顶点、点几何整体移动）、提交与回退，事件 `edit` / `editCommit` / `editCancel`，并导出框架无关的 `DrawingEditMachine` 与几何校验 `isEditableGeometry()`、`isValidDrawPosition()`。
 - 增加位置批量归一化 `normalizePositions()`：坐标校验、按 id 合并最新、可转移的 Float64Array 输出。
 - 增加折线图层与五种内置材质：PolylineCollection 批量渲染、逐条样式覆盖、原子替换与整层样式调整；画布快照契约改为可移植形状，core 层不再依赖 DOM 类型。
 - 增加运行时场景模式切换 `map.scene.setMode()`：形变完成结算、同模式立即结算、被取代语义与销毁处理。

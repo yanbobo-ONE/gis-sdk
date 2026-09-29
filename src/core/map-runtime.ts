@@ -1,4 +1,4 @@
-import type { DrawMode } from './drawing.js';
+import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { GisMap, MapEngineAdapter, MapEventMap, MapState } from './contracts.js';
 import type {
   BasemapController,
@@ -126,6 +126,21 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       clearCompleted: () => {
         this.assertReady('drawing.clearCompleted');
         adapter.drawing.clearCompleted();
+      },
+      edit: (geometry: DrawGeometry) => {
+        this.assertReady('drawing.edit');
+        return adapter.drawing.edit(geometry);
+      },
+      get editing() {
+        return adapter.drawing.editing;
+      },
+      commitEdit: () => {
+        this.assertReady('drawing.commitEdit');
+        return adapter.drawing.commitEdit();
+      },
+      cancelEdit: () => {
+        this.assertReady('drawing.cancelEdit');
+        adapter.drawing.cancelEdit();
       },
       on: <TKey extends keyof DrawingEventMap>(
         kind: TKey,
