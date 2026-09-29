@@ -32,6 +32,7 @@
 | 空间判断            | 可用 | `isPointInPolygon`、`filterPointsInPolygon`、`normalizeRingWinding`（包根或 `/core`）      | 外环 + 内环判断、边界归属可配、批量判断带包围盒预筛、绕向规范化                                                                    |
 | CSV 点位导入        | 可用 | `parseCsv`、`readPointCsv`、`guessCsvPointColumns`、`describeCsvColumn`（包根或 `/core`）  | RFC4180 解析、BOM 与编码校验、列数不一致拒绝、严格十进制坐标、列名显式映射与拒绝行样本                                             |
 | CRS 坐标转换        | 可用 | `registerCrs`、`registerChinaCrs`、`transformGeoPoint/Path/Ring`、`listCrs`、`describeCrs` | proj4 封装、CGCS2000 高斯带按公式登记并校验带号、往返残差与基准值有单测锁定                                                        |
+| 轨道与姿态数学      | 可用 | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics`（包根或 `/core`）       | 惯性系状态 ↔ 开普勒六根数、退化情形不产生 NaN、二体传播与二分法开普勒求解、四元数姿态积分（每步归一化）                            |
 | 数据管线核心        | 可用 | `DataPipeline`（包根或 `/core`）                                                           | 有界队列、同键最新值合并、溢出策略、批量读取和统计快照                                                                             |
 | 消息输入适配器      | 可用 | `DataPipelineMessageAdapter`（包根或 `/core`）                                             | Worker / MessagePort 监听、业务解码转发、拒绝/丢弃统计与监听释放                                                                   |
 | 帧预算调度器        | 可用 | `DataPipelineFrameScheduler`（包根或 `/core`）                                             | 动画帧请求合并、每帧有界消费、自动续帧、取消、失败事件与统计                                                                       |

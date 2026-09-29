@@ -44,6 +44,7 @@ export default defineConfig({
             { text: '绘制', link: '/guide/drawing' },
             { text: '画布快照', link: '/guide/capture' },
             { text: '空间计算与坐标转换', link: '/guide/spatial-analysis' },
+            { text: '轨道与姿态数学', link: '/guide/orbit-math' },
           ],
         },
         {
@@ -97,6 +98,7 @@ export default defineConfig({
             { text: '绘制', link: '/guide/drawing' },
             { text: '画布快照', link: '/guide/capture' },
             { text: '空间计算与坐标转换', link: '/guide/spatial-analysis' },
+            { text: '轨道与姿态数学', link: '/guide/orbit-math' },
             { text: '图层使用导航', link: '/guide/layers' },
             { text: '图层管理', link: '/guide/layer-management' },
             { text: 'GeoJSON 图层', link: '/guide/geojson-layer' },

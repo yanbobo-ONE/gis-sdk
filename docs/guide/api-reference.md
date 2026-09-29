@@ -4,29 +4,30 @@
 
 ## 先选场景
 
-| 目标                                             | 阅读页面                                    | 你会获得什么                                                    |
-| ------------------------------------------------ | ------------------------------------------- | --------------------------------------------------------------- |
-| 创建地图、监听事件、调整尺寸、抓取快照、释放资源 | [地图生命周期](./map-lifecycle.md)          | `createMap`、`resize`、`destroy`、`state`、`events`             |
-| 抓取当前画面用于导出或缩略图                     | [画布快照](./capture.md)                    | `map.capture()`、判空重试与超时语义                             |
-| 添加、查询、移除或清空图层                       | [图层管理](./layer-management.md)           | `map.layers.add/get/list/remove/clear`、通用 `LayerHandle`      |
-| 加载或替换业务要素数据                           | [GeoJSON 图层](./geojson-layer.md)          | GeoJSON 对象/URL、样式、`setData`、取消加载                     |
-| 接入 WMS、TMS、WMTS 或单张配准影像               | [影像图层](./imagery-layers.md)             | 样式、CQL 过滤、透明度、瓦片/单图参数与释放                     |
-| 加载城市/倾斜摄影等 3D Tiles                     | [3D Tiles 图层](./tiles3d-layer.md)         | 加载、显隐、基础 LOD、取消和释放                                |
-| 放置单个 glTF / GLB 模型                         | [静态模型图层](./model-layer.md)            | 位置/朝向、颜色叠加、外观策略、就地变换与并发加载限制           |
-| 批量渲染点位或导入 CSV                           | [点位图层](./points-layer.md)               | `type: 'points'`、`setData()`、`parseCsv()`、`readPointCsv()`   |
-| 画航线、轨迹、链路等批量线要素                   | [折线图层](./polyline-layer.md)             | `type: 'polyline'`、内置材质、`setData()` / `setStyle()`        |
-| 点击 / 悬停拾取地图对象                          | [拾取交互](./picking.md)                    | `map.picking.on()`、`PickingHit`、拾取标记与悬停节流            |
-| 交互绘制点、折线与面                             | [绘制](./drawing.md)                        | `map.drawing.start()`、`DrawingStateMachine` 渲染端口           |
-| 设置 XYZ 底图、相机、地形或采样高程              | [地图控制](./map-controls.md)               | `map.basemap`、`map.camera`、`map.terrain`、`sample()`          |
-| 运行时切换 2D / 3D 场景                          | [2D / 3D 场景切换](./scene-mode.md)         | `map.scene.setMode()`、`mode`、`morphing`                       |
-| 经纬度、世界坐标与屏幕坐标互转                   | [坐标转换](./coordinates.md)                | `map.coordinates` 的四个转换方法及返回值语义                    |
-| 调分辨率、地形精度或按帧率自动降档               | [渲染质量](./quality.md)                    | `map.quality`、`createMap({ quality })`、内置质量档             |
-| 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表 |
-| 消化高频业务消息                                 | [实时数据导航](./data-pipeline.md)          | 有界队列、Worker/MessagePort 输入、帧预算调度                   |
-| 处理乱序实时样本与断流追赶                       | [实时水位线](./realtime-waterline.md)       | `RealtimeWaterline`、`RealtimeTimestampGuard`                   |
-| 过滤无效坐标、按 id 合并高频位置                 | [位置批量归一化](./position-batch.md)       | `normalizePositions()`、可转移的 `Float64Array` 输出            |
-| 丢弃旧会话消息、处理序列断档                     | [会话门禁与重同步](./realtime-session.md)   | `RealtimeSessionGate`、`RealtimeResyncController`               |
-| 判断和处理失败                                   | [错误与原生出口](./errors-and-native.md)    | `GisError`、错误码、`map.raw.viewer` 的边界                     |
+| 目标                                             | 阅读页面                                    | 你会获得什么                                                       |
+| ------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------ |
+| 创建地图、监听事件、调整尺寸、抓取快照、释放资源 | [地图生命周期](./map-lifecycle.md)          | `createMap`、`resize`、`destroy`、`state`、`events`                |
+| 抓取当前画面用于导出或缩略图                     | [画布快照](./capture.md)                    | `map.capture()`、判空重试与超时语义                                |
+| 添加、查询、移除或清空图层                       | [图层管理](./layer-management.md)           | `map.layers.add/get/list/remove/clear`、通用 `LayerHandle`         |
+| 加载或替换业务要素数据                           | [GeoJSON 图层](./geojson-layer.md)          | GeoJSON 对象/URL、样式、`setData`、取消加载                        |
+| 接入 WMS、TMS、WMTS 或单张配准影像               | [影像图层](./imagery-layers.md)             | 样式、CQL 过滤、透明度、瓦片/单图参数与释放                        |
+| 加载城市/倾斜摄影等 3D Tiles                     | [3D Tiles 图层](./tiles3d-layer.md)         | 加载、显隐、基础 LOD、取消和释放                                   |
+| 放置单个 glTF / GLB 模型                         | [静态模型图层](./model-layer.md)            | 位置/朝向、颜色叠加、外观策略、就地变换与并发加载限制              |
+| 批量渲染点位或导入 CSV                           | [点位图层](./points-layer.md)               | `type: 'points'`、`setData()`、`parseCsv()`、`readPointCsv()`      |
+| 画航线、轨迹、链路等批量线要素                   | [折线图层](./polyline-layer.md)             | `type: 'polyline'`、内置材质、`setData()` / `setStyle()`           |
+| 点击 / 悬停拾取地图对象                          | [拾取交互](./picking.md)                    | `map.picking.on()`、`PickingHit`、拾取标记与悬停节流               |
+| 交互绘制点、折线与面                             | [绘制](./drawing.md)                        | `map.drawing.start()`、`DrawingStateMachine` 渲染端口              |
+| 设置 XYZ 底图、相机、地形或采样高程              | [地图控制](./map-controls.md)               | `map.basemap`、`map.camera`、`map.terrain`、`sample()`             |
+| 运行时切换 2D / 3D 场景                          | [2D / 3D 场景切换](./scene-mode.md)         | `map.scene.setMode()`、`mode`、`morphing`                          |
+| 经纬度、世界坐标与屏幕坐标互转                   | [坐标转换](./coordinates.md)                | `map.coordinates` 的四个转换方法及返回值语义                       |
+| 调分辨率、地形精度或按帧率自动降档               | [渲染质量](./quality.md)                    | `map.quality`、`createMap({ quality })`、内置质量档                |
+| 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表    |
+| 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics` |
+| 消化高频业务消息                                 | [实时数据导航](./data-pipeline.md)          | 有界队列、Worker/MessagePort 输入、帧预算调度                      |
+| 处理乱序实时样本与断流追赶                       | [实时水位线](./realtime-waterline.md)       | `RealtimeWaterline`、`RealtimeTimestampGuard`                      |
+| 过滤无效坐标、按 id 合并高频位置                 | [位置批量归一化](./position-batch.md)       | `normalizePositions()`、可转移的 `Float64Array` 输出               |
+| 丢弃旧会话消息、处理序列断档                     | [会话门禁与重同步](./realtime-session.md)   | `RealtimeSessionGate`、`RealtimeResyncController`                  |
+| 判断和处理失败                                   | [错误与原生出口](./errors-and-native.md)    | `GisError`、错误码、`map.raw.viewer` 的边界                        |
 
 ## 统一调用规则
 

@@ -145,6 +145,10 @@ export type {
   AnalysisViewshedInput,
   AnalysisViewshedResult,
 } from '../core/analysis.js';
+export { AttitudeDynamics } from '../spatial/attitude.js';
+export type { AngularVelocity, Quaternion } from '../spatial/attitude.js';
+export { calculateOrbitalElements, EARTH_MU, propagateTwoBody } from '../spatial/orbit.js';
+export type { OrbitState, OrbitalElements, Vector3 } from '../spatial/orbit.js';
 export {
   describeCrs,
   listCrs,
