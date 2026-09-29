@@ -66,11 +66,30 @@ await map.camera.flyTo({
 
 | 方法             | 参数           | 运行效果                                      | 可能抛出 / 拒绝                                  |
 | ---------------- | -------------- | --------------------------------------------- | ------------------------------------------------ |
+| `view`           | 无（只读）     | 当前位姿快照：经纬高（度 / 米）与航向 / 俯仰 / 翻滚 | `CAMERA_VIEW_UNAVAILABLE`                        |
+| `viewRectangle`  | 无（只读）     | 当前视口在地表覆盖的经纬四至；不可用时为 `undefined` | -                                                |
 | `setView(view)`  | `CameraView`   | 立即切换视角，并先取消进行中的飞行            | `INVALID_CAMERA_VIEW`                            |
 | `flyTo(view)`    | `CameraFlight` | 平滑飞行；完成时 Promise resolve              | `INVALID_CAMERA_VIEW`、`CAMERA_FLIGHT_CANCELLED` |
 | `cancelFlight()` | 无             | 取消 SDK 发起的当前飞行；无进行中飞行时无操作 | 当前飞行以 `CAMERA_FLIGHT_CANCELLED` reject      |
 
 `longitude` 必须在 `-180` 到 `180`，`latitude` 必须在 `-90` 到 `90`；`height`、姿态和 `duration` 必须是有限数，且 `duration` 不能为负数。再次调用 `flyTo()` 会先取消 SDK 的上一段飞行。
+
+### 读取当前视角
+
+```ts
+const view = map.camera.view;
+// { longitude, latitude, height, heading, pitch, roll } 全部存在，角度为度
+
+const bounds = map.camera.viewRectangle;
+// { west, south, east, north }（度）或 undefined
+
+map.camera.setView(view); // 快照可以直接传回 setView() / flyTo()
+```
+
+与传入侧的 `CameraView` 不同，`view` 的每个字段都一定存在，可以直接参与计算或原样传回 `setView()`。两种取值都反映**当前**相机状态，包括业务通过 `map.raw.viewer` 发起的飞行。
+
+- `view` 在相机位姿退化（例如相机落到地心、位姿为 `NaN`）时抛 `CAMERA_VIEW_UNAVAILABLE`；这类位姿会被地图创建时安装的退化保护在下一帧修复，因此调用方按可重试错误处理即可。
+- `viewRectangle` 在相机看不到椭球（例如指向天空）或视野覆盖全球时返回 `undefined`，而不是给出全球范围的假四至。二维模式下同样是当前视口范围，可直接用于按图幅查询业务数据。
 
 `setView()` 会先取消进行中的飞行。Cesium 的原生 `setView` 不会取消飞行，若不先取消，飞行会继续按帧覆写刚设置的视角。参数校验在取消之前完成，因此非法视角不会打断已有飞行。
 

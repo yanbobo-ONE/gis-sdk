@@ -9,22 +9,34 @@ const cesium = vi.hoisted(() => {
     }),
   );
   const toRadians = vi.fn<(value: number) => number>((value: number) => value / 180);
+  const toDegrees = vi.fn<(value: number) => number>((value: number) => (value * 180) / Math.PI);
 
-  return { fromDegrees, toRadians };
+  return { fromDegrees, toRadians, toDegrees };
 });
 
 vi.mock('cesium', () => ({
   Cartesian3: { fromDegrees: cesium.fromDegrees },
-  Math: { toRadians: cesium.toRadians },
+  Math: { toRadians: cesium.toRadians, toDegrees: cesium.toDegrees },
 }));
 
 import { CesiumCameraController } from '../src/cesium/camera-controller.js';
 
-function createCamera() {
+function createCamera(overrides: Record<string, unknown> = {}) {
   return {
     cancelFlight: vi.fn(),
     flyTo: vi.fn(),
     setView: vi.fn(),
+    positionCartographic: { longitude: Math.PI / 2, latitude: Math.PI / 4, height: 1200 },
+    heading: Math.PI,
+    pitch: -Math.PI / 2,
+    roll: Math.PI / 6,
+    computeViewRectangle: vi.fn(() => ({
+      west: -Math.PI / 2,
+      south: -Math.PI / 4,
+      east: Math.PI / 2,
+      north: Math.PI / 4,
+    })),
+    ...overrides,
   };
 }
 
@@ -116,5 +128,81 @@ describe('CesiumCameraController', () => {
 
     controller.cancelFlight();
     await expect(observedFlight).resolves.toMatchObject({ code: 'CAMERA_FLIGHT_CANCELLED' });
+  });
+
+  it('reads the current pose as degrees and meters', () => {
+    const controller = new CesiumCameraController(createCamera());
+
+    const view = controller.view;
+    expect(view.longitude).toBeCloseTo(90, 9);
+    expect(view.latitude).toBeCloseTo(45, 9);
+    expect(view.height).toBe(1200);
+    expect(view.heading).toBeCloseTo(180, 9);
+    expect(view.pitch).toBeCloseTo(-90, 9);
+    expect(view.roll).toBeCloseTo(30, 9);
+  });
+
+  it('falls back to a straight-down orientation while morphing', () => {
+    const controller = new CesiumCameraController(
+      createCamera({ heading: undefined, pitch: undefined, roll: undefined }),
+    );
+
+    expect(controller.view).toMatchObject({ heading: 0, pitch: -90, roll: 0 });
+  });
+
+  it('rejects a non-finite camera position', () => {
+    const controller = new CesiumCameraController(
+      createCamera({
+        positionCartographic: { longitude: Number.NaN, latitude: 0, height: 0 },
+      }),
+    );
+
+    expect(() => controller.view).toThrow(
+      expect.objectContaining({ code: 'CAMERA_VIEW_UNAVAILABLE', retryable: true }),
+    );
+  });
+
+  it('reads the viewport rectangle in degrees', () => {
+    const controller = new CesiumCameraController(createCamera());
+
+    expect(controller.viewRectangle).toEqual({ west: -90, south: -45, east: 90, north: 45 });
+  });
+
+  it('returns no rectangle when the camera misses the globe or the call fails', () => {
+    const globe = new CesiumCameraController(
+      createCamera({
+        computeViewRectangle: vi.fn(() => ({
+          west: -Math.PI,
+          south: -Math.PI / 2,
+          east: Math.PI,
+          north: Math.PI / 2,
+        })),
+      }),
+    ).viewRectangle;
+    const missing = new CesiumCameraController(
+      createCamera({ computeViewRectangle: vi.fn(() => undefined) }),
+    ).viewRectangle;
+    const throwing = new CesiumCameraController(
+      createCamera({
+        computeViewRectangle: vi.fn(() => {
+          throw new Error('morphing');
+        }),
+      }),
+    ).viewRectangle;
+    const notFinite = new CesiumCameraController(
+      createCamera({
+        computeViewRectangle: vi.fn(() => ({
+          west: Number.NaN,
+          south: -1,
+          east: 1,
+          north: 1,
+        })),
+      }),
+    ).viewRectangle;
+
+    expect(globe).toBeUndefined();
+    expect(missing).toBeUndefined();
+    expect(throwing).toBeUndefined();
+    expect(notFinite).toBeUndefined();
   });
 });

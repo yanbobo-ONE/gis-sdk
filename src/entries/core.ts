@@ -40,6 +40,7 @@ export type {
   CameraController,
   CameraFlight,
   CameraView,
+  CameraViewSnapshot,
   CesiumTerrainSpec,
   CoordinateTransform,
   EllipsoidTerrainSpec,

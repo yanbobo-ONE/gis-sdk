@@ -17,7 +17,7 @@
 | 画航线、轨迹、链路等批量线要素                   | [折线图层](./polyline-layer.md)             | `type: 'polyline'`、内置材质、`setData()` / `setStyle()`           |
 | 点击 / 悬停拾取地图对象                          | [拾取交互](./picking.md)                    | `map.picking.on()`、`PickingHit`、拾取标记与悬停节流               |
 | 交互绘制点、折线与面，或拖动已有顶点             | [绘制与编辑](./drawing.md)                  | `map.drawing.start()`、`edit()` / `commitEdit()`、`DrawingStateMachine` |
-| 设置 XYZ 底图、相机、地形或采样高程              | [地图控制](./map-controls.md)               | `map.basemap`、`map.camera`、`map.terrain`、`sample()`             |
+| 设置或读取相机、XYZ 底图、地形与采样             | [地图控制](./map-controls.md)               | `map.camera.view` / `viewRectangle`、`map.basemap`、`map.terrain`  |
 | 运行时切换 2D / 3D 场景                          | [2D / 3D 场景切换](./scene-mode.md)         | `map.scene.setMode()`、`mode`、`morphing`                          |
 | 经纬度、世界坐标与屏幕坐标互转                   | [坐标转换](./coordinates.md)                | `map.coordinates` 的四个转换方法及返回值语义                       |
 | 调分辨率、地形精度或按帧率自动降档               | [渲染质量](./quality.md)                    | `map.quality`、`createMap({ quality })`、内置质量档                |

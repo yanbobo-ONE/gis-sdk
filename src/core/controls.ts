@@ -1,5 +1,6 @@
 import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { Unsubscribe } from './event-hub.js';
+import type { GeoBBox } from '../spatial/types.js';
 
 /** 经纬度位置，单位为度和米。 */
 export interface GeoPosition {
@@ -61,6 +62,27 @@ export interface CameraView extends GeoPosition {
 export interface CameraFlight extends CameraView {
   /** 飞行时长，单位为秒；省略时由 Cesium 计算。 */
   readonly duration?: number;
+}
+
+/**
+ * 相机位姿快照。
+ *
+ * 与 {@link CameraView} 的区别是这里读出来的每个字段都一定存在：角度为度、高度为米，
+ * 可以直接参与计算，也可以原样传回 `setView()` / `flyTo()`。
+ */
+export interface CameraViewSnapshot {
+  /** 相机所在经度。 */
+  readonly longitude: number;
+  /** 相机所在纬度。 */
+  readonly latitude: number;
+  /** 相机椭球高，单位为米。 */
+  readonly height: number;
+  /** 朝向，0 度为正北，顺时针增加。 */
+  readonly heading: number;
+  /** 俯仰角，-90 度为垂直向下。 */
+  readonly pitch: number;
+  /** 滚转角。 */
+  readonly roll: number;
 }
 
 /** SDK 支持的地图场景模式。 */
@@ -232,6 +254,18 @@ export interface PickingController {
 
 /** 类型化相机控制器。 */
 export interface CameraController {
+  /**
+   * 当前相机位姿快照。
+   *
+   * 读取失败（位姿退化，例如相机与地心重合）时抛出 `CAMERA_VIEW_UNAVAILABLE`。
+   */
+  readonly view: CameraViewSnapshot;
+  /**
+   * 当前视口在地表覆盖的经纬四至。
+   *
+   * 相机看不到椭球（例如指向天空）或视角覆盖全球时返回 `undefined`。
+   */
+  readonly viewRectangle: GeoBBox | undefined;
   /** 立即设置相机视角。 */
   setView(view: CameraView): void;
   /** 平滑飞行到指定视角；飞行被取消时拒绝。 */

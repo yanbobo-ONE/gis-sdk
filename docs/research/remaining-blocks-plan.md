@@ -68,6 +68,7 @@
   - `map.camera.synchronize(source: CameraView, target?: 'secondary')`？—— **需要先定"第二视图"在 SDK 里是什么**（SDK 目前一个实例一个 Viewer）。
   - 更可能落地的形态是提供 `readonly view: CameraView`（读取当前相机）+ `setView()`（已有），让业务自己同步；只有当 SDK 提供多视图能力时才需要 `CameraSynchronizer`。
 - **结论**：**降级为"先提供 `map.camera.view` 只读快照"**，多视图同步留给业务。
+- **已落地（2026-09-29）**：`map.camera.view`（经纬高与航向/俯仰/翻滚，角度为度）与 `map.camera.viewRectangle`（视口经纬四至，看不到椭球或全球视野时为 `undefined`）；读不到的位姿按 `CAMERA_VIEW_UNAVAILABLE` 抛错，交由退化保护下一帧修复。双 Viewer 同步仍未做。
 
 ### 3.5 环境效果（`environment/`，9,486 行）
 

@@ -29,6 +29,8 @@ const camera = {
   cancelFlight: vi.fn(),
   flyTo: vi.fn(() => Promise.resolve()),
   setView: vi.fn(),
+  view: { longitude: 116.39, latitude: 39.9, height: 1000, heading: 0, pitch: -90, roll: 0 },
+  viewRectangle: undefined,
 } satisfies CameraController;
 
 const basemap = {
@@ -155,6 +157,15 @@ describe('MapRuntime', () => {
     expect(map.camera).toBe(map.camera);
     expect(map.basemap).toBe(map.basemap);
     expect(map.terrain).toBe(map.terrain);
+    expect(map.camera.view).toEqual({
+      longitude: 116.39,
+      latitude: 39.9,
+      height: 1000,
+      heading: 0,
+      pitch: -90,
+      roll: 0,
+    });
+    expect(map.camera.viewRectangle).toBeUndefined();
     map.camera.setView({ longitude: 116.39, latitude: 39.9 });
     map.basemap.set({ type: 'xyz', url: '/tiles/{z}/{x}/{y}.png' });
     await map.terrain.set({ type: 'ellipsoid' });

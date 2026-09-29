@@ -32,6 +32,8 @@ const camera = {
   cancelFlight: vi.fn(),
   flyTo: vi.fn(() => Promise.resolve()),
   setView: vi.fn(),
+  view: { longitude: 116.39, latitude: 39.9, height: 1000, heading: 0, pitch: -90, roll: 0 },
+  viewRectangle: undefined,
 } satisfies CameraController;
 
 const basemap = {

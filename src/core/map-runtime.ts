@@ -176,6 +176,12 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       },
     });
     this.camera = Object.freeze({
+      get view() {
+        return adapter.camera.view;
+      },
+      get viewRectangle() {
+        return adapter.camera.viewRectangle;
+      },
       setView: (view: CameraView) => {
         this.assertReady('camera.setView');
         this.adapter.camera.setView(view);
