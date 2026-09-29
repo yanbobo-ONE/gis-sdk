@@ -4,7 +4,8 @@ import type { EventHub } from '../core/event-hub.js';
 import type { GisError } from '../core/errors.js';
 
 /** 当前稳定支持的图层类型。 */
-export type LayerType = 'geojson' | 'wms' | 'tms' | 'wmts' | 'single-image' | 'model' | '3d-tiles';
+export type LayerType =
+  'geojson' | 'wms' | 'tms' | 'wmts' | 'single-image' | 'model' | 'points' | '3d-tiles';
 
 /** 图层句柄的生命周期状态。 */
 export type LayerState = 'loading' | 'ready' | 'hidden' | 'disposing' | 'disposed' | 'error';
@@ -267,6 +268,63 @@ export interface ModelLayerSpec extends BaseLayerSpec {
   readonly appearance?: ModelAppearanceOptions;
 }
 
+/** 单个点位的稳定表达。 */
+export interface PointSpec {
+  /** 经度，范围 -180 到 180。 */
+  readonly longitude: number;
+  /** 纬度，范围 -90 到 90。 */
+  readonly latitude: number;
+  /** 椭球高，单位为米，默认 0。 */
+  readonly height?: number;
+  /** 覆盖图层默认颜色的 CSS 颜色字符串。 */
+  readonly color?: string;
+  /** 覆盖图层默认尺寸的像素直径，范围 2 到 40。 */
+  readonly pixelSize?: number;
+}
+
+/** 点位图层样式；整层生效。 */
+export interface PointsLayerStyle {
+  /** 点颜色，CSS 颜色字符串。 */
+  readonly color?: string;
+  /** 点直径，单位为像素，范围 2 到 40。 */
+  readonly pixelSize?: number;
+  /** 轮廓宽度，单位为像素，范围 0 到 16。 */
+  readonly outlineWidth?: number;
+  /** 轮廓颜色，CSS 颜色字符串。 */
+  readonly outlineColor?: string;
+}
+
+/** 点位图层配置；使用 PointPrimitive 批量渲染，不创建 Entity 或 DataSource。 */
+export interface PointsLayerSpec extends BaseLayerSpec {
+  /** 判别点位图层。 */
+  readonly type: 'points';
+  /** 初始点位；单层上限见 {@link MAX_POINT_LAYER_POINTS}。 */
+  readonly points: readonly PointSpec[];
+  /** 点颜色，默认 `#43bfeb`。 */
+  readonly color?: string;
+  /** 点直径，单位为像素，范围 2 到 40，默认 8。 */
+  readonly pixelSize?: number;
+  /** 轮廓宽度，单位为像素，范围 0 到 16，默认 0。 */
+  readonly outlineWidth?: number;
+  /** 轮廓颜色，默认与点颜色相同。 */
+  readonly outlineColor?: string;
+}
+
+/** 单层点位数量上限。 */
+export const MAX_POINT_LAYER_POINTS = 200_000;
+
+/** 支持原子替换点位与整层样式调整的点位图层句柄。 */
+export interface PointsLayerHandle extends LayerHandle {
+  /** 判别点位句柄。 */
+  readonly type: 'points';
+  /** 当前渲染的点数。 */
+  readonly count: number;
+  /** 原子替换点位；失败或取消时保留旧点位。 */
+  setData(points: readonly PointSpec[], options?: OperationOptions): Promise<void>;
+  /** 整层调整样式；非法取值抛 `INVALID_LAYER_CONFIG` 或 `INVALID_LAYER_COLOR`。 */
+  setStyle(style: PointsLayerStyle): void;
+}
+
 /** Cesium 3D Tiles 图层配置。 */
 export interface Tiles3dLayerSpec extends BaseLayerSpec {
   /** 判别 3D Tiles 图层。 */
@@ -287,6 +345,7 @@ export type LayerSpec =
   | WmtsLayerSpec
   | SingleImageLayerSpec
   | ModelLayerSpec
+  | PointsLayerSpec
   | Tiles3dLayerSpec;
 
 /** 图层自身可订阅的生命周期事件。 */
@@ -408,9 +467,11 @@ export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayer
       ? ImageryLayerHandle
       : TSpec extends ModelLayerSpec
         ? ModelLayerHandle
-        : TSpec extends Tiles3dLayerSpec
-          ? LayerHandle
-          : LayerHandle;
+        : TSpec extends PointsLayerSpec
+          ? PointsLayerHandle
+          : TSpec extends Tiles3dLayerSpec
+            ? LayerHandle
+            : LayerHandle;
 
 /** 地图实例拥有的图层管理接口。 */
 export interface LayerManager {

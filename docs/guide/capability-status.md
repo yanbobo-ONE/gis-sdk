@@ -15,6 +15,7 @@
 | 单图影像            | 可用 | `type: 'single-image'`、`ImageryLayerHandle`                                               | WGS84 度数范围、异步加载、显隐、透明度、取消加载和统一资源释放                                                             |
 | 3D Tiles            | 可用 | `type: '3d-tiles'`                                                                         | 加载标准 Tileset、显隐、基础 LOD 配置、取消后的延迟资源清理和释放                                                          |
 | 静态模型            | 可用 | `type: 'model'`、`ModelLayerHandle`、`createMap({ quality })`                              | glTF / GLB 加载、WGS84 位置朝向与朝向补偿、颜色叠加、外观策略（提亮 / 无光照）、就地变换、取消加载、并发上限与统一资源释放 |
+| 点位图层            | 可用 | `type: 'points'`、`PointsLayerHandle`、`MAX_POINT_LAYER_POINTS`                            | PointPrimitive 批量渲染、单层 20 万点、逐点样式覆盖、原子替换点位、整层样式调整与统一资源释放                              |
 | 相机控制            | 可用 | `map.camera.setView()`、`flyTo()`、`cancelFlight()`                                        | 使用度和米定位、飞行、取消、切换视角时先取消进行中的飞行、退化旋转与 NaN 位姿兜底                                          |
 | XYZ 底图            | 可用 | `createMap({ basemap })`、`map.basemap`                                                    | 单底图原子替换、透明度与显隐，始终位于业务影像图层下方                                                                     |
 | 地形                | 可用 | `map.terrain.set()`、`TerrainSetOptions`                                                   | 椭球切换和 Cesium Terrain 异步加载，失败或超时（默认 30 秒）时保留旧地形并可立即重试                                       |
@@ -24,6 +25,7 @@
 | 图层错误可观测      | 可用 | `LayerHandle.errorCount`、`layer.events.on('error')`、`map.basemap.errorCount`             | 影像瓦片失败累计计数并只上报首个；底图首个失败经 `map:error` 上报                                                          |
 | 空间量算            | 可用 | `measureDistance`、`measureArea`、`measureBBox`、`nearestPointOnPath` 等（包根或 `/core`） | 球面量算：距离、折线长度、面积（含洞）、方位、目标点、包围盒、质心、沿线取点、最近点                                       |
 | 空间判断            | 可用 | `isPointInPolygon`、`filterPointsInPolygon`、`normalizeRingWinding`（包根或 `/core`）      | 外环 + 内环判断、边界归属可配、批量判断带包围盒预筛、绕向规范化                                                            |
+| CSV 点位导入        | 可用 | `parseCsv`、`readPointCsv`、`guessCsvPointColumns`、`describeCsvColumn`（包根或 `/core`）  | RFC4180 解析、BOM 与编码校验、列数不一致拒绝、严格十进制坐标、列名显式映射与拒绝行样本                                     |
 | CRS 坐标转换        | 可用 | `registerCrs`、`registerChinaCrs`、`transformGeoPoint/Path/Ring`、`listCrs`、`describeCrs` | proj4 封装、CGCS2000 高斯带按公式登记并校验带号、往返残差与基准值有单测锁定                                                |
 | 数据管线核心        | 可用 | `DataPipeline`（包根或 `/core`）                                                           | 有界队列、同键最新值合并、溢出策略、批量读取和统计快照                                                                     |
 | 消息输入适配器      | 可用 | `DataPipelineMessageAdapter`（包根或 `/core`）                                             | Worker / MessagePort 监听、业务解码转发、拒绝/丢弃统计与监听释放                                                           |
@@ -35,18 +37,18 @@
 
 ## 未发布能力
 
-| 模块                            | 当前状态 | 在完成前的边界                                                                                                                         |
-| ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 企业影像服务                    | 未发布   | 当前未封装企业鉴权、服务专属参数或凭证更新策略；可临时使用原生出口                                                                     |
-| CZML、动态实体与模型动画        | 未发布   | 静态 glTF / GLB 已通过 `type: 'model'` 发布；CZML、动态实体、动画、拾取事件与外观策略仍无 SDK 方法                                     |
-| Worker 池与专用动态输入 Adapter | 未发布   | 尚无 Worker 池、WebSocket/SSE/CZML/二进制协议适配、校验和标准化                                                                        |
-| 海量数据渲染                    | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺                                                                 |
-| 绘制与编辑                      | 未发布   | 尚无 `map.drawing`、编辑状态、捕捉或交互事件 API                                                                                       |
-| 自定义材质与效果                | 未发布   | 尚无材质注册、着色器、特效或版本兼容策略                                                                                               |
-| `map.analysis` 分析任务         | 未发布   | 量算、判断、CRS 转换与地形采样已可用；`map.analysis` 控制器及其通视 / 视域 / 坡度坡向工具、任务模型、结果图层、Worker 执行接口尚未发布 |
-| 插件、诊断和框架绑定            | 未发布   | 图层与底图已提供错误计数与首个失败事件；尚无插件协议、完整监控 API 或官方 Vue / React 组件                                             |
-| 多浏览器性能验证                | 未完成   | 尚未建立真实 WebGL 端到端矩阵、性能阈值和公开压测结果                                                                                  |
-| 旧项目迁移适配                  | 未完成   | 尚未提供兼容层；接入以当前公开 SDK 契约为准                                                                                            |
+| 模块                                 | 当前状态 | 在完成前的边界                                                                                                                         |
+| ------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 企业影像服务                         | 未发布   | 当前未封装企业鉴权、服务专属参数或凭证更新策略；可临时使用原生出口                                                                     |
+| CZML、动态实体与模型动画             | 未发布   | 静态 glTF / GLB 已通过 `type: 'model'` 发布；CZML、动态实体、动画、拾取事件与外观策略仍无 SDK 方法                                     |
+| Worker 池与专用动态输入 Adapter      | 未发布   | 尚无 Worker 池、WebSocket/SSE/CZML/二进制协议适配、校验和标准化                                                                        |
+| 海量数据渲染（聚合 / 标签 / Worker） | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺                                                                 |
+| 绘制与编辑                           | 未发布   | 尚无 `map.drawing`、编辑状态、捕捉或交互事件 API                                                                                       |
+| 自定义材质与效果                     | 未发布   | 尚无材质注册、着色器、特效或版本兼容策略                                                                                               |
+| `map.analysis` 分析任务              | 未发布   | 量算、判断、CRS 转换与地形采样已可用；`map.analysis` 控制器及其通视 / 视域 / 坡度坡向工具、任务模型、结果图层、Worker 执行接口尚未发布 |
+| 插件、诊断和框架绑定                 | 未发布   | 图层与底图已提供错误计数与首个失败事件；尚无插件协议、完整监控 API 或官方 Vue / React 组件                                             |
+| 多浏览器性能验证                     | 未完成   | 尚未建立真实 WebGL 端到端矩阵、性能阈值和公开压测结果                                                                                  |
+| 旧项目迁移适配                       | 未完成   | 尚未提供兼容层；接入以当前公开 SDK 契约为准                                                                                            |
 
 未发布不代表不重要，而是不能以“已支持”对外承诺。业务若临时通过原生 Cesium API 接入，必须自行管理对象所有权、资源销毁和 Cesium 升级兼容性。
 

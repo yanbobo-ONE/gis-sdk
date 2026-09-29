@@ -5,14 +5,19 @@ import {
   DataPipelineFrameScheduler,
   DataPipelineMessageAdapter,
   describeCrs,
+  describeCsvColumn,
   filterPointsInPolygon,
+  guessCsvPointColumns,
   isPointInPolygon,
   listCrs,
   measureArea,
   measureBBox,
   measureDistance,
+  MAX_POINT_LAYER_POINTS,
   normalizeRingWinding,
+  parseCsv,
   qualityProfiles,
+  readPointCsv,
   registerChinaCrs,
   registerCrs,
   RenderQualityMonitor,
@@ -44,6 +49,9 @@ import type {
   GeoPoint,
   GeoPolygon,
   GeoRing,
+  CsvTable,
+  PointsLayerHandle,
+  PointsLayerSpec,
   QualityController,
   QualityProfileId,
   RenderQuality,
@@ -102,6 +110,9 @@ describe('package public layer interface', () => {
       readonly crs: CrsDescriptor;
       readonly crsOptions: RegisterChinaCrsOptions;
       readonly analysis: AnalysisController;
+      readonly pointsSpec: PointsLayerSpec;
+      readonly pointsHandle: PointsLayerHandle;
+      readonly csvTable: CsvTable;
       readonly analysisTool: AnalysisToolId;
       readonly imageryHandle: ImageryLayerHandle;
       readonly pipelineOptions: DataPipelineOptions<{ readonly id: string }>;
@@ -134,5 +145,10 @@ describe('package public layer interface', () => {
     expect(typeof listCrs).toBe('function');
     expect(typeof describeCrs).toBe('function');
     expect(SPATIAL_ALGORITHM_VERSION).toBe(1);
+    expect(typeof parseCsv).toBe('function');
+    expect(typeof readPointCsv).toBe('function');
+    expect(typeof guessCsvPointColumns).toBe('function');
+    expect(typeof describeCsvColumn).toBe('function');
+    expect(MAX_POINT_LAYER_POINTS).toBe(200_000);
   });
 });

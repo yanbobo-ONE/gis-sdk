@@ -19,6 +19,7 @@
 - 渲染质量档与按帧率自动降档（`map.quality`），联动分辨率、地形误差与模型并发；
 - 影像图层与底图的远端失败可观测：累计错误计数，并只上报首个失败；
 - 纯计算的空间能力：量算（距离/面积/方位/包围盒/质心/最近点）、点面判断与 CRS 转换（含 CGCS2000 高斯带）；
+- 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
 - 相机退化旋转与 NaN 位姿兜底、切换视角时取消飞行，以及地形加载超时保护；
 - 默认关闭在线底图和可选控件，无需 Cesium ion token 即可启动空白地球。
 
@@ -120,6 +121,7 @@ async function disposeMap() {
 - [坐标转换](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/coordinates.md)
 - [渲染质量与自动降档](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/quality.md)
 - [空间计算与坐标转换](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/spatial-analysis.md)
+- [点位图层与 CSV 导入](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/points-layer.md)
 - [功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)
 - [TypeScript 类型索引](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/api.md)
 - [变更日志](https://github.com/yanbobo-ONE/gis-sdk/blob/main/CHANGELOG.md)
@@ -135,6 +137,7 @@ async function disposeMap() {
 | 单图影像                                       | 可用                   | `map.layers.add({ type: 'single-image', url, rectangle?, ... })`，范围使用 WGS84 度数，返回 `ImageryLayerHandle`                                                             |
 | 3D Tiles                                       | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                                                                                      |
 | 静态模型                                       | 可用                   | `map.layers.add({ type: 'model', url, position, ... })`，支持 `setTransform()`、`setColor()`、`setAppearance()` 与 `headingOffset`，并发上限由 `createMap({ quality })` 控制 |
+| 点位图层与 CSV 导入                            | 可用                   | `map.layers.add({ type: 'points', points })` 支持 `setData()` / `setStyle()`；`@yanbobo/gis-sdk/core` 的 `parseCsv()`、`readPointCsv()` 解析点位表                           |
 | 坐标转换                                       | 可用                   | `map.coordinates`：`toWorld`、`toGeoPosition`、`toWindow`、`pickGeoPosition`，未命中返回 `undefined`                                                                         |
 | 地形采样                                       | 可用                   | `map.terrain.sample(points, options?)`：分批并发、缓存、取消与错误码                                                                                                         |
 | 渲染质量                                       | 可用                   | `createMap({ quality })`、`map.quality`：四档预设与按帧率自动升降档                                                                                                          |

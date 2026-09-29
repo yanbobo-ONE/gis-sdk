@@ -9,6 +9,7 @@ import {
   GisError,
   isPointInPolygon,
   measureDistance,
+  parseCsv,
   qualityProfiles,
   registerChinaCrs,
   RenderQualityMonitor,
@@ -109,6 +110,7 @@ describe('package subpath entrypoints', () => {
       value: 'OPEN',
     });
     expect(compileOnly).toBeUndefined();
+    expect(parseCsv('a\n1\n').columns).toEqual(['a']);
     expect(workerSource).toBe(worker);
     expect(messagePortSource).toBe(messagePort);
   });

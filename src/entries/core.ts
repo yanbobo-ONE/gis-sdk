@@ -46,6 +46,26 @@ export { GisError } from '../core/errors.js';
 export type { GisErrorCode, GisErrorOptions } from '../core/errors.js';
 export { EventHub } from '../core/event-hub.js';
 export type { Unsubscribe } from '../core/event-hub.js';
+export {
+  csvLimits,
+  describeCsvColumn,
+  guessCsvPointColumns,
+  hasReplacementCharacter,
+  parseCoordinateText,
+  parseCsv,
+  readPointCsv,
+} from '../core/csv.js';
+export type {
+  CsvColumnDescription,
+  CsvFieldKind,
+  CsvPointColumnGuess,
+  CsvParseOptions,
+  CsvPointReadOptions,
+  CsvPointReadResult,
+  CsvPointRow,
+  CsvRejectedRow,
+  CsvTable,
+} from '../core/csv.js';
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
 export type {
   QualityController,

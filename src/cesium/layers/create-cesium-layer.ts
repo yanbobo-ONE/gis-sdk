@@ -5,6 +5,7 @@ import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
 import type { CesiumLayerServices } from '../layer-services.js';
 import { createGeoJsonLayer } from './geojson-layer.js';
 import { createModelLayer } from './model-layer.js';
+import { createPointsLayer } from './points-layer.js';
 import { createSingleImageLayer } from './single-image-layer.js';
 import { createTiles3dLayer } from './tileset-layer.js';
 import { createTmsLayer, createWmtsLayer } from './tiled-imagery-layer.js';
@@ -30,6 +31,8 @@ export function createCesiumLayer(
       return createSingleImageLayer(viewer, spec, context);
     case 'model':
       return createModelLayer(viewer, spec, context, services);
+    case 'points':
+      return createPointsLayer(viewer, spec, context);
     case '3d-tiles':
       return createTiles3dLayer(viewer, spec, context);
   }

@@ -51,6 +51,7 @@ export default defineConfig({
             { text: 'WMS、TMS、WMTS 与单图影像', link: '/guide/imagery-layers' },
             { text: '3D Tiles 图层', link: '/guide/tiles3d-layer' },
             { text: '静态模型图层', link: '/guide/model-layer' },
+            { text: '点位图层与 CSV 导入', link: '/guide/points-layer' },
           ],
         },
         {
@@ -90,6 +91,7 @@ export default defineConfig({
             { text: 'WMS、TMS、WMTS 与单图影像', link: '/guide/imagery-layers' },
             { text: '3D Tiles 图层', link: '/guide/tiles3d-layer' },
             { text: '静态模型图层', link: '/guide/model-layer' },
+            { text: '点位图层与 CSV 导入', link: '/guide/points-layer' },
             { text: '实时数据导航', link: '/guide/data-pipeline' },
             { text: '有界数据管线', link: '/guide/data-pipeline-core' },
             { text: 'Worker / MessagePort 输入', link: '/guide/data-pipeline-message-input' },
