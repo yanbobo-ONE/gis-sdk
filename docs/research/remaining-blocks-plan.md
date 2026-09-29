@@ -3,18 +3,18 @@
 - 文档日期：2026-09-30
 - 适用仓库：`gis-sdk`（本文的裁决与路径以本仓库为准）
 - 参照实现：`Plugin-web/src/features/gis/`（行数按非测试文件统计）
-- 状态：待评审；编码前需拍板 §6 的 4 项
+- 状态：P1 / P2 路径已全部落地（2026-09-29）；§6 仍有 2 项待业务拍板（CZML 属性范围、标绘端口是否值得）
 
 ## 1. 结论摘要
 
 | 模块                                        | 行数     | 裁决                                                                                        |
 | ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
 | `simulation/` 轨道与姿态数学                | 630      | **已落地**：六根数、二体传播、锚点轨道、采样、最近接近、姿态积分（见本仓库 `src/spatial`）  |
-| `simulation/CzmlAdapter.ts`                 | 530      | **进 SDK（P1）**：CZML 是公开数据格式，生成/解析是纯函数；数据源加载仍走原生出口            |
-| `interaction/` 绘制编辑与捕捉               | 约 800   | **进 SDK（P1）**：绘制已发布，编辑与吸附是自然延伸，需先定"编辑会话"契约                    |
-| `playback/` 时间轴与播放时钟                | 约 700   | **部分进 SDK（P1）**：`ReplayTimeline` + `PlaybackClock` 是纯状态机；帧解析与数据源留在业务 |
-| `view/CameraSynchronizer`                   | 约 200   | **进 SDK（P2）**：多视图相机同步是引擎无关的状态同步                                        |
-| `environment/` 轻量效果（雾、霾、降水）     | 约 900   | **进 SDK（P2）**：参数可拆成 SDK 级与业务级；先做这三个，重效果后置                         |
+| `simulation/CzmlAdapter.ts`                 | 530      | **已落地（P1）**：`czmlFromPositions()` / `czmlFromSamples()` / `positionsFromCzml()`；数据源加载仍走原生出口 |
+| `interaction/` 绘制编辑与捕捉               | 约 800   | **已落地（P1）**：`map.drawing.edit()` / `commitEdit()` / `cancelEdit()` 与 `DrawingEditMachine`；**吸附与顶点增删未做** |
+| `playback/` 时间轴与播放时钟                | 约 700   | **已落地（P1）**：`SimulationClock` + `ReplayTimeline`；帧解析、数据源与事件快照留在业务      |
+| `view/CameraSynchronizer`                   | 约 200   | **降级落地（P2）**：`map.camera.view` / `viewRectangle` 只读快照；多视图同步留给业务           |
+| `environment/` 轻量效果（雾、霾、降水）     | 约 900   | **已落地（P2）**：`map.environment.set()` 深度雾 / 基础雾 / 雨 / 雪，着色器内联不依赖资产     |
 | `environment/` 重效果（云体积、热力、风场） | 约 6,000 | **只定契约**：依赖 shader、纹理资产与数据集，先给端口与边界，不动实现                       |
 | `plot/` 标绘                                | 2,484    | **只定契约**：几何含业务语义且参照实现仍在演进，SDK 提供图层与端口，几何留给业务            |
 | `view/MapFragmentTransition`                | 559      | **留在业务**：双 Viewer + 截图过渡是页面级编排；SDK 已提供 `capture()` 与 `setMode()` 原语  |
