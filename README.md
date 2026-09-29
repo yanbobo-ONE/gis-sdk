@@ -187,7 +187,7 @@ async function disposeMap() {
 | 实时水位线                                     | 可用                   | `RealtimeWaterline` 与 `RealtimeTimestampGuard`：乱序样本按时间释放、双阈值追赶、超前样本隔离与诊断统计                                                                         |
 | 位置批量归一化                                 | 可用                   | `normalizePositions()`：坐标校验、按 id 合并最新、输出可转移的 `Float64Array`                                                                                                   |
 | 实时会话门禁与重同步                           | 可用                   | `RealtimeSessionGate`（丢弃旧会话迟到包）与 `RealtimeResyncController`（序列断档→有界快照请求）                                                                                 |
-| CZML、动态实体与模型动画                       | 未完成                 | 静态 glTF / GLB 模型已可用；CZML、动态实体、动画与模型外观策略当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                                 |
+| 动态实体与模型动画                             | 未完成                 | CZML 生成 / 解析、静态模型与外观策略已可用；CZML 数据源加载、动态实体与动画播放当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                |
 | Worker 池、专用动态输入和 Primitive 大数据渲染 | 未完成                 | 当前没有 Worker 池、协议 Adapter、吞吐量、数据规模或性能承诺                                                                                                                    |
 | 绘制捕捉、自定义材质、插件与诊断               | 未完成                 | 绘制与顶点编辑、分析工具已可用；捕捉、顶点增删、自定义材质、分析结果图层、插件与诊断当前没有稳定公开 API                                                                          |
 
