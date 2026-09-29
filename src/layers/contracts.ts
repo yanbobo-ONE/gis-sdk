@@ -1,11 +1,20 @@
 import type { GeoJSON } from 'geojson';
 
+import type { GeoPosition } from '../core/controls.js';
 import type { EventHub } from '../core/event-hub.js';
 import type { GisError } from '../core/errors.js';
 
 /** 当前稳定支持的图层类型。 */
 export type LayerType =
-  'geojson' | 'wms' | 'tms' | 'wmts' | 'single-image' | 'model' | 'points' | '3d-tiles';
+  | 'geojson'
+  | 'wms'
+  | 'tms'
+  | 'wmts'
+  | 'single-image'
+  | 'model'
+  | 'points'
+  | 'polyline'
+  | '3d-tiles';
 
 /** 图层句柄的生命周期状态。 */
 export type LayerState = 'loading' | 'ready' | 'hidden' | 'disposing' | 'disposed' | 'error';
@@ -352,6 +361,7 @@ export type LayerSpec =
   | SingleImageLayerSpec
   | ModelLayerSpec
   | PointsLayerSpec
+  | PolylineLayerSpec
   | Tiles3dLayerSpec;
 
 /** 图层自身可订阅的生命周期事件。 */
@@ -452,6 +462,61 @@ export interface ModelLayerHandle extends LayerHandle {
   setAppearance(options?: ModelAppearanceOptions): void;
 }
 
+/** 折线材质；对应 Cesium 内置材质类型，不访问私有材质缓存。 */
+export type PolylineMaterialKind = 'solid' | 'glow' | 'outline' | 'arrow' | 'dash';
+
+/** 折线样式；既可作为图层默认值，也可用于运行时整层调整。 */
+export interface PolylineLayerStyle {
+  /** 线宽，单位为像素，范围 0 到 64，默认 2。 */
+  readonly width?: number;
+  /** 线颜色，CSS 颜色字符串，默认 `#ffffff`。 */
+  readonly color?: string;
+  /** 材质类型，默认 `'solid'`。 */
+  readonly material?: PolylineMaterialKind;
+  /** `'glow'` 材质的发光强度，范围 0 到 1，默认 0.2。 */
+  readonly glowPower?: number;
+  /** `'outline'` 材质的轮廓宽度，单位为像素，默认 2。 */
+  readonly outlineWidth?: number;
+  /** `'outline'` 材质的轮廓颜色，默认 `#000000`。 */
+  readonly outlineColor?: string;
+  /** `'dash'` 材质的虚线长度，单位为像素，范围 1 到 128，默认 16。 */
+  readonly dashLength?: number;
+}
+
+/** 单条折线的稳定表达。 */
+export interface PolylineSpec extends PolylineLayerStyle {
+  /** 业务对象 id；写入拾取标记，命中时通过 `PickingEvent.hit.objectId` 返回。 */
+  readonly id?: string;
+  /** 顶点序列，至少 2 个点，单条上限见 {@link MAX_POLYLINE_VERTICES}。 */
+  readonly positions: readonly GeoPosition[];
+}
+
+/** 折线图层配置；使用 PolylineCollection 批量渲染，不创建 Entity 或 DataSource。 */
+export interface PolylineLayerSpec extends BaseLayerSpec, PolylineLayerStyle {
+  /** 判别折线图层。 */
+  readonly type: 'polyline';
+  /** 初始折线；单层上限见 {@link MAX_POLYLINES_PER_LAYER}。 */
+  readonly polylines: readonly PolylineSpec[];
+}
+
+/** 单层折线数量上限。 */
+export const MAX_POLYLINES_PER_LAYER = 10_000;
+
+/** 单条折线顶点数上限。 */
+export const MAX_POLYLINE_VERTICES = 100_000;
+
+/** 支持原子替换与整层样式调整的折线图层句柄。 */
+export interface PolylineLayerHandle extends LayerHandle {
+  /** 判别折线句柄。 */
+  readonly type: 'polyline';
+  /** 当前渲染的折线条数。 */
+  readonly count: number;
+  /** 原子替换折线；失败或取消时保留旧折线。 */
+  setData(polylines: readonly PolylineSpec[], options?: OperationOptions): Promise<void>;
+  /** 整层调整样式；合法取值见 {@link PolylineLayerStyle}。 */
+  setStyle(style: PolylineLayerStyle): void;
+}
+
 /** 图层管理器返回的只读图层快照。 */
 export interface LayerInfo {
   /** 图层 id。 */
@@ -475,9 +540,11 @@ export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayer
         ? ModelLayerHandle
         : TSpec extends PointsLayerSpec
           ? PointsLayerHandle
-          : TSpec extends Tiles3dLayerSpec
-            ? LayerHandle
-            : LayerHandle;
+          : TSpec extends PolylineLayerSpec
+            ? PolylineLayerHandle
+            : TSpec extends Tiles3dLayerSpec
+              ? LayerHandle
+              : LayerHandle;
 
 /** 地图实例拥有的图层管理接口。 */
 export interface LayerManager {

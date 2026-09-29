@@ -14,6 +14,7 @@
 | 加载城市/倾斜摄影等 3D Tiles                     | [3D Tiles 图层](./tiles3d-layer.md)         | 加载、显隐、基础 LOD、取消和释放                                |
 | 放置单个 glTF / GLB 模型                         | [静态模型图层](./model-layer.md)            | 位置/朝向、颜色叠加、外观策略、就地变换与并发加载限制           |
 | 批量渲染点位或导入 CSV                           | [点位图层](./points-layer.md)               | `type: 'points'`、`setData()`、`parseCsv()`、`readPointCsv()`   |
+| 画航线、轨迹、链路等批量线要素                   | [折线图层](./polyline-layer.md)             | `type: 'polyline'`、内置材质、`setData()` / `setStyle()`        |
 | 点击 / 悬停拾取地图对象                          | [拾取交互](./picking.md)                    | `map.picking.on()`、`PickingHit`、拾取标记与悬停节流            |
 | 设置 XYZ 底图、相机、地形或采样高程              | [地图控制](./map-controls.md)               | `map.basemap`、`map.camera`、`map.terrain`、`sample()`          |
 | 运行时切换 2D / 3D 场景                          | [2D / 3D 场景切换](./scene-mode.md)         | `map.scene.setMode()`、`mode`、`morphing`                       |
@@ -46,4 +47,4 @@ await map.destroy();
 
 ## 已发布范围
 
-当前 alpha 包已发布地图生命周期、画布快照、场景模式切换、GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles、静态模型、点位图层、拾取交互、实时水位线、XYZ 底图、相机、地形与地形采样、地图坐标转换、渲染质量、空间计算（量算 / 判断 / CRS 转换）、CSV 解析、数据管线。动态实体、CZML、Worker 池、大数据渲染器、绘制、材质和空间分析尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。
+当前 alpha 包已发布地图生命周期、画布快照、场景模式切换、折线图层、GeoJSON、WMS、TMS、WMTS、单图影像、3D Tiles、静态模型、点位图层、拾取交互、实时水位线、XYZ 底图、相机、地形与地形采样、地图坐标转换、渲染质量、空间计算（量算 / 判断 / CRS 转换）、CSV 解析、数据管线。动态实体、CZML、Worker 池、大数据渲染器、绘制、材质和空间分析尚未提供稳定 SDK 方法；准确状态以[功能状态与路线图](./capability-status.md)为准。

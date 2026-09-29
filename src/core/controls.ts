@@ -85,10 +85,25 @@ export interface SceneController {
   setMode(mode: MapSceneMode, duration?: number): Promise<void>;
 }
 
+/**
+ * 画布快照的可移植形状。
+ *
+ * 浏览器终端下就是真实的 `HTMLCanvasElement`；这里只声明 SDK 用到的成员，
+ * 让非 DOM 终端（Worker、原生宿主、其它渲染引擎）也能消费截图结果。
+ */
+export interface CaptureCanvasLike {
+  /** 画布像素宽度。 */
+  readonly width: number;
+  /** 画布像素高度。 */
+  readonly height: number;
+  /** 导出为 data URL；宿主不提供该能力时省略。 */
+  toDataURL?(type?: string, quality?: number): string;
+}
+
 /** 画布快照；`canvas` 是设备像素分辨率的离屏副本，可直接导出或绘制。 */
 export interface FrameCapture {
-  /** 离屏画布副本。 */
-  readonly canvas: HTMLCanvasElement;
+  /** 离屏画布副本；浏览器终端下为 `HTMLCanvasElement`。 */
+  readonly canvas: CaptureCanvasLike;
   /** 画布像素宽度。 */
   readonly width: number;
   /** 画布像素高度。 */

@@ -1,4 +1,8 @@
-export { MAX_POINT_LAYER_POINTS } from '../layers/contracts.js';
+export {
+  MAX_POINT_LAYER_POINTS,
+  MAX_POLYLINES_PER_LAYER,
+  MAX_POLYLINE_VERTICES,
+} from '../layers/contracts.js';
 export { wmsFilter } from '../cesium/layers/wms-filter.js';
 export type {
   GeoJsonLayerHandle,
@@ -27,6 +31,11 @@ export type {
   PointsLayerHandle,
   PointsLayerSpec,
   PointsLayerStyle,
+  PolylineLayerHandle,
+  PolylineLayerSpec,
+  PolylineLayerStyle,
+  PolylineMaterialKind,
+  PolylineSpec,
   SingleImageLayerSpec,
   SingleImageRectangle,
   Tiles3dLayerSpec,

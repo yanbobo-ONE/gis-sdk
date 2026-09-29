@@ -55,6 +55,7 @@ export default defineConfig({
             { text: '3D Tiles 图层', link: '/guide/tiles3d-layer' },
             { text: '静态模型图层', link: '/guide/model-layer' },
             { text: '点位图层与 CSV 导入', link: '/guide/points-layer' },
+            { text: '折线图层与内置材质', link: '/guide/polyline-layer' },
           ],
         },
         {
@@ -100,6 +101,7 @@ export default defineConfig({
             { text: '3D Tiles 图层', link: '/guide/tiles3d-layer' },
             { text: '静态模型图层', link: '/guide/model-layer' },
             { text: '点位图层与 CSV 导入', link: '/guide/points-layer' },
+            { text: '折线图层与内置材质', link: '/guide/polyline-layer' },
             { text: '实时数据导航', link: '/guide/data-pipeline' },
             { text: '有界数据管线', link: '/guide/data-pipeline-core' },
             { text: 'Worker / MessagePort 输入', link: '/guide/data-pipeline-message-input' },

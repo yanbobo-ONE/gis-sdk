@@ -20,6 +20,7 @@
 - 影像图层与底图的远端失败可观测：累计错误计数，并只上报首个失败；
 - 纯计算的空间能力：量算（距离/面积/方位/包围盒/质心/最近点）、点面判断与 CRS 转换（含 CGCS2000 高斯带）；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
+- 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 类型化拾取交互（`map.picking`）：点击与悬停命中信息、地表经纬高，悬停按帧合并避免卡顿；
 - 实时水位线与时间戳守卫：乱序样本按时间释放、精确对象共同覆盖、双阈值追赶与超前样本隔离；
 - 实时会话门禁与重同步控制器：旧会话迟到包丢弃、序列断档合并请求与有界重试；
@@ -127,6 +128,7 @@ async function disposeMap() {
 - [渲染质量与自动降档](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/quality.md)
 - [空间计算与坐标转换](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/spatial-analysis.md)
 - [点位图层与 CSV 导入](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/points-layer.md)
+- [折线图层与内置材质](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/polyline-layer.md)
 - [拾取交互](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/picking.md)
 - [实时水位线](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/realtime-waterline.md)
 - [会话门禁与重同步](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/realtime-session.md)
@@ -150,6 +152,7 @@ async function disposeMap() {
 | 3D Tiles                                       | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                                                                                      |
 | 静态模型                                       | 可用                   | `map.layers.add({ type: 'model', url, position, ... })`，支持 `setTransform()`、`setColor()`、`setAppearance()` 与 `headingOffset`，并发上限由 `createMap({ quality })` 控制 |
 | 点位图层与 CSV 导入                            | 可用                   | `map.layers.add({ type: 'points', points })` 支持 `setData()` / `setStyle()`；`@yanbobo/gis-sdk/core` 的 `parseCsv()`、`readPointCsv()` 解析点位表                           |
+| 折线图层                                       | 可用                   | `map.layers.add({ type: 'polyline', polylines })`：五种内置材质（solid/glow/outline/arrow/dash）、`setData()` / `setStyle()`                                                 |
 | 拾取交互                                       | 可用                   | `map.picking.on('click' \| 'hover')`，命中信息含图层与对象 id；悬停按帧合并、相机移动期间暂停                                                                                |
 | 坐标转换                                       | 可用                   | `map.coordinates`：`toWorld`、`toGeoPosition`、`toWindow`、`pickGeoPosition`，未命中返回 `undefined`                                                                         |
 | 地形采样                                       | 可用                   | `map.terrain.sample(points, options?)`：分批并发、缓存、取消与错误码                                                                                                         |

@@ -25,6 +25,7 @@ export type {
 export type {
   BasemapController,
   BasemapType,
+  CaptureCanvasLike,
   CaptureOptions,
   FrameCapture,
   MapSceneMode,

@@ -8,6 +8,7 @@
 - 增加类型化坐标转换 `map.coordinates`、地形高度采样 `map.terrain.sample()`、渲染质量档与按帧率自动降档（`createMap({ quality })`、`map.quality`），并让模型并发上限统一由质量档控制。
 - 增加影像图层与底图的远端失败可观测性：累计错误计数，只上报首个失败（图层事件 `error` 与 `map:error`）。
 - 增加空间计算层（`/core`，零 Cesium 纯函数）：量算、空间判断与 CRS 坐标转换（含 CGCS2000 高斯带），并定稿 `map.analysis` 契约（尚未挂到地图实例）。
+- 增加折线图层与五种内置材质：PolylineCollection 批量渲染、逐条样式覆盖、原子替换与整层样式调整；画布快照契约改为可移植形状，core 层不再依赖 DOM 类型。
 - 增加运行时场景模式切换 `map.scene.setMode()`：形变完成结算、同模式立即结算、被取代语义与销毁处理。
 - 增加画布快照 `map.capture()`：postRender 同帧拷贝、降采样判空、重试与超时返回 undefined。
 - 增加实时会话门禁与重同步控制器：旧会话迟到包丢弃、序列断档自动转入快照等待、重复请求合并与有界重试。

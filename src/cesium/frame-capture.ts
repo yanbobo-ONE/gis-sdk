@@ -1,6 +1,6 @@
 import type { Viewer } from 'cesium';
 
-import type { CaptureOptions, FrameCapture } from '../core/controls.js';
+import type { CaptureCanvasLike, CaptureOptions, FrameCapture } from '../core/controls.js';
 
 /** 默认等待渲染的毫秒上限。 */
 const DEFAULT_TIMEOUT_MS = 400;
@@ -142,7 +142,7 @@ export function captureViewerFrame(
         const captured = copy(source);
         if (captured) {
           finish({
-            canvas: captured as unknown as HTMLCanvasElement,
+            canvas: captured as unknown as CaptureCanvasLike,
             width: captured.width,
             height: captured.height,
           });
