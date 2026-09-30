@@ -217,4 +217,7 @@ pnpm example:build
 `example:build` 会把当前 SDK 打成 `.tgz`，安装到隔离的 Vanilla 应用，复制 Cesium
 Workers、Assets 和 Widgets 后再执行 Vite 构建，避免示例误用仓库源码掩盖发布包问题。
 
+发版（手改版本号 → 六项门禁 → `pnpm release` → 修 dist-tag → 推 tag → 验证发布）的完整步骤与实测坑见
+[发版清单](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/research/release-checklist.md)。
+
 当前仓库使用 `UNLICENSED`，在明确开源或商业授权方案前不得把源码或 npm 包视为开放许可证软件。
