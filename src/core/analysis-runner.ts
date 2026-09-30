@@ -71,8 +71,13 @@ export interface AnalysisControllerOptions {
   readonly slopeAspectSamples?: number;
 }
 
-/** 内置工具的只读描述；名称与说明面向使用者，不在代码里做分支判断。 */
-const BUILTIN_TOOLS: readonly AnalysisToolDescriptor[] = Object.freeze([
+/**
+ * 内置分析工具的只读描述。
+ *
+ * 名称与说明面向使用者，不在代码里做分支判断；也可以在 Worker 场景把它传给
+ * `createAnalysisWorkerClient({ descriptors })`，让主线程的 `list()` 与 Worker 侧一致。
+ */
+export const analysisTools: readonly AnalysisToolDescriptor[] = Object.freeze([
   {
     id: 'convex-hull',
     source: 'builtin',
@@ -584,7 +589,7 @@ export function createAnalysisController(
 
   return {
     list() {
-      return BUILTIN_TOOLS;
+      return analysisTools;
     },
     async run<T extends AnalysisToolId>(tool: T, input: AnalysisInputMap[T], runOptions: AnalysisRunOptions = {}) {
       const signal = runOptions.signal;

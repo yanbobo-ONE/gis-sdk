@@ -144,6 +144,33 @@ export type {
 } from '../core/realtime-socket.js';
 
 export { createAnalysisController } from '../core/analysis-runner.js';
+export { analysisTools } from '../core/analysis-runner.js';
+export { createAnalysisWorkerClient, createAnalysisWorkerHost } from '../core/analysis-worker-client.js';
+export type {
+  AnalysisWorkerClientOptions,
+  AnalysisWorkerController,
+  AnalysisWorkerHost,
+  AnalysisWorkerHostOptions,
+} from '../core/analysis-worker-client.js';
+export { GIS_ERROR_CODES, isGisErrorCode } from '../core/errors.js';
+export {
+  createAnalysisWorkerCancel,
+  createAnalysisWorkerRequest,
+  fromAnalysisWorkerFailure,
+  isAnalysisWorkerCancel,
+  isAnalysisWorkerRequest,
+  isAnalysisWorkerResponse,
+  toAnalysisWorkerFailure,
+  toAnalysisWorkerSuccess,
+} from '../core/analysis-worker-protocol.js';
+export type {
+  AnalysisWorkerCancel,
+  AnalysisWorkerFailure,
+  AnalysisWorkerPort,
+  AnalysisWorkerRequest,
+  AnalysisWorkerResponse,
+  AnalysisWorkerSuccess,
+} from '../core/analysis-worker-protocol.js';
 export type {
   BasemapDiagnostics,
   CameraDiagnostics,

@@ -28,6 +28,7 @@
 | 生成或解析 CZML（位置 / 姿态 / 模型）             | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`positionsFromCzml`、`tracksFromCzml`          |
 | 接长连接：重连、心跳与按类型分发                       | [实时链路](./realtime-socket.md)            | `RealtimeSocketClient` 的 `connect()` / `subscribe()` / `stats`    |
 | 排查线上问题或做验收自检                           | [诊断快照](./diagnostics.md)                | `map.diagnostics.snapshot()` 一次拿到状态、质量、图层与错误计数     |
+| 把重计算搬到 Worker 里执行                           | [Worker 执行接口](./analysis-worker.md)     | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()` 与消息协议 |
 | 回放倍率、暂停、倒放与水线限速                   | [仿真 / 回放时钟](./simulation-clock.md)    | `SimulationClock`、`advance()`、`setWatermark()`                   |
 | 按时刻取回放样本、插值与轨迹窗口                 | [回放时间轴](./replay-timeline.md)          | `ReplayTimeline` 的 `sampleAt()` / `window()` / `trackAt()`        |
 | 消化高频业务消息                                 | [实时数据导航](./data-pipeline.md)          | 有界队列、Worker/MessagePort 输入、帧预算调度                      |
