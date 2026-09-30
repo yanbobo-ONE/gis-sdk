@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createVanillaExampleController } from '../examples/vanilla/src/example-controller.js';
-import type { AnalysisController, AnalysisResultMap, CameraController } from '../src/entries/core.js';
+import type {
+  AnalysisController,
+  AnalysisResultMap,
+  CameraController,
+} from '../src/entries/core.js';
 import type {
   CzmlLayerHandle,
   GeoJsonLayerSpec,
@@ -52,26 +56,30 @@ function createHarness() {
     setVisible: vi.fn(),
     setData: vi.fn(() => Promise.resolve()),
   };
-  const add = vi.fn((spec: GeoJsonLayerSpec | WmsLayerSpec | { readonly type: 'points' } | { readonly type: 'czml' }) => {
-    if (spec.type === 'points') {
-      return Promise.resolve(points as unknown as PointsLayerHandle);
-    }
-    if (spec.type === 'czml') {
-      return Promise.resolve(czml as unknown as CzmlLayerHandle);
-    }
-    return Promise.resolve(spec.type === 'geojson' ? geoJson : wms);
-  });
+  const add = vi.fn(
+    (
+      spec:
+        GeoJsonLayerSpec | WmsLayerSpec | { readonly type: 'points' } | { readonly type: 'czml' },
+    ) => {
+      if (spec.type === 'points') {
+        return Promise.resolve(points as unknown as PointsLayerHandle);
+      }
+      if (spec.type === 'czml') {
+        return Promise.resolve(czml as unknown as CzmlLayerHandle);
+      }
+      return Promise.resolve(spec.type === 'geojson' ? geoJson : wms);
+    },
+  );
   const environmentSet = vi.fn();
   const environmentClearAll = vi.fn();
-  const lineOfSight = vi.fn(
-    (): Promise<AnalysisResultMap['line-of-sight']> =>
-      Promise.resolve({
-        visible: false,
-        minClearanceMeters: -12.5,
-        blockedAtIndex: 7,
-        sampleCount: 31,
-        algorithmVersion: 1,
-      }),
+  const lineOfSight = vi.fn((): Promise<AnalysisResultMap['line-of-sight']> =>
+    Promise.resolve({
+      visible: false,
+      minClearanceMeters: -12.5,
+      blockedAtIndex: 7,
+      sampleCount: 31,
+      algorithmVersion: 1,
+    }),
   );
   const slopeAspect = vi.fn(() =>
     Promise.resolve({
@@ -82,14 +90,32 @@ function createHarness() {
       algorithmVersion: 1,
     }),
   );
-  const analysisRun = vi.fn((tool: string) => (tool === 'line-of-sight' ? lineOfSight() : slopeAspect()));
+  const analysisRun = vi.fn((tool: string) =>
+    tool === 'line-of-sight' ? lineOfSight() : slopeAspect(),
+  );
+  const terrainSet = vi.fn(() => Promise.resolve());
+  const terrain = {
+    type: 'ellipsoid' as 'cesium-terrain' | 'ellipsoid',
+    pending: false,
+    ready: Promise.resolve(),
+    set: terrainSet,
+  };
+
   const map = {
     state: 'ready' as const,
     camera: {
-      view: { longitude: 116.391, latitude: 39.907, height: 1_234, heading: 12, pitch: -45, roll: 0 },
+      view: {
+        longitude: 116.391,
+        latitude: 39.907,
+        height: 1_234,
+        heading: 12,
+        pitch: -45,
+        roll: 0,
+      },
       metersPerPixel: 120,
     } as unknown as Pick<CameraController, 'view' | 'metersPerPixel'>,
     environment: { set: environmentSet, clearAll: environmentClearAll },
+    terrain,
     analysis: { list: vi.fn(() => []), run: analysisRun } as unknown as AnalysisController,
     layers: {
       add,
@@ -107,7 +133,30 @@ function createHarness() {
     },
     destroy: vi.fn(() => Promise.resolve()),
   };
-  const createMap = vi.fn(() => map);
+  const createMap = vi.fn(
+    (options: {
+      readonly container: string | HTMLElement;
+      readonly cesiumBaseUrl: string;
+      readonly terrain?: { readonly type: 'cesium-terrain'; readonly url: string };
+    }) => {
+      // 桩按真实语义建模 pending 过渡：创建后仍在途，元数据兑现后转 false。
+      if (options.terrain) {
+        terrain.type = 'cesium-terrain';
+        terrain.pending = true;
+        terrain.ready = new Promise<void>((resolve) => {
+          setTimeout(() => {
+            terrain.pending = false;
+            resolve();
+          }, 0);
+        });
+      } else {
+        terrain.type = 'ellipsoid';
+        terrain.pending = false;
+        terrain.ready = Promise.resolve();
+      }
+      return map;
+    },
+  );
   const filter = { op: 'eq' as const, property: 'status', value: 'ACTIVE' };
   const createActiveFilter = vi.fn(() => filter);
 
@@ -124,6 +173,7 @@ function createHarness() {
     map,
     points,
     slopeAspect,
+    terrainSet,
     wms,
   };
 }
@@ -136,6 +186,7 @@ describe('Vanilla example controller', () => {
       createActiveFilter: harness.createActiveFilter,
       geoJsonUrl: '/data/operations.geojson',
       wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
     });
 
     await controller.start('map');
@@ -176,6 +227,7 @@ describe('Vanilla example controller', () => {
       createActiveFilter: harness.createActiveFilter,
       geoJsonUrl: '/data/operations.geojson',
       wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
     });
     await controller.start('map');
 
@@ -206,6 +258,7 @@ describe('Vanilla example controller', () => {
       createActiveFilter: harness.createActiveFilter,
       geoJsonUrl: '/data/operations.geojson',
       wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
     });
     await controller.start('map');
 
@@ -245,6 +298,7 @@ describe('Vanilla example controller', () => {
       createActiveFilter: harness.createActiveFilter,
       geoJsonUrl: '/data/operations.geojson',
       wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
     });
     await controller.start('map');
     controller.setEnvironment('rain');
@@ -265,6 +319,7 @@ describe('Vanilla example controller', () => {
       createActiveFilter: harness.createActiveFilter,
       geoJsonUrl: '/data/operations.geojson',
       wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
     });
     await controller.start('map');
 
@@ -291,6 +346,7 @@ describe('Vanilla example controller', () => {
       createActiveFilter: harness.createActiveFilter,
       geoJsonUrl: '/data/operations.geojson',
       wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
     });
     await controller.start('map');
 
@@ -299,5 +355,29 @@ describe('Vanilla example controller', () => {
     expect(harness.analysisRun).toHaveBeenCalledTimes(20);
     expect(harness.analysisRun.mock.calls[0]?.[0]).toBe('slope-aspect');
     expect(controller.snapshot().batch).toBe('完成 20 / 失败 0 / 总数 20');
+  });
+
+  it('declares terrain at map creation, awaits ready, then falls back to ellipsoid', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+    });
+    await controller.start('map');
+
+    await controller.createWithTerrain();
+
+    expect(harness.createMap).toHaveBeenNthCalledWith(2, {
+      container: 'map',
+      cesiumBaseUrl: '/cesium/',
+      terrain: { type: 'cesium-terrain', url: '/__test/terrain/' },
+    });
+    expect(harness.terrainSet).toHaveBeenCalledWith({ type: 'ellipsoid' });
+    expect(controller.snapshot().terrain).toBe(
+      '创建期声明 → cesium-terrain / 加载中 pending=true / 兑现后 pending=false',
+    );
   });
 });

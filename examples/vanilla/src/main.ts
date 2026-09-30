@@ -29,12 +29,14 @@ const pointsValue = element('points-value');
 const clustersValue = element('clusters-value');
 const czmlValue = element('czml-value');
 const batchValue = element('batch-value');
+const terrainValue = element('terrain-value');
 
 const controller = createVanillaExampleController({
   createMap,
   createActiveFilter: () => wmsFilter.eq('status', 'ACTIVE'),
   geoJsonUrl: '/data/operations.geojson',
   wmsUrl: '/wms',
+  terrainUrl: '/__test/terrain/',
 });
 
 controller.subscribe((snapshot) => {
@@ -53,6 +55,7 @@ controller.subscribe((snapshot) => {
   clustersValue.textContent = snapshot.clusters ?? '未聚合';
   czmlValue.textContent = snapshot.czml ?? '未加载';
   batchValue.textContent = snapshot.batch ?? '未运行';
+  terrainValue.textContent = snapshot.terrain ?? '未验证';
   if (snapshot.error) {
     operationMessage.textContent = snapshot.error;
     operationMessage.dataset.kind = 'error';
@@ -146,6 +149,10 @@ element('run-batch').addEventListener('click', () => {
 
 element('restart-map').addEventListener('click', () => {
   void runOperation('地图销毁并重建', () => controller.restart());
+});
+
+element('create-with-terrain').addEventListener('click', () => {
+  void runOperation('创建期声明地形', () => controller.createWithTerrain());
 });
 
 window.addEventListener('beforeunload', () => {

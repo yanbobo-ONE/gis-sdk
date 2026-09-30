@@ -1,13 +1,10 @@
-import {
-  clusterPoints,
-  czmlFromPositions,
-  runAnalysisBatch,
-} from '@yanbobo/gis-sdk/core';
+import { clusterPoints, czmlFromPositions, runAnalysisBatch } from '@yanbobo/gis-sdk/core';
 import type {
   AnalysisController,
   CameraController,
   EnvironmentController,
   GeoPoint,
+  TerrainController,
 } from '@yanbobo/gis-sdk/core';
 import type { LayerManager } from '@yanbobo/gis-sdk/layers';
 
@@ -68,6 +65,8 @@ interface ExampleMapLike {
   /** 直接复用 SDK 的相机读数字段：示例同时验证发布包的类型可用。 */
   readonly camera: Pick<CameraController, 'view' | 'metersPerPixel'>;
   readonly environment: Pick<EnvironmentController, 'set' | 'clearAll'>;
+  /** 创建期地形的读数与切换：示例验证 `ready` / `pending` / `set` 确实随发布包一起可用。 */
+  readonly terrain: Pick<TerrainController, 'type' | 'pending' | 'ready' | 'set'>;
   readonly analysis: AnalysisController;
   readonly layers: Pick<LayerManager, 'add' | 'list' | 'remove'>;
   readonly raw: {
@@ -83,10 +82,13 @@ interface ExampleDependencies {
   readonly createMap: (options: {
     readonly container: string | HTMLElement;
     readonly cesiumBaseUrl: string;
+    readonly terrain?: { readonly type: 'cesium-terrain'; readonly url: string };
   }) => ExampleMapLike;
   readonly createActiveFilter: () => unknown;
   readonly geoJsonUrl: string;
   readonly wmsUrl: string;
+  /** 本地地形元数据 fixture 的根地址；验收台用它验证创建期地形真的发出请求。 */
+  readonly terrainUrl: string;
 }
 
 /** 面板上的环境预设；`clear` 表示清空全部环境效果。 */
@@ -113,6 +115,8 @@ export interface VanillaExampleSnapshot {
   readonly czml: string | undefined;
   /** 批量分析读数：`完成 / 失败 / 总数`；没跑过时为 `undefined`。 */
   readonly batch: string | undefined;
+  /** 创建期地形读数：`已安装类型 / pending / ready 结果`；没验过时为 `undefined`。 */
+  readonly terrain: string | undefined;
   readonly error?: string;
 }
 
@@ -131,6 +135,8 @@ export interface VanillaExampleController {
   clusterPoints(): void;
   addCzmlLayer(): Promise<void>;
   runBatchAnalysis(): Promise<void>;
+  /** 用 `createMap({ terrain })` 重建地图，等 `ready` 兑现后记录读数并切回椭球地形。 */
+  createWithTerrain(): Promise<void>;
   setWmsFilterEnabled(enabled: boolean): Promise<void>;
   reloadWms(): Promise<void>;
   snapshot(): VanillaExampleSnapshot;
@@ -197,6 +203,7 @@ export function createVanillaExampleController(
   let clusters: string | undefined;
   let czml: string | undefined;
   let batch: string | undefined;
+  let terrain: string | undefined;
   let pointsHandle: PointsHandleLike | undefined;
   let pointsLabelsEnabled = true;
   let currentError: string | undefined;
@@ -217,6 +224,7 @@ export function createVanillaExampleController(
       clusters,
       czml,
       batch,
+      terrain,
     };
     return currentError ? { ...value, error: currentError } : value;
   };
@@ -235,7 +243,10 @@ export function createVanillaExampleController(
     return { geoJson, map, wms };
   };
 
-  const start = async (nextContainer: string | HTMLElement) => {
+  const start = async (
+    nextContainer: string | HTMLElement,
+    options: { terrain?: boolean; onCreated?: (created: ExampleMapLike) => void } = {},
+  ) => {
     if (state === 'ready' || state === 'starting') {
       return;
     }
@@ -247,8 +258,13 @@ export function createVanillaExampleController(
     const nextMap = dependencies.createMap({
       container: nextContainer,
       cesiumBaseUrl: '/cesium/',
+      ...(options.terrain
+        ? { terrain: { type: 'cesium-terrain', url: dependencies.terrainUrl } }
+        : {}),
     });
     map = nextMap;
+    // 同步回调：调用方在这里读到的地形 `pending` 才是"仍在加载"的真实状态，不会被后续 await 掩盖。
+    options.onCreated?.(nextMap);
 
     try {
       const nextGeoJson = await nextMap.layers.add({
@@ -290,6 +306,7 @@ export function createVanillaExampleController(
       clusters = undefined;
       czml = undefined;
       batch = undefined;
+      terrain = undefined;
       pointsHandle = undefined;
       pointsLabelsEnabled = true;
       const target = nextMap.raw.viewer.dataSources?.get(0) ?? nextGeoJson;
@@ -330,6 +347,29 @@ export function createVanillaExampleController(
       await start(restartContainer);
     },
     destroy,
+    /**
+     * 用 `createMap({ terrain })` 重建地图：先证明创建期声明的地形地址真的被请求、`ready` 可 await，
+     * 再切回椭球地形（本地 fixture 只提供元数据，没有瓦片数据）。
+     */
+    async createWithTerrain() {
+      if (!container) {
+        throw new Error('The Vanilla example has not been started.');
+      }
+      const restartContainer = container;
+      let pendingWhileLoading = false;
+      await destroy();
+      await start(restartContainer, {
+        terrain: true,
+        onCreated: (created) => {
+          pendingWhileLoading = created.terrain.pending;
+        },
+      });
+      const target = requireReady().map.terrain;
+      await target.ready;
+      terrain = `创建期声明 → ${target.type} / 加载中 pending=${String(pendingWhileLoading)} / 兑现后 pending=${String(target.pending)}`;
+      await requireReady().map.terrain.set({ type: 'ellipsoid' });
+      notify();
+    },
     async replaceGeoJson() {
       const handles = requireReady();
       await handles.geoJson.setData(replacementGeoJson);
@@ -390,7 +430,7 @@ export function createVanillaExampleController(
         generated.push({
           id: `pt-${String(index)}`,
           // 在机场周边铺一片方形点位，便于观察聚合效果。
-          longitude: 116.2 + ((index % 20) * 0.01),
+          longitude: 116.2 + (index % 20) * 0.01,
           latitude: 39.8 + Math.floor(index / 20) * 0.008,
           label: `P${String(index)}`,
         });

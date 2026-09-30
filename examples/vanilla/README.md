@@ -15,4 +15,6 @@ npm --prefix .tmp/vanilla-consumer run dev -- --host 127.0.0.1 --port 4175
 
 面板里的 WMS 图层带了一个自定义鉴权头（`X-Example-Auth`），本地 fixture 会把它记进 `/__test/wms-state`；访问该地址能看到 `lastAuthHeader`，用来验证"请求头真的发到了服务端"。改 fixture 或鉴权逻辑后可以据此回归。
 
-验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析、相机位姿读取、点位图层与标签（含 `labelCount` 读数与开关）、按 `metersPerPixel` 驱动的点聚合、CZML 轨迹图层，以及 20 点的批量坡度坡向分析。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。
+"创建期声明地形"按钮用 `createMap({ terrain })` 重建地图，指向本地地形 fixture `/__test/terrain/`：该 fixture 只提供 `layer.json` 元数据，访问 `/__test/terrain-state` 能看到 `layerJsonRequests`，用来验证创建期声明的地址真的被请求。瓦片数据不在 fixture 范围内，所以验收流程在 `map.terrain.ready` 兑现、记录读数之后会立刻切回椭球地形，面板上的"创建期地形"一行会写出 `类型 / 加载中 pending / 兑现后 pending` 三个读数。
+
+验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析、相机位姿读取、点位图层与标签（含 `labelCount` 读数与开关）、按 `metersPerPixel` 驱动的点聚合、CZML 轨迹图层、20 点的批量坡度坡向分析，以及创建期地形声明与 `ready` 语义。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。

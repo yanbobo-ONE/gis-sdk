@@ -49,8 +49,14 @@
           </div>
           <button id="run-line-of-sight" type="button">通视分析（两点）</button>
           <dl class="readout">
-            <div><dt>相机</dt><dd id="camera-value">未读取</dd></div>
-            <div><dt>通视</dt><dd id="line-of-sight-value">未分析</dd></div>
+            <div>
+              <dt>相机</dt>
+              <dd id="camera-value">未读取</dd>
+            </div>
+            <div>
+              <dt>通视</dt>
+              <dd id="line-of-sight-value">未分析</dd>
+            </div>
           </dl>
         </section>
 
@@ -101,10 +107,22 @@
           <button id="add-czml" type="button">加载 CZML 轨迹</button>
           <button id="run-batch" type="button">批量分析（20 点坡度坡向）</button>
           <dl class="readout">
-            <div><dt>点位</dt><dd id="points-value">未添加</dd></div>
-            <div><dt>聚合</dt><dd id="clusters-value">未聚合</dd></div>
-            <div><dt>CZML</dt><dd id="czml-value">未加载</dd></div>
-            <div><dt>批量</dt><dd id="batch-value">未运行</dd></div>
+            <div>
+              <dt>点位</dt>
+              <dd id="points-value">未添加</dd>
+            </div>
+            <div>
+              <dt>聚合</dt>
+              <dd id="clusters-value">未聚合</dd>
+            </div>
+            <div>
+              <dt>CZML</dt>
+              <dd id="czml-value">未加载</dd>
+            </div>
+            <div>
+              <dt>批量</dt>
+              <dd id="batch-value">未运行</dd>
+            </div>
           </dl>
         </section>
 
@@ -114,6 +132,13 @@
             <h2>资源生命周期</h2>
           </div>
           <button id="restart-map" class="secondary" type="button">销毁并重建地图</button>
+          <button id="create-with-terrain" type="button">创建期声明地形（本地 fixture）</button>
+          <dl class="readout">
+            <div>
+              <dt>创建期地形</dt>
+              <dd id="terrain-value">未验证</dd>
+            </div>
+          </dl>
         </section>
 
         <p id="operation-message" class="operation-message" role="status">正在创建地图...</p>
