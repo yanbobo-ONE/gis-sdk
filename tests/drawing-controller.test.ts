@@ -451,4 +451,62 @@ describe('CesiumDrawingController', () => {
     expect(controller.editing).toBeUndefined();
     expect(controller.mode).toBe('point');
   });
+
+  it('snaps picked positions to completed vertices when enabled', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+    const completed: DrawGeometry[] = [];
+    controller.on('complete', (geometry) => completed.push(geometry));
+
+    // 先画一条折线：(10,0) → (12,0)。
+    controller.start('polyline');
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(10));
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(12));
+    cesium.actions.get(cesium.LEFT_DOUBLE_CLICK)?.();
+    expect(completed).toHaveLength(1);
+
+    // 吸附关闭时落点按拾取结果走（11）；随后移除它，避免它自己成为吸附目标。
+    controller.start('point');
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(11));
+    expect(completed[1]?.positions[0]).toEqual({ longitude: 11, latitude: 0 });
+    controller.removeLatestCompleted();
+
+    // 打开吸附：11 距离顶点 10 只有 1 像素，落点应吸到 10。
+    controller.setSnap({ enabled: true, pixelTolerance: 12 });
+    expect(controller.snap).toEqual({ enabled: true, pixelTolerance: 12, includeEdges: false });
+    controller.start('point');
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(11));
+    cesium.actions.get(cesium.LEFT_DOUBLE_CLICK)?.();
+
+    // 关掉吸附后回到拾取结果。
+    controller.setSnap({ enabled: false });
+    controller.start('point');
+    cesium.actions.get(cesium.LEFT_CLICK)?.(screen(11));
+    cesium.actions.get(cesium.LEFT_DOUBLE_CLICK)?.();
+    expect(completed[completed.length - 1]?.positions[0]).toEqual({ longitude: 11, latitude: 0 });
+  });
+
+  it('snaps a dragged vertex to its neighbours and rejects invalid tolerance', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+    expect(() => {
+      controller.setSnap({ enabled: true, pixelTolerance: 0 });
+    }).toThrow(expect.objectContaining({ code: 'INVALID_DRAWING_INPUT' }));
+
+    controller.setSnap({ enabled: true, pixelTolerance: 12 });
+    controller.edit(polylineGeometry());
+    // 拖动第 3 个顶点（经度 12），光标落在 11：距离顶点 11（第二个顶点）最近，应吸过去。
+    cesium.actions.get(cesium.LEFT_DOWN)?.(screen(12));
+    cesium.actions.get(cesium.MOUSE_MOVE)?.(screen(11));
+
+    expect(controller.editing?.positions[2]).toEqual({ longitude: 11, latitude: 0 });
+  });
 });

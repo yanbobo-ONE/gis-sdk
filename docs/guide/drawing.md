@@ -97,6 +97,27 @@ const machine = new DrawingEditMachine(
 if (isEditableGeometry(candidate)) machine.begin({ id: 'shape-1', vertexIndex: 2 });
 ```
 
+## 吸附
+
+开启吸附后，落点与拖动会吸到**已完成图形**的顶点上（可选线段）：
+
+```ts
+map.drawing.setSnap({ enabled: true, pixelTolerance: 12, includeEdges: false });
+map.drawing.snap; // { enabled, pixelTolerance, includeEdges }
+```
+
+| 参数             | 默认值 | 说明                                                     |
+| ---------------- | ------ | -------------------------------------------------------- |
+| `enabled`        | 必填   | 是否启用吸附                                             |
+| `pixelTolerance` | `12`   | 屏幕像素阈值，1 到 64；按像素判定，缩放级别不影响手感     |
+| `includeEdges`   | `false`| 是否同时吸附到线段；默认只吸顶点，行为更可预测            |
+
+判定规则是**顶点优先**：阈值内有顶点就吸顶点，无论线段是否更近——密集折线上靠近交点时不会因为"线段更近"而错过顶点。线段候选的落点按屏幕比例在两端之间插值，经度走最短弧。
+
+吸附目标包括：已完成图形的顶点（与线段）、绘制过程中已确定的顶点、编辑会话中**除当前拖动顶点之外**的同图形顶点。因此拖动一个顶点可以精确对齐到相邻顶点，也能把新画的点吸回已有顶点做闭合。
+
+其它终端可以直接用 `/core` 的纯函数：`findSnapTarget(vertices, segments, cursor, options)` 与 `segmentsOf(vertices)` 只吃屏幕坐标与经纬高，不依赖渲染引擎。
+
 ## 已完成图形的管理
 
 完成的图形由控制器持有（默认样式：青色实线 + 顶点，预览为黄色虚线）：
@@ -111,6 +132,6 @@ map.drawing.clearCompleted(); // 全部清除
 ## 当前边界
 
 - **不做顶点增删**：编辑会话只能拖动已有顶点、整体移动点；插入与删除顶点仍需删除后重画。
-- **不做吸附与捕捉**：拖动与绘制都不吸附到已有图形顶点、边或地形表面。
+- **吸附范围限于 SDK 自己画的图形**：不会吸附到业务图层（GeoJSON / WMS 等）或地形表面；需要跨图层吸附时用 `/core` 的 `findSnapTarget()` 自己拼候选。
 - **不做贴地绘制**：预览与结果都用椭球高（`height` 默认 0）；需要贴地时先把几何交给地形采样（`map.terrain.sample()`）再渲染。
 - **不拦截相机操作**：绘制与编辑期间相机仍可拖动缩放；如需锁定，用 `map.raw.viewer.scene.screenSpaceCameraController.enableInputs = false`。

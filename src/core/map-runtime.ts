@@ -17,6 +17,7 @@ import type {
   CoordinateTransform,
   FrameCapture,
   DrawingEventMap,
+  DrawingSnapOptions,
   GeoPosition,
   MapDrawingController,
   MapSceneMode,
@@ -145,6 +146,13 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       },
       get editing() {
         return adapter.drawing.editing;
+      },
+      setSnap: (snapOptions: DrawingSnapOptions) => {
+        this.assertReady('drawing.setSnap');
+        adapter.drawing.setSnap(snapOptions);
+      },
+      get snap() {
+        return adapter.drawing.snap;
       },
       commitEdit: () => {
         this.assertReady('drawing.commitEdit');

@@ -11,14 +11,18 @@ import type { Cartesian2, Viewer } from 'cesium';
 import type {
   CoordinateTransform,
   DrawingEventMap,
+  DrawingSnapOptions,
   GeoPosition,
   MapDrawingController,
+  ResolvedDrawingSnapOptions,
 } from '../core/controls.js';
 import type { DrawGeometry, DrawMode, DrawRendererPort, DrawRenderValue } from '../core/drawing.js';
 import { DrawingStateMachine } from '../core/drawing.js';
 import { DrawingEditMachine } from '../core/drawing-edit.js';
 import type { DrawEditTarget } from '../core/drawing-edit.js';
 import { isEditableGeometry } from '../core/drawing-edit.js';
+import { findSnapTarget, resolveSnapOptions } from '../core/drawing-snap.js';
+import type { SnapSegment, SnapVertex } from '../core/drawing-snap.js';
 import { GisError } from '../core/errors.js';
 import type { Unsubscribe } from '../core/event-hub.js';
 
@@ -94,6 +98,14 @@ export class CesiumDrawingController implements MapDrawingController {
   private editPrimitives: DrawPrimitives | undefined;
   /** 是否正在拖动顶点：左键按下命中顶点后置位，抬起清位。 */
   private dragging = false;
+  /** 吸附配置；默认关闭，行为与未实现吸附时完全一致。 */
+  private snapOptions: ResolvedDrawingSnapOptions = { ...resolveSnapOptions(), enabled: false };
+  /** 已完成几何，按渲染句柄索引：吸附候选按需投影，移除时精确删除。 */
+  private readonly completedSnapSources = new Map<DrawPrimitives, DrawGeometry>();
+  /** 绘制中的已确定顶点（预览会带上光标位置，这里只留已确定的）。 */
+  private drawPreviewSnap: DrawGeometry | undefined;
+  /** 编辑会话中正在拖动的顶点下标，吸附时要排除它自身。 */
+  private editVertexIndex: number | undefined;
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') {
       return;
@@ -101,6 +113,7 @@ export class CesiumDrawingController implements MapDrawingController {
     if (this.dragging) {
       // 拖动中按 Esc 只回退这一次拖动，编辑会话继续。
       this.dragging = false;
+      this.editVertexIndex = undefined;
       this.editMachine.cancel();
     } else if (this.editGeometry) {
       this.cancelEdit();
@@ -145,7 +158,7 @@ export class CesiumDrawingController implements MapDrawingController {
         // 编辑会话期间左键用于拖动顶点，不再累积绘制顶点。
         return;
       }
-      const position = this.pick(movement.position);
+      const position = this.pick(movement.position, true);
       if (position) {
         this.machine.addVertex(position);
       }
@@ -153,14 +166,14 @@ export class CesiumDrawingController implements MapDrawingController {
     handler.setInputAction((movement: Movement) => {
       if (this.editGeometry) {
         if (this.dragging) {
-          const position = this.pick(movement.position);
+          const position = this.pick(movement.position, true);
           if (position) {
             this.editMachine.move(position);
           }
         }
         return;
       }
-      const position = this.pick(movement.position);
+      const position = this.pick(movement.position, true);
       if (position) {
         this.machine.previewPositions(position);
       }
@@ -173,6 +186,7 @@ export class CesiumDrawingController implements MapDrawingController {
         return;
       }
       this.dragging = false;
+      this.editVertexIndex = undefined;
       this.editMachine.end();
     }, ScreenSpaceEventType.LEFT_UP);
     handler.setInputAction((movement: Movement) => {
@@ -222,6 +236,25 @@ export class CesiumDrawingController implements MapDrawingController {
 
   get editing(): DrawGeometry | undefined {
     return this.editGeometry;
+  }
+
+  get snap(): ResolvedDrawingSnapOptions {
+    return this.snapOptions;
+  }
+
+  /**
+   * 设置吸附配置。
+   *
+   * 关闭吸附会立即丢弃已收集的候选；开启后在每次落点与拖动时按屏幕像素阈值吸附。
+   */
+  setSnap(options: DrawingSnapOptions): void {
+    this.assertActive('setSnap');
+    const resolved = resolveSnapOptions(options);
+    this.snapOptions = {
+      enabled: options.enabled,
+      pixelTolerance: resolved.pixelTolerance,
+      includeEdges: resolved.includeEdges,
+    };
   }
 
   /**
@@ -317,8 +350,11 @@ export class CesiumDrawingController implements MapDrawingController {
     handler.removeInputAction(ScreenSpaceEventType.RIGHT_CLICK);
     handler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
     this.dragging = false;
+    this.editVertexIndex = undefined;
     this.editGeometry = undefined;
     this.editOrigin = undefined;
+    this.drawPreviewSnap = undefined;
+    this.completedSnapSources.clear();
     if (this.editPrimitives) {
       this.remove(this.editPrimitives);
       this.editPrimitives = undefined;
@@ -348,6 +384,7 @@ export class CesiumDrawingController implements MapDrawingController {
       geometry.positions.length > 1 ? { id: EDIT_ID, vertexIndex: index } : { id: EDIT_ID };
     if (this.editMachine.begin(target)) {
       this.dragging = true;
+      this.editVertexIndex = geometry.positions.length > 1 ? index : undefined;
     }
   }
 
@@ -400,17 +437,63 @@ export class CesiumDrawingController implements MapDrawingController {
   }
 
   /** 屏幕坐标 → 地表经纬高；未命中地球时返回 `undefined`。 */
-  private pick(screen: Cartesian2 | undefined): GeoPosition | undefined {
+  private pick(screen: Cartesian2 | undefined, applySnap = false): GeoPosition | undefined {
     if (!screen) {
       return undefined;
     }
+    let position: GeoPosition | undefined;
     try {
-      return this.coordinates.pickGeoPosition({ x: screen.x, y: screen.y });
+      position = this.coordinates.pickGeoPosition({ x: screen.x, y: screen.y });
     } catch {
       return undefined;
     }
+    if (!position || !applySnap || !this.snapOptions.enabled) {
+      return position;
+    }
+    return this.snapPosition(screen, position);
   }
 
+  /**
+   * 把落点吸附到已完成图形与当前绘制顶点的最近候选上。
+   *
+   * 编辑会话中额外把"同一图形里除当前拖动顶点之外的顶点"作为候选，因此拖动时也能对齐到相邻顶点。
+   */
+  private snapPosition(screen: Cartesian2, fallback: GeoPosition): GeoPosition {
+    const candidates = this.collectSnapCandidates();
+    const hit = findSnapTarget(
+      candidates.vertices,
+      candidates.segments,
+      { x: screen.x, y: screen.y },
+      this.snapOptions,
+    );
+    return hit ? hit.position : fallback;
+  }
+
+  /** 收集当前所有吸附候选：已完成图形 + 绘制中的已确定顶点 + 编辑图形（排除拖动中的顶点）。 */
+  private collectSnapCandidates(): {
+    readonly vertices: SnapVertex[];
+    readonly segments: SnapSegment[];
+  } {
+    const geometries = [...this.completedSnapSources.values()];
+    if (this.drawPreviewSnap) {
+      geometries.push(this.drawPreviewSnap);
+    }
+    const editing = this.editGeometry;
+    const skipIndex = editing ? this.editVertexIndex : undefined;
+    if (editing) {
+      geometries.push({ mode: editing.mode, positions: editing.positions });
+    }
+    return projectSnapCandidates(geometries, this.coordinates, skipIndex);
+  }
+
+
+  /**
+   * 进入编辑会话。
+   *
+   * 传入几何会被复制，编辑过程与结果都不回写调用方对象；进入编辑会先取消进行中的绘制。
+   * 左键按下时按屏幕距离命中最近顶点（默认命中半径 12 像素），拖动中持续更新几何并抛出
+   * `edit` 事件，松开左键结束本次拖动但保留会话。
+   */
   private assertActive(operation: string): void {
     if (this.disposed) {
       throw new GisError('Drawing controller has been disposed.', {
@@ -424,12 +507,32 @@ export class CesiumDrawingController implements MapDrawingController {
   /** 渲染端口：预览与完成图形各用一组图元，用颜色与线型区分。 */
   private createRenderer(): DrawRendererPort<DrawPrimitives, DrawPrimitives> {
     return {
-      renderPreview: (value) => this.render(value, PREVIEW_STYLE, true),
-      renderCompleted: (value) => this.render(value, COMPLETED_STYLE, false),
+      renderPreview: (value) => {
+        // 预览的最后一个顶点是光标位置，只把已确定的顶点留作吸附候选。
+        // 候选只存几何副本，投影推迟到真正吸附时做，因此吸附关闭时几乎没有额外开销。
+        this.drawPreviewSnap =
+          value.positions.length > 1
+            ? {
+                mode: value.mode,
+                positions: value.positions.slice(0, -1).map((position) => ({ ...position })),
+              }
+            : undefined;
+        return this.render(value, PREVIEW_STYLE, true);
+      },
+      renderCompleted: (value) => {
+        const handle = this.render(value, COMPLETED_STYLE, false);
+        this.completedSnapSources.set(handle, {
+          mode: value.mode,
+          positions: value.positions.map((position) => ({ ...position })),
+        });
+        return handle;
+      },
       removePreview: (handle) => {
+        this.drawPreviewSnap = undefined;
         this.remove(handle);
       },
       removeCompleted: (handle) => {
+        this.completedSnapSources.delete(handle);
         this.remove(handle);
       },
     };
@@ -465,4 +568,55 @@ export class CesiumDrawingController implements MapDrawingController {
       handle.points.destroy();
     }
   }
+}
+
+/**
+ * 把一组几何投影成吸附候选。
+ *
+ * `skipIndex` 指定的顶点会被排除（编辑拖动时排除自身）；该顶点两侧的线段也随之断开——
+ * 这是刻意的取舍：宁可少一条候选，也不要吸附到"已经不在那里的线段"上。
+ */
+function projectSnapCandidates(
+  geometries: readonly DrawGeometry[],
+  coordinates: CoordinateTransform,
+  skipIndex: number | undefined,
+): { readonly vertices: SnapVertex[]; readonly segments: SnapSegment[] } {
+  const vertices: SnapVertex[] = [];
+  const segments: SnapSegment[] = [];
+  for (const geometry of geometries) {
+    const projected = geometry.positions.map((position, index): SnapVertex | undefined | null => {
+      if (skipIndex !== undefined && index === skipIndex) {
+        return null;
+      }
+      let window: { x: number; y: number } | undefined;
+      try {
+        window = coordinates.toWindow(position);
+      } catch {
+        window = undefined;
+      }
+      return window ? { position, screen: window } : undefined;
+    });
+    for (const vertex of projected) {
+      if (vertex) {
+        vertices.push(vertex);
+      }
+    }
+    if (geometry.mode === 'point') {
+      continue;
+    }
+    for (let index = 0; index + 1 < projected.length; index += 1) {
+      const from = projected[index];
+      const to = projected[index + 1];
+      if (!from || !to) {
+        continue;
+      }
+      segments.push({
+        from: from.position,
+        fromScreen: from.screen,
+        to: to.position,
+        toScreen: to.screen,
+      });
+    }
+  }
+  return { vertices, segments };
 }

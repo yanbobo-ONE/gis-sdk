@@ -108,6 +108,26 @@ export interface SceneController {
   setMode(mode: MapSceneMode, duration?: number): Promise<void>;
 }
 
+/** 绘制吸附配置。 */
+export interface DrawingSnapOptions {
+  /** 是否启用吸附。 */
+  readonly enabled: boolean;
+  /** 屏幕像素阈值，默认 12，允许 1 到 64。 */
+  readonly pixelTolerance?: number;
+  /** 是否同时吸附到已完成图形的线段，默认 `false`（只吸附顶点）。 */
+  readonly includeEdges?: boolean;
+}
+
+/** 补齐默认值后的吸附配置。 */
+export interface ResolvedDrawingSnapOptions {
+  /** 是否启用吸附。 */
+  readonly enabled: boolean;
+  /** 屏幕像素阈值。 */
+  readonly pixelTolerance: number;
+  /** 是否吸附到线段。 */
+  readonly includeEdges: boolean;
+}
+
 /** 绘制控制器的事件。 */
 export interface DrawingEventMap {
   /** 一次绘制完成。 */
@@ -157,6 +177,15 @@ export interface MapDrawingController {
   commitEdit(): DrawGeometry | undefined;
   /** 取消编辑并丢弃改动。 */
   cancelEdit(): void;
+  /**
+   * 设置吸附配置。
+   *
+   * 开启后，绘制落点与编辑拖动会吸附到**已完成图形**的顶点（可选线段）上：
+   * 顶点优先，阈值按屏幕像素计算，因此缩放级别不影响手感。
+   */
+  setSnap(options: DrawingSnapOptions): void;
+  /** 当前吸附配置（已补齐默认值）。 */
+  readonly snap: ResolvedDrawingSnapOptions;
   /** 订阅绘制事件，返回取消订阅函数。 */
   on<TKey extends keyof DrawingEventMap>(
     kind: TKey,

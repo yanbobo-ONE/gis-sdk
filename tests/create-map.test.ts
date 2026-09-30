@@ -132,6 +132,8 @@ function createFactory() {
       editing: undefined,
       commitEdit: vi.fn(() => undefined),
       cancelEdit: vi.fn(),
+      setSnap: vi.fn(),
+      snap: { enabled: false, pixelTolerance: 12, includeEdges: false },
       on: vi.fn(() => () => undefined),
     },
     resize: vi.fn(),

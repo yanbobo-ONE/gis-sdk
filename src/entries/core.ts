@@ -28,11 +28,13 @@ export type {
   CaptureCanvasLike,
   CaptureOptions,
   DrawingEventMap,
+  DrawingSnapOptions,
   MapDrawingController,
   FrameCapture,
   MapSceneMode,
   PickingController,
   PickingEvent,
+  ResolvedDrawingSnapOptions,
   SceneController,
   PickingEventKind,
   PickingHit,
@@ -110,6 +112,20 @@ export type {
 } from '../core/environment.js';
 export { DrawingEditMachine, isEditableGeometry, isValidDrawPosition } from '../core/drawing-edit.js';
 export { convexHull } from '../spatial/hull.js';
+export {
+  DEFAULT_SNAP_PIXEL_TOLERANCE,
+  MAX_SNAP_PIXEL_TOLERANCE,
+  findSnapTarget,
+  resolveSnapOptions,
+  segmentsOf,
+} from '../core/drawing-snap.js';
+export type {
+  ResolvedSnapOptions,
+  SnapOptions,
+  SnapResult,
+  SnapSegment,
+  SnapVertex,
+} from '../core/drawing-snap.js';
 export { simplifyPath, simplifyRing } from '../spatial/simplify.js';
 export { validatePolygon } from '../spatial/polygon-validation.js';
 export type { PolygonIssue, PolygonIssueCode, ValidatePolygonOptions } from '../spatial/polygon-validation.js';
