@@ -19,6 +19,7 @@
 - 渲染质量档与按帧率自动降档（`map.quality`），联动分辨率、地形误差与模型并发；
 - 影像图层与底图的远端失败可观测：累计错误计数，并只上报首个失败；
 - 纯计算的空间能力：量算（距离/面积/方位/包围盒/质心/最近点）、点面判断与 CRS 转换（含 CGCS2000 高斯带）；
+- 姿态四元数运算：与 Cesium 逐位一致的航向/俯仰/翻滚互转、最短弧 slerp、归一化；
 - 轨道与姿态数学：开普勒六根数、二体传播、锚点推导轨道与采样、最近接近预警、四元数姿态积分；
 - CZML 位置采样的生成与解析（支持 ISO 时间戳与包级 epoch，数据源仍走原生出口）；
 - 仿真 / 回放时钟 `SimulationClock`：播放状态机、倍率与方向、seek/step 与水位线限速；
@@ -180,7 +181,7 @@ async function disposeMap() {
 | Worker 分析执行接口                            | 可用                   | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()`：按 id 匹配、取消与超时、错误码跨线程还原                                            |
 | 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                     |
 | 分析工具                                       | 可用                   | `map.analysis.run('distance' \| 'line-of-sight' \| 'viewshed' \| 'convex-hull' \| ...)`：15 个内置工具、算法版本与 `signal` 取消                                  |
-| 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`（纯计算，零 Cesium） |
+| 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`、`slerp()`、`quaternionFromHeadingPitchRollDegrees()`（纯计算，零 Cesium） |
 | CZML 生成与解析                                | 可用                   | `czmlFromPositions()` / `czmlFromSamples()` / `positionsFromCzml()` / `tracksFromCzml()`：位置采样、可用区间、姿态四元数与 `model` 报文                                                                        |
 | 仿真 / 回放时钟                                | 可用                   | `SimulationClock`：倍率、暂停、倒放、seek/step 与水位线限速，可订阅状态                                                                                                         |
 | 回放时间轴                                     | 可用                   | `ReplayTimeline`：按对象分组、同刻去重、`sampleAt()` 插值、`window()` / `trackAt()` 切片、有界外推                                                                                |

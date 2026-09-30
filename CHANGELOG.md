@@ -26,6 +26,7 @@
 - 增加分析 Worker 执行接口：`createAnalysisWorkerClient()` / `createAnalysisWorkerHost()` 与消息协议，支持按 id 匹配、取消、超时与错误码跨线程还原；并导出运行时错误码清单 `GIS_ERROR_CODES` / `isGisErrorCode()`。
 - 增加绘制吸附：`map.drawing.setSnap()` 让落点与拖动吸附到已完成图形的顶点（可选线段），顶点优先、像素阈值判定；导出 `findSnapTarget()` 等纯函数供其它终端复用。
 - 绘制编辑支持顶点增删：`map.drawing.insertVertex()` / `removeVertex()`（含最少顶点校验与编辑目标顺延），并导出 `insertVertexAt()` / `removeVertexAt()` / `nearestSegmentIndex()` 纯函数。
+- 姿态数学补完：四元数 ↔ 航向/俯仰/翻滚互转（与 Cesium 逐位一致）、最短弧 `slerp()` 与 `normalizeQuaternion()`。
 - 增加位置批量归一化 `normalizePositions()`：坐标校验、按 id 合并最新、可转移的 Float64Array 输出。
 - 增加折线图层与五种内置材质：PolylineCollection 批量渲染、逐条样式覆盖、原子替换与整层样式调整；画布快照契约改为可移植形状，core 层不再依赖 DOM 类型。
 - 增加运行时场景模式切换 `map.scene.setMode()`：形变完成结算、同模式立即结算、被取代语义与销毁处理。

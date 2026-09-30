@@ -311,14 +311,24 @@ export type {
   CzmlTrack,
   CzmlTrackSample,
 } from '../core/czml.js';
-export { AttitudeDynamics } from '../spatial/attitude.js';
+export {
+  AttitudeDynamics,
+  headingPitchRollDegreesFromQuaternion,
+  normalizeQuaternion,
+  quaternionFromHeadingPitchRollDegrees,
+  slerp,
+} from '../spatial/attitude.js';
 export { findClosestApproaches } from '../spatial/closest-approach.js';
 export type {
   ApproachOptions,
   ApproachTrack,
   ApproachWarning,
 } from '../spatial/closest-approach.js';
-export type { AngularVelocity, Quaternion } from '../spatial/attitude.js';
+export type {
+  AngularVelocity,
+  HeadingPitchRollDegrees,
+  Quaternion,
+} from '../spatial/attitude.js';
 export {
   EARTH_RADIUS,
   orbitalElementsFromAnchor,
