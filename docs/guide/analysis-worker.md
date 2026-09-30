@@ -78,8 +78,33 @@ Worker 里**没有** `map.terrain.sample()`：需要地形高度的工具要么�
 
 大数组建议先用 `normalizePositions()` 转成可转移的 `Float64Array` 再做结构化克隆，或直接在 `postMessage` 的转移列表里传入。
 
+## 多 Worker：`createAnalysisWorkerPool()`
+
+```ts
+import { analysisTools, createAnalysisWorkerPool } from '@yanbobo/gis-sdk/core';
+
+const pool = createAnalysisWorkerPool(ports, { maxPendingPerWorker: 1, maxQueued: 32, descriptors: analysisTools });
+
+const [hull, simplified] = await Promise.all([
+  pool.run('convex-hull', { points }),
+  pool.run('simplify', { points: track, toleranceMeters: 50 }),
+]);
+
+pool.stats; // { workers, pending, queued, completed, failed }
+pool.dispose();
+```
+
+| 配置                   | 默认值 | 说明                                                     |
+| ---------------------- | ------ | -------------------------------------------------------- |
+| `maxPendingPerWorker`  | `1`    | 每个 Worker 允许同时在途的请求数（1 表示串行）            |
+| `maxQueued`            | `32`   | 排队上限；队列满时以可重试的 `ANALYSIS_WORKER_QUEUE_FULL` 拒绝 |
+| `timeoutMs`            | `30000`| 单次请求超时，语义与单 Worker 客户端一致                  |
+| `descriptors`          | 无     | `list()` 返回的工具描述（池无法同步查询 Worker 的工具集）  |
+
+调度策略是**最小在途优先**：每次派发挑当前在途最少的 Worker，慢任务不会把某个 Worker 堵死；全部饱和时请求 FIFO 排队。每个 Worker 内部复用 `createAnalysisWorkerClient`，因此取消、超时、错误码还原的语义与单 Worker 相同——池只负责选目标与排队。需要按工具或数据分片的业务可以自己起多个池。
+
 ## 当前边界
 
-- **不做 Worker 池**：这里是一个端口的客户端 / 宿主对。要跑多条并行任务，业务自己起多个 Worker、各自持有一个客户端即可；调度策略（按工具路由、排队上限）由业务决定。
+- **调度策略只有一种默认**：最小在途优先 + FIFO 排队。按工具路由、按数据分片、优先级队列等策略需要业务在池之上自己编排。
 - **不跨帧续跑**：一次请求就是一个 Promise；长任务没有进度上报。
 - **不做共享内存**：`SharedArrayBuffer` 需要页面开启跨源隔离，SDK 不假设这个前提。

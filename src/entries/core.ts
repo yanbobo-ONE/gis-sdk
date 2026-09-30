@@ -169,6 +169,12 @@ export type {
 export { createAnalysisController } from '../core/analysis-runner.js';
 export { analysisTools } from '../core/analysis-runner.js';
 export { createAnalysisWorkerClient, createAnalysisWorkerHost } from '../core/analysis-worker-client.js';
+export { createAnalysisWorkerPool } from '../core/analysis-worker-pool.js';
+export type {
+  AnalysisWorkerPool,
+  AnalysisWorkerPoolOptions,
+  AnalysisWorkerPoolStats,
+} from '../core/analysis-worker-pool.js';
 export type {
   AnalysisWorkerClientOptions,
   AnalysisWorkerController,

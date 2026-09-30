@@ -178,7 +178,7 @@ async function disposeMap() {
 | 环境效果                                       | 可用                   | `map.environment.set('depthFog' \| 'haze' \| 'rain' \| 'snow', options)`：内置参数、降级说明与统一资源释放                                                                       |
 | 远端失败可观测                                 | 可用                   | `layer.events.on('error')`、`layer.errorCount`、`map.basemap.errorCount` 与 `map:error` 上的首个失败                                                                            |
 | 诊断快照                                       | 可用                   | `map.diagnostics.snapshot()`：一次调用汇总运行状态与错误计数，读不到不抛错                                                                                                     |
-| Worker 分析执行接口                            | 可用                   | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()`：按 id 匹配、取消与超时、错误码跨线程还原                                            |
+| Worker 分析执行接口                            | 可用                   | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()` / `createAnalysisWorkerPool()`：按 id 匹配、取消与超时、错误码跨线程还原、最小在途优先调度 |
 | 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                     |
 | 分析工具                                       | 可用                   | `map.analysis.run('distance' \| 'line-of-sight' \| 'viewshed' \| 'convex-hull' \| ...)`：15 个内置工具、算法版本与 `signal` 取消                                  |
 | 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`、`slerp()`、`quaternionFromHeadingPitchRollDegrees()`（纯计算，零 Cesium） |
@@ -195,7 +195,7 @@ async function disposeMap() {
 | 实时会话门禁与重同步                           | 可用                   | `RealtimeSessionGate`（丢弃旧会话迟到包）与 `RealtimeResyncController`（序列断档→有界快照请求）                                                                                 |
 | 实时链路（WebSocket）                          | 可用                   | `RealtimeSocketClient`：重连退避与抖动、心跳存活判断、按类型订阅、解码与订阅方异常隔离、链路统计                                                                               |
 | 动态实体与模型动画                             | 未完成                 | CZML 生成 / 解析、静态模型与外观策略已可用；CZML 数据源加载、动态实体与动画播放当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                |
-| Worker 池与 Primitive 大数据渲染               | 未完成                 | 分析的 Worker 执行接口已可用；多 Worker 调度、吞吐量与数据规模承诺、Primitive 批处理尚未提供                                                                                   |
+| Primitive 大数据渲染                           | 未完成                 | 分析 Worker 接口与池已可用；吞吐量与数据规模承诺、Primitive 批处理与自动 LOD 尚未提供                                                                                           |
 | 绘制手势、自定义材质与插件                     | 未完成                 | 绘制、顶点编辑 / 增删 / 吸附、分析工具、诊断快照已可用；顶点增删的交互手势、自定义材质、分析结果图层与插件协议当前没有稳定公开 API                                                  |
 
 功能完成后会在[功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)将状态改为“可用”，补充可运行示例、API 参数页和变更日志，并以新的 npm alpha 版本发布。规划能力不是已发布 API，不能按名称直接调用。

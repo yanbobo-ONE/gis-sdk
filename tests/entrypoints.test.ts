@@ -6,6 +6,7 @@ import { createMap } from '../src/entries/cesium.js';
 import {
   convexHull,
   createAnalysisController,
+  createAnalysisWorkerPool,
   curvatureDropMeters,
   czmlFromPositions,
   DataPipeline,
@@ -194,6 +195,7 @@ describe('package subpath entrypoints', () => {
       DrawingEditMachine,
       DrawingStateMachine,
       createAnalysisController,
+  createAnalysisWorkerPool,
       convexHull,
       simplifyPath,
       simplifyRing,
@@ -244,6 +246,7 @@ describe('package subpath entrypoints', () => {
       'simplifyPath',
       'validatePolygon',
       'createAnalysisController',
+      'createAnalysisWorkerPool',
       'tracksFromCzml',
       'DrawingEditMachine',
       'MapDiagnosticsSnapshot',
