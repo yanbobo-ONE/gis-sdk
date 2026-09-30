@@ -1,5 +1,9 @@
 import type {
   AnalysisAreaInput,
+  AnalysisConvexHullInput,
+  AnalysisConvexHullResult,
+  AnalysisSimplifyInput,
+  AnalysisSimplifyResult,
   AnalysisBBoxInput,
   AnalysisBearingInput,
   AnalysisCenterOfMassInput,
@@ -23,6 +27,8 @@ import type {
 import type { GeoPoint } from '../spatial/types.js';
 import type { TerrainSample, TerrainSampleOptions, TerrainSamplePoint } from './controls.js';
 import { GisError } from './errors.js';
+import { convexHull } from '../spatial/hull.js';
+import { simplifyPath } from '../spatial/simplify.js';
 import { measureArea, measureBBox, measureBearing, measureCenterOfMass, measureDestination, measureDistance } from '../spatial/measure.js';
 import { filterPointsInPolygon, isPointInPolygon } from '../spatial/predicate.js';
 import { transformGeoPoint } from '../spatial/crs.js';
@@ -67,6 +73,18 @@ export interface AnalysisControllerOptions {
 
 /** 内置工具的只读描述；名称与说明面向使用者，不在代码里做分支判断。 */
 const BUILTIN_TOOLS: readonly AnalysisToolDescriptor[] = Object.freeze([
+  {
+    id: 'convex-hull',
+    source: 'builtin',
+    title: '凸包',
+    description: '求点集的平面凸包（经纬度平面，适用于城市级到区域级范围），结果是闭合环。',
+  },
+  {
+    id: 'simplify',
+    source: 'builtin',
+    title: '轨迹抽稀',
+    description: '按米制容差做 Ramer–Douglas–Peucker 抽稀，保留首尾顶点，环保持闭合。',
+  },
   {
     id: 'distance',
     source: 'builtin',
@@ -241,6 +259,26 @@ export function createAnalysisController(
     if (signal?.aborted === true) {
       throw aborted(operation);
     }
+  };
+
+  const runConvexHull = (input: AnalysisConvexHullInput): AnalysisConvexHullResult & { algorithmVersion: number } => {
+    const hull = convexHull(input.points);
+    return {
+      hull,
+      // 闭合环的首尾重复只算一个点。
+      pointCount: Math.max(0, hull.length - 1),
+      algorithmVersion: SPATIAL_ALGORITHM_VERSION,
+    };
+  };
+
+  const runSimplify = (input: AnalysisSimplifyInput): AnalysisSimplifyResult & { algorithmVersion: number } => {
+    const result = simplifyPath(input.points, input.toleranceMeters);
+    return {
+      points: result.points,
+      originalCount: input.points.length,
+      removedCount: result.removedCount,
+      algorithmVersion: SPATIAL_ALGORITHM_VERSION,
+    };
   };
 
   const runDistance = (input: AnalysisDistanceInput): AnalysisResultMap['distance'] => ({
@@ -553,6 +591,10 @@ export function createAnalysisController(
       assertNotAborted(signal, tool);
       const result = await (async (): Promise<unknown> => {
         switch (tool) {
+          case 'convex-hull':
+            return runConvexHull(input as AnalysisConvexHullInput);
+          case 'simplify':
+            return runSimplify(input as AnalysisSimplifyInput);
           case 'distance':
             return runDistance(input as AnalysisDistanceInput);
           case 'surface-distance':

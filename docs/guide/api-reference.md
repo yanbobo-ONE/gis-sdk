@@ -22,8 +22,8 @@
 | 运行时切换 2D / 3D 场景                          | [2D / 3D 场景切换](./scene-mode.md)         | `map.scene.setMode()`、`mode`、`morphing`                          |
 | 经纬度、世界坐标与屏幕坐标互转                   | [坐标转换](./coordinates.md)                | `map.coordinates` 的四个转换方法及返回值语义                       |
 | 调分辨率、地形精度或按帧率自动降档               | [渲染质量](./quality.md)                    | `map.quality`、`createMap({ quality })`、内置质量档                |
-| 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`transformGeoPoint`、CRS 注册表    |
-| 通视、视域、坡度坡向、地表距离                   | [分析工具](./analysis.md)                   | `map.analysis.run(tool, input)`、13 个内置工具与算法版本           |
+| 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`convexHull`、`simplifyPath`、`validatePolygon`、CRS 注册表 |
+| 通视、视域、坡度坡向、凸包、抽稀                 | [分析工具](./analysis.md)                   | `map.analysis.run(tool, input)`、15 个内置工具与算法版本           |
 | 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics` |
 | 生成或解析 CZML（位置 / 姿态 / 模型）             | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`positionsFromCzml`、`tracksFromCzml`          |
 | 接长连接：重连、心跳与按类型分发                       | [实时链路](./realtime-socket.md)            | `RealtimeSocketClient` 的 `connect()` / `subscribe()` / `stats`    |

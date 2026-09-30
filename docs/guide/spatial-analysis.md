@@ -37,6 +37,19 @@ nearestPointOnPath(path, target); // { point, index, distanceMeters, alongMeters
 | `pointAlongPath(points, meters)`              | 折线 + 距离                    | 折线上的点                                      |
 | `nearestPointOnPath(points, target)`          | 折线 + 目标点                  | `{ point, index, distanceMeters, alongMeters }` |
 
+## 几何构造与校验
+
+```ts
+import { convexHull, simplifyPath, simplifyRing, validatePolygon } from '@yanbobo/gis-sdk/core';
+
+convexHull(points);                       // 闭合凸包环，跨半球点集应先投影
+simplifyPath(ring, 50);                   // RDP 抽稀，容差单位为米：{ points, removedCount }
+simplifyRing(ring, 50);                   // 同理，但保证结果闭合
+validatePolygon(polygon, { requireClosed: true }); // 问题列表，空数组表示通过
+```
+
+三者都是零依赖实现：凸包是安德鲁单调链，抽稀是 Ramer–Douglas–Peucker（距离用 `nearestPointOnPath()` 的米制口径，高纬度不会过抽），多边形校验含包围盒扫描的自交检测。需要依赖几何引擎的缓冲区与叠加分析仍按 `docs/research/spatial-analysis-plan.md` §3.3 的三选一推进，尚未引入。
+
 ## 空间判断
 
 ```ts
@@ -124,7 +137,7 @@ transformGeoPath(csvPoints, 'EPSG:4547', 'EPSG:4490'); // 批量转换，顺序�
 
 - [分析工具](./analysis.md)（`map.analysis`）已可用：量算、判断、CRS 转换、地形采样、通视、视域与坡度坡向。
 - 分析结果图层、任务模型与 Worker 执行接口尚未提供：`run()` 直接返回数值，渲染与后台编排由业务自己做。
-- 缓冲区、叠加分析、凸包、抽稀、Delaunay/Voronoi 尚未提供（P2）。
+- 凸包、抽稀与多边形校验已提供（零依赖）；缓冲区、叠加分析与 Delaunay/Voronoi 尚未提供（等待 §3.3 的依赖三选一）。
 - 不提供任何交互 UI：点选量算面板、结果标注样式属于应用层。
 - 多边形合法性校验（自交诊断）依赖 `@turf/boolean-valid`，排在 P2。
 - CGCS2000 与 WGS84 在现有业务尺度按恒等处理；厘米级基准转换需要七参数或格网改正，本 SDK 不承诺。

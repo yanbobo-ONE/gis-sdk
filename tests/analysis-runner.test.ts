@@ -45,8 +45,10 @@ describe('createAnalysisController', () => {
     const controller = createAnalysisController(createPort());
     const ids = controller.list().map((tool) => tool.id);
 
-    expect(ids).toHaveLength(13);
+    expect(ids).toHaveLength(15);
     expect(ids).toContain('line-of-sight');
+    expect(ids).toContain('convex-hull');
+    expect(ids).toContain('simplify');
     expect(controller.list().every((tool) => tool.source === 'builtin')).toBe(true);
   });
 
@@ -328,5 +330,43 @@ describe('createAnalysisController', () => {
       signal?: AbortSignal;
     };
     expect(forwarded.signal).toBe(abort.signal);
+  });
+
+  it('runs the batch tools for convex hull and simplification', async () => {
+    const controller = createAnalysisController(createPort());
+
+    const hull = await controller.run('convex-hull', {
+      points: [
+        { longitude: 0, latitude: 0 },
+        { longitude: 1, latitude: 0 },
+        { longitude: 1, latitude: 1 },
+        { longitude: 0, latitude: 1 },
+        { longitude: 0.5, latitude: 0.5 },
+      ],
+    });
+    expect(hull.pointCount).toBe(4);
+    expect(hull.hull[0]).toEqual(hull.hull[hull.hull.length - 1]);
+    expect(hull.algorithmVersion).toBe(SPATIAL_ALGORITHM_VERSION);
+
+    const simplified = await controller.run('simplify', {
+      points: [
+        { longitude: 0, latitude: 0 },
+        { longitude: 0.5, latitude: 1e-6 },
+        { longitude: 1, latitude: 0 },
+      ],
+      toleranceMeters: 50,
+    });
+    expect(simplified).toMatchObject({ originalCount: 3, removedCount: 1 });
+    expect(simplified.points).toHaveLength(2);
+
+    await expect(
+      controller.run('simplify', {
+        points: [
+          { longitude: 0, latitude: 0 },
+          { longitude: 1, latitude: 0 },
+        ],
+        toleranceMeters: 0,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_SPATIAL_INPUT' });
   });
 });

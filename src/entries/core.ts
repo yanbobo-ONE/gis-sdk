@@ -109,6 +109,11 @@ export type {
   ResolvedPrecipitationOptions,
 } from '../core/environment.js';
 export { DrawingEditMachine, isEditableGeometry, isValidDrawPosition } from '../core/drawing-edit.js';
+export { convexHull } from '../spatial/hull.js';
+export { simplifyPath, simplifyRing } from '../spatial/simplify.js';
+export { validatePolygon } from '../spatial/polygon-validation.js';
+export type { PolygonIssue, PolygonIssueCode, ValidatePolygonOptions } from '../spatial/polygon-validation.js';
+export type { SimplifyResult } from '../spatial/simplify.js';
 export type {
   DrawEditSnapshot,
   DrawEditTarget,
@@ -207,6 +212,8 @@ export type {
   AnalysisBearingInput,
   AnalysisCenterOfMassInput,
   AnalysisController,
+  AnalysisConvexHullInput,
+  AnalysisConvexHullResult,
   AnalysisDistanceInput,
   AnalysisInputMap,
   AnalysisLineOfSightInput,
@@ -217,6 +224,8 @@ export type {
   AnalysisResultMap,
   AnalysisResultMeta,
   AnalysisRunOptions,
+  AnalysisSimplifyInput,
+  AnalysisSimplifyResult,
   AnalysisSlopeAspectInput,
   AnalysisSlopeAspectResult,
   AnalysisSurfaceDistanceInput,

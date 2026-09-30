@@ -18,7 +18,7 @@ const { slopeDegrees, aspectDegrees } = await map.analysis.run('slope-aspect', {
   radiusMeters: 200,
 });
 
-map.analysis.list(); // 13 个内置工具的 id / 名称 / 说明
+map.analysis.list(); // 15 个内置工具的 id / 名称 / 说明
 ```
 
 取消与地形采样一致：`{ signal }` 中止后以 `ANALYSIS_ABORTED` 拒绝，已发出的地形请求不撤回但结果不再返回。
@@ -40,8 +40,16 @@ map.analysis.list(); // 13 个内置工具的 id / 名称 / 说明
 | `points-in-polygon`   | `points`、`polygon`               | 命中下标、命中点、数量                                |
 | `bbox`                | 点 / 环 / 多边形                  | 经纬包围盒                                            |
 | `center-of-mass`      | 环 / 多边形                       | 质心                                                  |
+| `convex-hull`         | `points`                          | 平面凸包（闭合环）与参与计算的点数                    |
+| `simplify`            | `points`、`toleranceMeters`       | 抽稀后的顶点、原始点数与移除数量                      |
 
 除 `terrain-sample` 外，结果都带 `algorithmVersion`（当前 `1`）：算法口径变化时会递增，业务据此判断是否需要重算历史结果。
+
+## 批处理工具
+
+- **凸包（`convex-hull`）**：在经纬度平面上做安德鲁单调链，结果是**闭合**环（首尾同点），可直接交给折线/面图层渲染或做覆盖范围判断。口径与 turf 的 `convex` 一致，适用于城市级到区域级范围；跨半球或跨 180° 经线的点集应先投影到平面坐标系。
+- **抽稀（`simplify`）**：Ramer–Douglas–Peucker，距离口径是**米**（用 `nearestPointOnPath()` 求点到弦的最近距离），因此在高纬度不会像按度数判定那样过抽。首尾顶点一定保留，输入是环时保持闭合。
+- **多边形校验**：不在 `map.analysis` 里，而是 `/core` 的 `validatePolygon()`——它是同步纯函数，返回问题列表（顶点不足、未闭合、重复顶点、自交、洞越界或穿壳）而不是抛错，业务在绘制提交或数据入库前按自己的策略处理。自交检测用包围盒扫描，顶点数超过 20000 时跳过自交检测（其余检查照常）。
 
 ## 通视与视域的判定口径
 

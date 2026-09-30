@@ -348,7 +348,7 @@ await map.analysis.run('transform', {
 > `src/spatial/terrain-profile.ts`（通视、地平线、坡度坡向、地表折线长度、曲率修正），
 > 路由与取数在 `src/core/analysis-runner.ts`（`createAnalysisController(port)`，只依赖一个地形采样端口），
 > `MapRuntime` 把它接到 `map.terrain.sample()`。因此 `map.analysis` 全链路零 Cesium 依赖，
-> 同一份实现可直接在 Worker 或其它终端复用。13 个内置工具全部可用；任务模型、结果图层与
+> 同一份实现可直接在 Worker 或其它终端复用。15 个内置工具全部可用（含凸包与轨迹抽稀）；任务模型、结果图层与
 > Worker 执行接口仍留待 P2。
 
 1. `src/cesium/analysis-controller.ts` + `GisMap.analysis`（PRD §8.2）

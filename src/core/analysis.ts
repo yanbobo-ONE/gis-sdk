@@ -13,9 +13,12 @@ import type {
  *
  * PRD 一期工具为 `distance`、`surface-distance`、`area`、`bearing`、
  * `terrain-sample`、`line-of-sight`、`viewshed`、`slope-aspect`、`transform`；
- * `point-in-polygon`、`points-in-polygon`、`bbox`、`center-of-mass` 属需求驱动的补强项。
+ * `point-in-polygon`、`points-in-polygon`、`bbox`、`center-of-mass` 属需求驱动的补强项；
+ * `convex-hull`、`simplify` 是 P2 批处理工具（凸包与轨迹抽稀）。
  */
 export type AnalysisToolId =
+  | 'convex-hull'
+  | 'simplify'
   | 'distance'
   | 'surface-distance'
   | 'area'
@@ -45,6 +48,38 @@ export interface AnalysisRunOptions {
 export interface AnalysisResultMeta {
   /** 计算所用的算法版本，取值见 `SPATIAL_ALGORITHM_VERSION`。 */
   readonly algorithmVersion: typeof SPATIAL_ALGORITHM_VERSION;
+}
+
+/** 凸包工具输入。 */
+export interface AnalysisConvexHullInput {
+  /** 待求凸包的点集。 */
+  readonly points: readonly GeoPoint[];
+}
+
+/** 凸包结果。 */
+export interface AnalysisConvexHullResult {
+  /** 闭合的凸包环（首尾同点）。 */
+  readonly hull: GeoRing;
+  /** 参与计算的去重后点数。 */
+  readonly pointCount: number;
+}
+
+/** 抽稀工具输入。 */
+export interface AnalysisSimplifyInput {
+  /** 待抽稀的顶点序列（折线或环）。 */
+  readonly points: GeoRing;
+  /** 容差，单位为米，必须为正。 */
+  readonly toleranceMeters: number;
+}
+
+/** 抽稀结果。 */
+export interface AnalysisSimplifyResult {
+  /** 抽稀后的顶点；首尾保留，输入是环时保持闭合。 */
+  readonly points: GeoPoint[];
+  /** 输入顶点数。 */
+  readonly originalCount: number;
+  /** 被移除的顶点数。 */
+  readonly removedCount: number;
 }
 
 /** 距离类工具输入。 */
@@ -209,6 +244,10 @@ export interface AnalysisCenterOfMassInput {
 
 /** 工具 ID 到输入类型的映射。 */
 export interface AnalysisInputMap {
+  /** 凸包输入。 */
+  readonly 'convex-hull': AnalysisConvexHullInput;
+  /** 抽稀输入。 */
+  readonly simplify: AnalysisSimplifyInput;
   /** 两点距离输入。 */
   readonly distance: AnalysisDistanceInput;
   /** 地表距离输入，沿线叠加地形高度。 */
@@ -239,6 +278,10 @@ export interface AnalysisInputMap {
 
 /** 工具 ID 到结果类型的映射。 */
 export interface AnalysisResultMap {
+  /** 凸包结果。 */
+  readonly 'convex-hull': AnalysisConvexHullResult & AnalysisResultMeta;
+  /** 抽稀结果。 */
+  readonly simplify: AnalysisSimplifyResult & AnalysisResultMeta;
   /** 距离量算结果。 */
   readonly distance: DistanceMeasurement & AnalysisResultMeta;
   /** 地表距离量算结果。 */
