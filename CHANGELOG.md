@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0-alpha.10
+## 0.1.0-alpha.11（未发布）
+
+### Minor Changes
+
+- 点位图层支持标签：`points[].label` + `labels` 样式（字体/颜色/描边/偏移/上限），用 `LabelCollection` 批量绘制并新增 `labelCount` 读数，`setData()` 与 `setStyle()` 一并处理标签。
+
+## 0.1.0-alpha.10（已发布）
 
 ### Minor Changes
 
@@ -31,7 +37,6 @@
 - 增加轨迹回放桥 `createTrackTimeline()` / `sampleTrackPose()`：CZML 轨迹装入 `ReplayTimeline`，位置按最短弧插值、姿态走四元数 slerp，默认不外推。
 - 增加 CZML 图层 `type: 'czml'`：受管的 `CzmlDataSource` 生命周期、原子 `setData()`、`entityCount` 读数与统一释放；时钟联动仍由业务接。
 - 增加纯计算点聚合 `clusterPoints()`：米制网格分组（高纬度不过度聚合）、中心/计数/成员/包围盒、跨 180° 经线安全、输出稳定。
-- 点位图层支持标签：`points[].label` + `labels` 样式（字体/颜色/描边/偏移/上限），用 `LabelCollection` 批量绘制并新增 `labelCount` 读数，`setData()` 与 `setStyle()` 一并处理标签。
 - 增加位置批量归一化 `normalizePositions()`：坐标校验、按 id 合并最新、可转移的 Float64Array 输出。
 - 增加折线图层与五种内置材质：PolylineCollection 批量渲染、逐条样式覆盖、原子替换与整层样式调整；画布快照契约改为可移植形状，core 层不再依赖 DOM 类型。
 - 增加运行时场景模式切换 `map.scene.setMode()`：形变完成结算、同模式立即结算、被取代语义与销毁处理。
