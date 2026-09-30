@@ -93,6 +93,7 @@ import type {
   ModelLayerHandle,
   ModelLayerSpec,
   ModelTransform,
+  PointsLabelStyle,
   SingleImageLayerSpec,
   Tiles3dLayerSpec,
   TmsLayerSpec,
