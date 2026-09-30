@@ -20,7 +20,7 @@
 | 点位图层            | 可用 | `type: 'points'`、`PointsLayerHandle`、`MAX_POINT_LAYER_POINTS`                                                                                                    | PointPrimitive 批量渲染、单层 20 万点、逐点样式覆盖、原子替换点位、整层样式调整与统一资源释放                                      |
 | 折线图层            | 可用 | `type: 'polyline'`、`PolylineLayerHandle`、`MAX_POLYLINES_PER_LAYER`                                                                                               | PolylineCollection 批量渲染、五种内置材质（solid / glow / outline / arrow / dash）、逐条样式覆盖、原子替换、整层样式调整与拾取标记 |
 | 拾取交互            | 可用 | `map.picking.on('click' \| 'hover')`、`map.picking.setEnabled()`                                                                                                   | 类型化命中信息（图层 / 对象 / 地球 / 原生对象）、地表经纬高、按帧合并悬停、相机变化期间暂停拾取、点击向下钻取                      |
-| 交互绘制与编辑      | 可用 | `map.drawing`、`DrawingStateMachine`、`DrawRendererPort`、`DrawingEditMachine`、`setSnap()`                                                                        | 点 / 折线 / 面绘制、预览与确认、完成图形管理、顶点拖动编辑与提交 / 回退、顶点与线段吸附（像素阈值）                                |
+| 交互绘制与编辑      | 可用 | `map.drawing`、`DrawingStateMachine`、`DrawRendererPort`、`DrawingEditMachine`、`setSnap()`、`insertVertex()` / `removeVertex()`                                    | 点 / 折线 / 面绘制、预览与确认、完成图形管理、顶点拖动 / 插入 / 删除、提交与回退、顶点与线段吸附（像素阈值）                        |
 | 相机控制与读取      | 可用 | `map.camera.view`、`viewRectangle`、`setView()`、`flyTo()`、`cancelFlight()`                                                                                       | 读取当前位姿与视口四至、使用度和米定位、飞行、取消、切换视角时先取消进行中的飞行、退化旋转与 NaN 位姿兜底                          |
 | XYZ 底图            | 可用 | `createMap({ basemap })`、`map.basemap`                                                                                                                            | 单底图原子替换、透明度与显隐，始终位于业务影像图层下方                                                                             |
 | 地形                | 可用 | `map.terrain.set()`、`TerrainSetOptions`                                                                                                                           | 椭球切换和 Cesium Terrain 异步加载，失败或超时（默认 30 秒）时保留旧地形并可立即重试                                               |
@@ -60,7 +60,7 @@
 | Worker 池                            | 未发布   | 分析的 Worker 执行接口（协议 + 客户端 + 宿主）与 WebSocket 链路已可用；多 Worker 调度、SSE / MQTT / 二进制协议解码与校验尚未发布        |
 | 实时协议与 Worker 池                 | 未发布   | 长连接链路、水位线、时间戳守卫、会话门禁与重同步已可用；SSE / MQTT / 二进制协议解码与 Worker 池尚未发布                                |
 | 海量数据渲染（聚合 / 标签 / Worker） | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺                                                                 |
-| 顶点增删                             | 未发布   | 绘制、顶点拖动与吸附已可用；顶点插入与删除尚无 API                                                                                     |
+| 绘制交互手势                         | 未发布   | 顶点增删已提供程序化 API 与纯函数；SDK 不绑定右键菜单 / 双击线段等手势，交互由业务自己接                                               |
 | 体积类环境效果与自定义材质           | 未发布   | 深度雾、基础雾与降水已可用；体积云、热力图、三维风场、闪电、水面与自定义 GLSL 材质尚无 SDK 方法                                        |
 | 分析任务模型与结果图层               | 未发布   | `map.analysis`（15 个工具）与 Worker 执行接口已可用；任务队列、进度上报与结果图层尚未发布                                                |
 | 插件与框架绑定                       | 未发布   | 错误计数、首个失败事件与 `map.diagnostics` 快照已可用；插件注册协议与官方 Vue / React 组件尚未发布                                     |

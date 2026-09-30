@@ -173,6 +173,20 @@ export interface MapDrawingController {
   edit(geometry: DrawGeometry): boolean;
   /** 编辑中的几何；没有会话时为 `undefined`。 */
   readonly editing: DrawGeometry | undefined;
+  /**
+   * 在编辑几何中插入顶点。
+   *
+   * @param position - 新顶点；非法落点被忽略。
+   * @param index - 插入位置，省略时追加到末尾；越界或点几何返回 `undefined`。
+   */
+  insertVertex(position: GeoPosition, index?: number): DrawGeometry | undefined;
+  /**
+   * 在编辑几何中删除顶点。
+   *
+   * @param index - 要删除的顶点下标；省略时删除会话正在编辑的顶点。
+   * @returns 更新后的几何；删除后会低于该模式最少顶点数时返回 `undefined`。
+   */
+  removeVertex(index?: number): DrawGeometry | undefined;
   /** 提交编辑并返回最终几何；没有会话时为 `undefined`。 */
   commitEdit(): DrawGeometry | undefined;
   /** 取消编辑并丢弃改动。 */

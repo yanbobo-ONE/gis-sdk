@@ -509,4 +509,31 @@ describe('CesiumDrawingController', () => {
 
     expect(controller.editing?.positions[2]).toEqual({ longitude: 11, latitude: 0 });
   });
+
+  it('delegates insert and remove vertex to the edit session', () => {
+    const harness = createHarness();
+    const controller = new CesiumDrawingController(
+      harness.viewer as never,
+      harness.coordinates,
+      harness.documentRef as never,
+    );
+
+    // 没有编辑会话时返回 undefined，而不是抛错。
+    expect(controller.insertVertex({ longitude: 1, latitude: 1 })).toBeUndefined();
+    expect(controller.removeVertex(0)).toBeUndefined();
+
+    controller.edit(polylineGeometry());
+    const inserted = controller.insertVertex({ longitude: 10.5, latitude: 0 }, 1);
+    expect(inserted?.positions.map((vertex) => vertex.longitude)).toEqual([10, 10.5, 11, 12]);
+    // 起点就是编辑顶点：插入会写进几何，但返回的是副本。
+    expect(inserted).not.toBe(controller.editing);
+
+    const removed = controller.removeVertex(0);
+    expect(removed?.positions.map((vertex) => vertex.longitude)).toEqual([10.5, 11, 12]);
+
+    controller.dispose();
+    expect(() => controller.insertVertex({ longitude: 1, latitude: 1 })).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED' }),
+    );
+  });
 });

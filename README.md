@@ -31,7 +31,7 @@
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
 - 类型化拾取交互（`map.picking`）：点击与悬停命中信息、地表经纬高，悬停按帧合并避免卡顿；
-- 交互绘制与编辑 `map.drawing`：点 / 折线 / 面绘制，完成后可拖动顶点并提交 / 回退，支持顶点与线段吸附；纯状态机 + 可替换端口（不绑定 Cesium）；
+- 交互绘制与编辑 `map.drawing`：点 / 折线 / 面绘制，完成后可拖动、插入、删除顶点并提交 / 回退，支持顶点与线段吸附；纯状态机 + 可替换端口（不绑定 Cesium）；
 - 实时水位线与时间戳守卫：乱序样本按时间释放、精确对象共同覆盖、双阈值追赶与超前样本隔离；
 - 实时会话门禁与重同步控制器：旧会话迟到包丢弃、序列断档合并请求与有界重试；
 - 位置批量归一化 `normalizePositions()`：坐标校验、按 id 合并最新、可转移类型化数组；
@@ -170,7 +170,7 @@ async function disposeMap() {
 | 点位图层与 CSV 导入                            | 可用                   | `map.layers.add({ type: 'points', points })` 支持 `setData()` / `setStyle()`；`@yanbobo/gis-sdk/core` 的 `parseCsv()`、`readPointCsv()` 解析点位表                              |
 | 折线图层                                       | 可用                   | `map.layers.add({ type: 'polyline', polylines })`：五种内置材质（solid/glow/outline/arrow/dash）、`setData()` / `setStyle()`                                                    |
 | 拾取交互                                       | 可用                   | `map.picking.on('click' \| 'hover')`，命中信息含图层与对象 id；悬停按帧合并、相机移动期间暂停                                                                                   |
-| 交互绘制与编辑                                 | 可用                   | `map.drawing.start('point' \| 'polyline' \| 'polygon')`：左键落点、移动预览、右键/双击确认、Esc 取消；`edit()` 拖动顶点；`setSnap()` 顶点吸附                                                                            |
+| 交互绘制与编辑                                 | 可用                   | `map.drawing.start('point' \| 'polyline' \| 'polygon')`：左键落点、移动预览、右键/双击确认、Esc 取消；`edit()` 拖动顶点；`setSnap()` 顶点吸附；`insertVertex()` / `removeVertex()` 增删顶点                                                                            |
 | 坐标转换                                       | 可用                   | `map.coordinates`：`toWorld`、`toGeoPosition`、`toWindow`、`pickGeoPosition`，未命中返回 `undefined`                                                                            |
 | 地形采样                                       | 可用                   | `map.terrain.sample(points, options?)`：分批并发、缓存、取消与错误码                                                                                                            |
 | 渲染质量                                       | 可用                   | `createMap({ quality })`、`map.quality`：四档预设与按帧率自动升降档                                                                                                             |
@@ -195,7 +195,7 @@ async function disposeMap() {
 | 实时链路（WebSocket）                          | 可用                   | `RealtimeSocketClient`：重连退避与抖动、心跳存活判断、按类型订阅、解码与订阅方异常隔离、链路统计                                                                               |
 | 动态实体与模型动画                             | 未完成                 | CZML 生成 / 解析、静态模型与外观策略已可用；CZML 数据源加载、动态实体与动画播放当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                |
 | Worker 池与 Primitive 大数据渲染               | 未完成                 | 分析的 Worker 执行接口已可用；多 Worker 调度、吞吐量与数据规模承诺、Primitive 批处理尚未提供                                                                                   |
-| 顶点增删、自定义材质与插件                     | 未完成                 | 绘制、顶点编辑与吸附、分析工具、诊断快照已可用；顶点增删、自定义材质、分析结果图层与插件协议当前没有稳定公开 API                                                                  |
+| 绘制手势、自定义材质与插件                     | 未完成                 | 绘制、顶点编辑 / 增删 / 吸附、分析工具、诊断快照已可用；顶点增删的交互手势、自定义材质、分析结果图层与插件协议当前没有稳定公开 API                                                  |
 
 功能完成后会在[功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)将状态改为“可用”，补充可运行示例、API 参数页和变更日志，并以新的 npm alpha 版本发布。规划能力不是已发布 API，不能按名称直接调用。
 

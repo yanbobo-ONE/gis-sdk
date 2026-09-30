@@ -143,6 +143,8 @@ function createAdapter(): TestAdapter {
       clearCompleted: vi.fn(),
       edit: vi.fn(() => true),
       editing: undefined,
+      insertVertex: vi.fn(() => undefined),
+      removeVertex: vi.fn(() => undefined),
       commitEdit: vi.fn(() => undefined),
       cancelEdit: vi.fn(),
       setSnap: vi.fn(),
@@ -236,6 +238,12 @@ describe('MapRuntime', () => {
     );
     expect(() => map.drawing.commitEdit()).toThrow(
       expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'drawing.commitEdit' }),
+    );
+    expect(() => map.drawing.insertVertex({ longitude: 1, latitude: 2 })).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'drawing.insertVertex' }),
+    );
+    expect(() => map.drawing.removeVertex(0)).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'drawing.removeVertex' }),
     );
     expect(() => {
       map.drawing.cancelEdit();

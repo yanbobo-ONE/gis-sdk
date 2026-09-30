@@ -110,7 +110,14 @@ export type {
   ResolvedDepthFogOptions,
   ResolvedPrecipitationOptions,
 } from '../core/environment.js';
-export { DrawingEditMachine, isEditableGeometry, isValidDrawPosition } from '../core/drawing-edit.js';
+export {
+  DrawingEditMachine,
+  insertVertexAt,
+  isEditableGeometry,
+  isValidDrawPosition,
+  nearestSegmentIndex,
+  removeVertexAt,
+} from '../core/drawing-edit.js';
 export { convexHull } from '../spatial/hull.js';
 export {
   DEFAULT_SNAP_PIXEL_TOLERANCE,

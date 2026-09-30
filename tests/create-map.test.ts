@@ -130,6 +130,8 @@ function createFactory() {
       clearCompleted: vi.fn(),
       edit: vi.fn(() => true),
       editing: undefined,
+      insertVertex: vi.fn(() => undefined),
+      removeVertex: vi.fn(() => undefined),
       commitEdit: vi.fn(() => undefined),
       cancelEdit: vi.fn(),
       setSnap: vi.fn(),

@@ -154,6 +154,14 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       get snap() {
         return adapter.drawing.snap;
       },
+      insertVertex: (position: GeoPosition, index?: number) => {
+        this.assertReady('drawing.insertVertex');
+        return adapter.drawing.insertVertex(position, index);
+      },
+      removeVertex: (index?: number) => {
+        this.assertReady('drawing.removeVertex');
+        return adapter.drawing.removeVertex(index);
+      },
       commitEdit: () => {
         this.assertReady('drawing.commitEdit');
         return adapter.drawing.commitEdit();

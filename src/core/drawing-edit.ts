@@ -1,6 +1,7 @@
 import type { GeoPosition } from './controls.js';
 import { GisError } from './errors.js';
 import type { DrawGeometry } from './drawing.js';
+import { nearestPointOnPath } from '../spatial/measure.js';
 
 /** 编辑目标。 */
 export interface DrawEditTarget {
@@ -63,6 +64,47 @@ export function isValidDrawPosition(position: unknown): position is GeoPosition 
   );
 }
 
+/** 各模式允许的最少顶点数：插入后不足、删除后不足都会被拒绝。 */
+const MINIMUM_VERTICES: Readonly<Record<DrawGeometry['mode'], number>> = Object.freeze({
+  point: 1,
+  polyline: 2,
+  polygon: 3,
+});
+
+/**
+ * 找出一条折线/环上距离目标点最近的线段下标。
+ *
+ * 用米制最近点距离判定，因此高纬度不会因为"按度数比较"而选错线段。多段等距时返回较小的下标，
+ * 结果稳定可预测。
+ *
+ * @param geometry - 多顶点几何（点模式没有线段，恒为 `undefined`）。
+ * @param position - 目标点。
+ * @returns 线段起点的下标（`positions[index]` 到 `positions[index + 1]`）。
+ */
+export function nearestSegmentIndex(
+  geometry: DrawGeometry,
+  position: GeoPosition,
+): number | undefined {
+  if (geometry.mode === 'point' || geometry.positions.length < 2) {
+    return undefined;
+  }
+  let bestIndex: number | undefined;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let index = 0; index + 1 < geometry.positions.length; index += 1) {
+    const from = geometry.positions[index];
+    const to = geometry.positions[index + 1];
+    if (!from || !to) {
+      continue;
+    }
+    const distance = nearestPointOnPath([from, to], position).distanceMeters;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+  return bestIndex;
+}
+
 /**
  * 校验一份几何是否可进入编辑会话：模式合法且至少有一个合法顶点。
  *
@@ -80,6 +122,58 @@ export function isEditableGeometry(geometry: unknown): geometry is DrawGeometry 
     positions.length > 0 &&
     positions.every(isValidDrawPosition)
   );
+}
+
+/**
+ * 在几何中插入一个顶点，返回新几何（不改动入参）。
+ *
+ * @param geometry - 多顶点几何；点几何返回 `undefined`（插入会把它变成折线，属于换图形）。
+ * @param position - 新顶点；非法落点返回 `undefined`。
+ * @param index - 插入位置，省略时追加到末尾；越界返回 `undefined`。
+ * @returns 新几何。
+ */
+export function insertVertexAt(
+  geometry: DrawGeometry,
+  position: GeoPosition,
+  index?: number,
+): DrawGeometry | undefined {
+  if (geometry.mode === 'point' || !isValidDrawPosition(position)) {
+    return undefined;
+  }
+  const target = index ?? geometry.positions.length;
+  if (!Number.isInteger(target) || target < 0 || target > geometry.positions.length) {
+    return undefined;
+  }
+  return {
+    mode: geometry.mode,
+    positions: [
+      ...geometry.positions.slice(0, target).map((vertex) => ({ ...vertex })),
+      { ...position },
+      ...geometry.positions.slice(target).map((vertex) => ({ ...vertex })),
+    ],
+  };
+}
+
+/**
+ * 删除几何中的一个顶点，返回新几何（不改动入参）。
+ *
+ * @param geometry - 几何。
+ * @param index - 要删除的顶点下标；越界返回 `undefined`。
+ * @returns 新几何；删除后会低于该模式最少顶点数时返回 `undefined`。
+ */
+export function removeVertexAt(geometry: DrawGeometry, index: number): DrawGeometry | undefined {
+  if (!Number.isInteger(index) || index < 0 || index >= geometry.positions.length) {
+    return undefined;
+  }
+  if (geometry.positions.length - 1 < MINIMUM_VERTICES[geometry.mode]) {
+    return undefined;
+  }
+  return {
+    mode: geometry.mode,
+    positions: geometry.positions
+      .filter((_, positionIndex) => positionIndex !== index)
+      .map((vertex) => ({ ...vertex })),
+  };
 }
 
 /**
@@ -169,6 +263,92 @@ export class DrawingEditMachine {
     this.port.update(geometry);
     this.onChange?.(cloneGeometry(geometry));
     return geometry;
+  }
+
+  /**
+   * 在编辑几何中插入顶点。
+   *
+   * @param position - 新顶点；非法落点会被忽略。
+   * @param index - 插入位置：新顶点会落在该下标上，后续顶点后移；省略时追加到末尾。
+   * @returns 更新后的几何；没有会话、落点非法或下标越界时返回 `undefined`。
+   */
+  insertVertex(position: GeoPosition, index?: number): DrawGeometry | undefined {
+    if (this.disposed || !this.active) {
+      return undefined;
+    }
+    const current = this.port.get(this.active.target.id);
+    if (!current) {
+      return undefined;
+    }
+    const geometry = insertVertexAt(current, position, index);
+    if (!geometry) {
+      return undefined;
+    }
+    this.port.update(geometry);
+    this.retargetAfterVertexChange(index ?? current.positions.length, false);
+    this.onChange?.(cloneGeometry(geometry));
+    return geometry;
+  }
+
+  /**
+   * 在编辑几何中删除顶点。
+   *
+   * @param index - 要删除的顶点下标；省略时删除会话正在编辑的顶点。
+   * @returns 更新后的几何；没有会话、下标越界或删除后会低于该模式的最少顶点数时返回 `undefined`。
+   */
+  removeVertex(index?: number): DrawGeometry | undefined {
+    if (this.disposed || !this.active) {
+      return undefined;
+    }
+    const current = this.port.get(this.active.target.id);
+    if (!current) {
+      return undefined;
+    }
+    const target = index ?? this.active.target.vertexIndex;
+    if (target === undefined) {
+      return undefined;
+    }
+    const geometry = removeVertexAt(current, target);
+    if (!geometry) {
+      return undefined;
+    }
+    this.port.update(geometry);
+    this.retargetAfterVertexChange(target, true);
+    this.onChange?.(cloneGeometry(geometry));
+    return geometry;
+  }
+
+  /**
+   * 顶点增删后修正会话的顶点下标。
+   *
+   * 插入会把插入点之后的编辑目标后移一位；删除正在编辑的顶点时，会话顺延到后一个顶点
+   * （已经删到末尾则退回最后一个），这样"连续删除"不会因为下标失效而中断。
+   */
+  private retargetAfterVertexChange(index: number, removed: boolean): void {
+    const active = this.active;
+    if (!active) {
+      return;
+    }
+    const current = this.port.get(active.target.id);
+    if (!current) {
+      return;
+    }
+    const editing = active.target.vertexIndex;
+    let next = editing;
+    if (editing !== undefined) {
+      if (removed) {
+        if (index === editing) {
+          next = Math.min(editing, current.positions.length - 1);
+        } else if (index < editing) {
+          next = editing - 1;
+        }
+      } else if (index <= editing) {
+        next = editing + 1;
+      }
+    }
+    const target: DrawEditTarget =
+      next === undefined ? { id: active.target.id } : { id: active.target.id, vertexIndex: next };
+    this.active = { target, origin: active.origin };
   }
 
   /** 提交编辑并结束会话。 */

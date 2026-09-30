@@ -18,7 +18,7 @@ import type {
 } from '../core/controls.js';
 import type { DrawGeometry, DrawMode, DrawRendererPort, DrawRenderValue } from '../core/drawing.js';
 import { DrawingStateMachine } from '../core/drawing.js';
-import { DrawingEditMachine } from '../core/drawing-edit.js';
+import { DrawingEditMachine, insertVertexAt, removeVertexAt } from '../core/drawing-edit.js';
 import type { DrawEditTarget } from '../core/drawing-edit.js';
 import { isEditableGeometry } from '../core/drawing-edit.js';
 import { findSnapTarget, resolveSnapOptions } from '../core/drawing-snap.js';
@@ -48,6 +48,14 @@ const VERTEX_HIT_RADIUS_PX = 12;
 
 interface Movement {
   readonly position?: Cartesian2;
+}
+
+/** 复制一份几何，避免把内部状态直接交给调用方。 */
+function cloneGeometry(geometry: DrawGeometry): DrawGeometry {
+  return {
+    mode: geometry.mode,
+    positions: geometry.positions.map((position) => ({ ...position })),
+  };
 }
 
 /** 一组绘制图元；移除时整组释放。 */
@@ -282,6 +290,60 @@ export class CesiumDrawingController implements MapDrawingController {
     this.editGeometry = copy;
     this.renderEdit();
     return true;
+  }
+
+  /**
+   * 在编辑会话中插入顶点。
+   *
+   * 会话整体由控制器持有（而不是按拖动起停），因此这里直接在当前编辑几何上做增删并重绘；
+   * 顶点算法的纯函数在 `/core`，其它终端可以直接复用。
+   */
+  insertVertex(position: GeoPosition, index?: number): DrawGeometry | undefined {
+    this.assertActive('insertVertex');
+    const current = this.editGeometry;
+    if (!current) {
+      return undefined;
+    }
+    const geometry = insertVertexAt(current, position, index);
+    if (!geometry) {
+      return undefined;
+    }
+    this.editGeometry = geometry;
+    // 插入点在拖动目标之前时，拖动目标后移一位。
+    const target = index ?? current.positions.length;
+    if (this.editVertexIndex !== undefined && target <= this.editVertexIndex) {
+      this.editVertexIndex += 1;
+    }
+    this.renderEdit();
+    return cloneGeometry(geometry);
+  }
+
+  /** 在编辑会话中删除顶点；删除正在编辑的顶点后，拖动目标顺延到后一个顶点。 */
+  removeVertex(index?: number): DrawGeometry | undefined {
+    this.assertActive('removeVertex');
+    const current = this.editGeometry;
+    if (!current) {
+      return undefined;
+    }
+    const target = index ?? this.editVertexIndex;
+    if (target === undefined) {
+      return undefined;
+    }
+    const geometry = removeVertexAt(current, target);
+    if (!geometry) {
+      return undefined;
+    }
+    this.editGeometry = geometry;
+    if (this.editVertexIndex !== undefined) {
+      this.editVertexIndex =
+        this.editVertexIndex === target
+          ? Math.min(target, geometry.positions.length - 1)
+          : target < this.editVertexIndex
+            ? this.editVertexIndex - 1
+            : this.editVertexIndex;
+    }
+    this.renderEdit();
+    return cloneGeometry(geometry);
   }
 
   /** 提交编辑并返回最终几何；没有会话时返回 `undefined`。 */

@@ -85,6 +85,27 @@ map.drawing.on('editCancel', (geometry) => {}); // 取消，参数为还原后�
 
 编辑与绘制互斥：`edit()` 会取消进行中的绘制，`start()` 会结束编辑会话。编辑中的几何用**品红实线**渲染，与黄色虚线预览、青色完成图形区分。
 
+### 顶点增删
+
+编辑会话里还可以插点与删点：
+
+```ts
+map.drawing.insertVertex({ longitude: 116.4, latitude: 39.9 }, 2); // 插到下标 2 上，后续顶点后移
+map.drawing.insertVertex({ longitude: 116.41, latitude: 39.91 }); // 省略下标：追加到末尾
+map.drawing.removeVertex(0); // 删除指定顶点
+map.drawing.removeVertex(); // 省略下标：删除当前正在编辑的顶点
+```
+
+| 行为           | 规则                                                                       |
+| -------------- | -------------------------------------------------------------------------- |
+| 插入位置       | `index` 省略时追加到末尾；插入点在编辑目标之前时，编辑目标自动后移一位       |
+| 插入限制       | 点几何不能插点（插了就不是点）；非法落点与越界下标被忽略，返回 `undefined`   |
+| 删除限制       | 折线最少 2 个顶点、面最少 3 个顶点、点最少 1 个；低于下限时拒绝删除          |
+| 删除后的会话   | 删掉正在编辑的顶点时，编辑目标顺延到后一个顶点（已到末尾则退回最后一个）     |
+| 回退           | `cancelEdit()` 会把插删一起还原成进入编辑时的快照                           |
+
+用 `nearestSegmentIndex(geometry, position)`（`/core`）可以判断"点在哪一段上"，据此算出插入下标；它按米制距离判定，高纬度不会选错线段。SDK 不绑定具体手势（右键菜单、工具条按钮、双击线段都可以），交互留给业务。
+
 需要把编辑接到自己的数据上时，用纯状态机 `DrawingEditMachine` 传入 `DrawingEditPort`（`get`/`update`）即可，不依赖 Cesium：
 
 ```ts
@@ -131,7 +152,7 @@ map.drawing.clearCompleted(); // 全部清除
 
 ## 当前边界
 
-- **不做顶点增删**：编辑会话只能拖动已有顶点、整体移动点；插入与删除顶点仍需删除后重画。
+- **不绑定顶点增删手势**：插点与删点提供的是程序化 API 与纯函数，右键菜单、工具条按钮等交互由业务自己绑定。
 - **吸附范围限于 SDK 自己画的图形**：不会吸附到业务图层（GeoJSON / WMS 等）或地形表面；需要跨图层吸附时用 `/core` 的 `findSnapTarget()` 自己拼候选。
 - **不做贴地绘制**：预览与结果都用椭球高（`height` 默认 0）；需要贴地时先把几何交给地形采样（`map.terrain.sample()`）再渲染。
 - **不拦截相机操作**：绘制与编辑期间相机仍可拖动缩放；如需锁定，用 `map.raw.viewer.scene.screenSpaceCameraController.enableInputs = false`。
