@@ -162,6 +162,8 @@ describe('Vanilla example controller', () => {
       layers: 'demo:coverage',
       opacity: 0.72,
       parameters: { format: 'image/png', transparent: true },
+      // 示例带自定义鉴权头，用来验证请求头真的发到了服务端。
+      headers: { 'X-Example-Auth': 'gis-sdk-example-token' },
     });
     expect(controller.snapshot()).toMatchObject({ state: 'ready', layerCount: 2 });
     expect(harness.map.raw.viewer.flyTo).toHaveBeenCalledWith(harness.geoJson);

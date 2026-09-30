@@ -11,6 +11,7 @@ const wmsTile = Buffer.from(
 function localWms(): Plugin {
   let requestCount = 0;
   let lastRequest = '';
+  let lastAuthHeader = '';
 
   const install = (server: ViteDevServer | PreviewServer) => {
     server.middlewares.use((request: Connect.IncomingMessage, response, next) => {
@@ -18,7 +19,7 @@ function localWms(): Plugin {
       if (requestUrl.pathname === '/__test/wms-state') {
         response.setHeader('Content-Type', 'application/json');
         response.setHeader('Cache-Control', 'no-store');
-        response.end(JSON.stringify({ requestCount, lastRequest }));
+        response.end(JSON.stringify({ requestCount, lastRequest, lastAuthHeader }));
         return;
       }
       if (requestUrl.pathname !== '/wms') {
@@ -28,6 +29,8 @@ function localWms(): Plugin {
 
       requestCount += 1;
       lastRequest = requestUrl.search;
+      // 记录自定义鉴权头，用于验证 layers 的 headers 真的发到了服务端。
+      lastAuthHeader = String(request.headers['x-example-auth'] ?? '');
       response.statusCode = 200;
       response.setHeader('Content-Type', 'image/png');
       response.setHeader('Cache-Control', 'no-store');

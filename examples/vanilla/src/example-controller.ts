@@ -11,6 +11,9 @@ import type {
 } from '@yanbobo/gis-sdk/core';
 import type { LayerManager } from '@yanbobo/gis-sdk/layers';
 
+/** 示例用来验证自定义请求头的取值；服务端 fixture 会把它记进 `/__test/wms-state`。 */
+export const EXAMPLE_AUTH_HEADER = 'gis-sdk-example-token';
+
 type ExampleState = 'idle' | 'starting' | 'ready' | 'destroying' | 'error';
 
 interface LayerInfoLike {
@@ -266,6 +269,8 @@ export function createVanillaExampleController(
         layers: 'demo:coverage',
         opacity: 0.72,
         parameters: { format: 'image/png', transparent: true },
+        // 自定义请求头：示例用它验证鉴权头真的随瓦片请求发出（本地 fixture 会记录）。
+        headers: { 'X-Example-Auth': EXAMPLE_AUTH_HEADER },
       });
 
       if (!isGeoJsonHandle(nextGeoJson) || !isWmsHandle(nextWms)) {
