@@ -32,6 +32,7 @@
 | 图层错误可观测      | 可用 | `LayerHandle.errorCount`、`layer.events.on('error')`、`map.basemap.errorCount`                                                                                     | 影像瓦片失败累计计数并只上报首个；底图首个失败经 `map:error` 上报                                                                  |
 | 诊断快照            | 可用 | `map.diagnostics.snapshot()`（`/core` 契约 + 适配器读数）                                                                                                          | 一次调用汇总生命周期、相机（含安全网恢复次数）、质量与帧率、图层与错误计数、底图、地形、场景、环境与绘制状态；读不到不抛错 |
 | 分析工具            | 可用 | `map.analysis.run(tool, input)`、`map.analysis.list()`、`createAnalysisController()`                                                                             | 15 个内置工具（含凸包与轨迹抽稀）、按工具窄化的输入输出、算法版本、地形采样端口、无数据不伪造、`signal` 取消与稳定错误码 |
+| 点聚合              | 可用 | `clusterPoints()`（`/core`，零依赖）                                                                                                                               | 米制网格分组、中心与计数、成员与包围盒、最小簇规模、跨 180° 经线安全、输出稳定可当渲染 id；只分组不渲染 |
 | 空间量算            | 可用 | `measureDistance`、`measureArea`、`measureBBox`、`nearestPointOnPath` 等（包根或 `/core`）                                                                         | 球面量算：距离、折线长度、面积（含洞）、方位、目标点、包围盒、质心、沿线取点、最近点                                               |
 | 空间判断            | 可用 | `isPointInPolygon`、`filterPointsInPolygon`、`normalizeRingWinding`（包根或 `/core`）                                                                              | 外环 + 内环判断、边界归属可配、批量判断带包围盒预筛、绕向规范化                                                                    |
 | CSV 点位导入        | 可用 | `parseCsv`、`readPointCsv`、`guessCsvPointColumns`、`describeCsvColumn`（包根或 `/core`）                                                                          | RFC4180 解析、BOM 与编码校验、列数不一致拒绝、严格十进制坐标、列名显式映射与拒绝行样本                                             |
@@ -59,7 +60,7 @@
 | 动态实体与模型动画                   | 部分可用 | CZML 图层 `type: 'czml'` 可按受管图层加载动态实体（时钟联动与动画编排由业务接）；实体级拾取事件与内置动画仍无 SDK 方法              |
 | Worker 池与协议适配                  | 部分可用 | 分析 Worker 执行接口含 `createAnalysisWorkerPool()`（最小在途优先 + 有界队列）；SSE / MQTT / 二进制协议解码与校验尚未发布              |
 | 实时协议与 Worker 池                 | 未发布   | 长连接链路、水位线、时间戳守卫、会话门禁与重同步已可用；SSE / MQTT / 二进制协议解码与 Worker 池尚未发布                                |
-| 海量数据渲染（聚合 / 标签 / Worker） | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺                                                                 |
+| 海量数据渲染（标签 / 自动 LOD）      | 未发布   | 点位/折线批量渲染与纯计算点聚合已可用；标签、自动 LOD 与数据规模基准承诺尚未提供                                                      |
 | 绘制交互手势                         | 未发布   | 顶点增删已提供程序化 API 与纯函数；SDK 不绑定右键菜单 / 双击线段等手势，交互由业务自己接                                               |
 | 体积类环境效果与自定义材质           | 未发布   | 深度雾、基础雾与降水已可用；体积云、热力图、三维风场、闪电、水面与自定义 GLSL 材质尚无 SDK 方法                                        |
 | 分析任务模型与结果图层               | 未发布   | `map.analysis`（15 个工具）与 Worker 执行接口已可用；任务队列、进度上报与结果图层尚未发布                                                |

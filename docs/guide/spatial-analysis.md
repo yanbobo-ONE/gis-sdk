@@ -37,6 +37,28 @@ nearestPointOnPath(path, target); // { point, index, distanceMeters, alongMeters
 | `pointAlongPath(points, meters)`              | 折线 + 距离                    | 折线上的点                                      |
 | `nearestPointOnPath(points, target)`          | 折线 + 目标点                  | `{ point, index, distanceMeters, alongMeters }` |
 
+## 点聚合
+
+```ts
+import { clusterPoints } from '@yanbobo/gis-sdk/core';
+
+const clusters = clusterPoints(stations, {
+  cellSizeMeters: 1_000, // 网格边长按米给
+  positionOf: (station) => station.position,
+  minCount: 1, // 少于这么多成员的簇不返回
+});
+// [{ id, center, count, members, bounds }, ...]
+```
+
+只做分组、不做渲染：业务可以把簇当成一个点交给[点位图层](./points-layer.md)（用 `count` 决定大小），也可以把少于阈值的簇展开成原始点——"什么时候展开、怎么画"是渲染策略，SDK 不替业务决定。
+
+- **网格边长按米给**：先按当前纬度把米换算成经纬步长，因此同样的 `cellSizeMeters` 在不同纬度覆盖的地面面积一致，高纬度不会被过度聚合。
+- **跨 180° 经线安全**：经度用相对首个点的连续值参与计算，不会把一簇数据拆成两簇。
+- **输出稳定**：按网格行列排序（从南到北、从西到东），同样的数据重复聚合得到同样的 `id`，可以直接用作渲染对象的 id。
+- **复杂度 O(n)**：逐点分桶，没有成对比较，十万级点位也不需要 Worker。
+
+需要"按屏幕像素聚合"（缩放时簇自动合并/展开）时，业务把当前视野下的分辨率换算成 `cellSizeMeters` 再调用即可；SDK 不内置按像素的网格，因为那等于替业务定义交互语义。
+
 ## 几何构造与校验
 
 ```ts
@@ -137,7 +159,7 @@ transformGeoPath(csvPoints, 'EPSG:4547', 'EPSG:4490'); // 批量转换，顺序�
 
 - [分析工具](./analysis.md)（`map.analysis`）已可用：量算、判断、CRS 转换、地形采样、通视、视域与坡度坡向。
 - 分析结果图层、任务模型与 Worker 执行接口尚未提供：`run()` 直接返回数值，渲染与后台编排由业务自己做。
-- 凸包、抽稀与多边形校验已提供（零依赖）；缓冲区、叠加分析与 Delaunay/Voronoi 尚未提供（等待 §3.3 的依赖三选一）。
+- 凸包、抽稀、多边形校验与点聚合已提供（零依赖）；缓冲区、叠加分析与 Delaunay/Voronoi 尚未提供（等待 §3.3 的依赖三选一）。
 - 不提供任何交互 UI：点选量算面板、结果标注样式属于应用层。
 - 多边形合法性校验（自交诊断）依赖 `@turf/boolean-valid`，排在 P2。
 - CGCS2000 与 WGS84 在现有业务尺度按恒等处理；厘米级基准转换需要七参数或格网改正，本 SDK 不承诺。

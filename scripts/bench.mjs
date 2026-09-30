@@ -3,6 +3,7 @@ import { cpus, totalmem } from 'node:os';
 
 import {
   AttitudeDynamics,
+  clusterPoints,
   ReplayTimeline,
   SimulationClock,
   convexHull,
@@ -130,6 +131,20 @@ const track = Array.from({ length: 5_000 }, (_, index) => ({
 }));
 record(
   measure('simplifyPath（5 千顶点，10 米容差）', () => track, (points) => simplifyPath(points, 10), 5_000, '顶点'),
+);
+
+const clusteredPoints = Array.from({ length: 50_000 }, (_, index) => ({
+  longitude: 116 + ((index * 7) % 500) * 0.0005,
+  latitude: 39.9 + ((index * 13) % 500) * 0.0005,
+}));
+record(
+  measure(
+    'clusterPoints（5 万点，1 公里网格）',
+    () => clusteredPoints,
+    (points) => clusterPoints(points, { cellSizeMeters: 1_000 }),
+    50_000,
+    '点',
+  ),
 );
 
 // ── 地形剖面判据 ─────────────────────────────────────────────────────────────

@@ -118,6 +118,8 @@ export {
   nearestSegmentIndex,
   removeVertexAt,
 } from '../core/drawing-edit.js';
+export { clusterPoints } from '../spatial/cluster.js';
+export type { ClusterOptions, PointCluster } from '../spatial/cluster.js';
 export { convexHull } from '../spatial/hull.js';
 export {
   DEFAULT_SNAP_PIXEL_TOLERANCE,

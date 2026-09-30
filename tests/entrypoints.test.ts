@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createMap } from '../src/entries/cesium.js';
 import {
+  clusterPoints,
   convexHull,
   createAnalysisController,
   createAnalysisWorkerPool,
@@ -200,6 +201,7 @@ describe('package subpath entrypoints', () => {
       createAnalysisController,
   createAnalysisWorkerPool,
   createTrackTimeline,
+      clusterPoints,
       convexHull,
       simplifyPath,
       simplifyRing,

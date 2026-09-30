@@ -19,6 +19,7 @@ pnpm bench   # 可用 BENCH_MS=1000 加长每项测量时间
 | `measureArea()`（四边形）                | 0.13 µs         | 7.7 M 次/秒      |
 | `filterPointsInPolygon()`（1 万点）      | 713 µs          | 14.0 M 点/秒     |
 | `convexHull()`（2 千点）                 | 305 µs          | 6.6 M 点/秒      |
+| `clusterPoints()`（5 万点，1 公里网格） | 3.96 ms         | 12.6 M 点/秒     |
 | `simplifyPath()`（5 千顶点，10 米容差）  | 145 ms          | 34.4 k 顶点/秒   |
 | `evaluateLineOfSight()`（64 个剖面点）   | 0.11 µs         | 9.0 M 次/秒      |
 | `evaluateHorizon()`（32 个剖面点）       | 0.04 µs         | 27.8 M 次/秒     |
@@ -37,6 +38,7 @@ pnpm bench   # 可用 BENCH_MS=1000 加长每项测量时间
 
 - **每帧只需要微秒级的**：`evaluateLineOfSight()`、`evaluateHorizon()`、`slerp()`、`sampleAt()`、`SimulationClock.advance()` 都在 0.1 µs 量级——按 60 fps 算，一帧的预算里它们连零头都用不到，可以放心放在渲染循环里。
 - **单次调用在百微秒级的**：`filterPointsInPolygon()`、`convexHull()`。适合"数据变化时算一次"，不适合每帧算。
+- **点聚合可以跟着视野走**：`clusterPoints()` 聚合 5 万点只要 4 ms，缩放或平移时重算一次完全来得及，不需要 Worker。
 - **`simplifyPath()` 是本表最慢的一项**，145 ms/5 千顶点：RDP 在"容差小、几乎每个点都要保留"时接近最坏情况。轨迹抽稀建议放进 Worker（见[Worker 执行接口](./analysis-worker.md)），或先降采样再抽稀。
 - **`createTrackTimeline()` 是"一次性建索引"的成本**（1.35 ms/600 采样点）：建好之后按 `sampleAt()` 查询只要 0.02 µs。
 - **`normalizePositions()` 输出可转移的 `Float64Array`**，吞吐量高到可以在数据到达的瞬间跑一遍。
