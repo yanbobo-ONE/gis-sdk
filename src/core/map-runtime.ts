@@ -210,6 +210,9 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       get viewRectangle() {
         return adapter.camera.viewRectangle;
       },
+      get metersPerPixel() {
+        return adapter.camera.metersPerPixel;
+      },
       setView: (view: CameraView) => {
         this.assertReady('camera.setView');
         this.adapter.camera.setView(view);

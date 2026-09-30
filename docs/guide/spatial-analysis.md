@@ -57,7 +57,14 @@ const clusters = clusterPoints(stations, {
 - **输出稳定**：按网格行列排序（从南到北、从西到东），同样的数据重复聚合得到同样的 `id`，可以直接用作渲染对象的 id。
 - **复杂度 O(n)**：逐点分桶，没有成对比较，十万级点位也不需要 Worker。
 
-需要"按屏幕像素聚合"（缩放时簇自动合并/展开）时，业务把当前视野下的分辨率换算成 `cellSizeMeters` 再调用即可；SDK 不内置按像素的网格，因为那等于替业务定义交互语义。
+需要"按屏幕像素聚合"（缩放时簇自动合并/展开）时，用 `map.camera.metersPerPixel` 把像素换算成米再调用：
+
+```ts
+const perPixel = map.camera.metersPerPixel;            // 屏幕中心处每像素米数，二维 / 三维都适用
+const clusters = clusterPoints(points, { cellSizeMeters: (perPixel ?? 0) * 48 }); // 48 像素一簇
+```
+
+**何时重算、阈值取多少像素**仍由业务决定（那是交互语义）；SDK 只提供分辨率读数与聚合算法。
 
 ## 几何构造与校验
 

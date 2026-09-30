@@ -71,6 +71,7 @@ import type { CreateMapOptions, QualityOptions } from '../src/entries/cesium.js'
 import type { GisMap, TerrainSetOptions } from '../src/entries/core.js';
 import type {
   AnalysisBatchOutcome,
+  CameraController,
   AnalysisInputMap,
   AnalysisResultMap,
   CameraViewSnapshot,
@@ -119,6 +120,7 @@ describe('package subpath entrypoints', () => {
       readonly singleImage: SingleImageLayerSpec;
       readonly model: ModelLayerSpec;
       readonly pointLabels: PointsLabelStyle;
+      readonly metersPerPixel: CameraController['metersPerPixel'];
       readonly batchOutcome: AnalysisBatchOutcome;
       readonly modelHandle: ModelLayerHandle;
       readonly modelAppearance: ModelAppearanceOptions;

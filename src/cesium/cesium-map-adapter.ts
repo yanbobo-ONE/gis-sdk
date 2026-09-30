@@ -197,7 +197,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       const viewerInstance = viewer;
       guardDegenerateCameraRotation(viewerInstance.camera);
       cameraPoseGuard = guardCameraPose(viewerInstance.camera, viewerInstance.scene);
-      cameraRuntime = new CesiumCameraController(viewerInstance.camera);
+      cameraRuntime = new CesiumCameraController(viewerInstance.camera, viewerInstance.scene);
       basemapRuntime = new CesiumBasemapController(viewerInstance);
       const modelLoad = new LoadLimiter(options.quality.modelLoadConcurrency);
       terrainRuntime = new CesiumTerrainController(

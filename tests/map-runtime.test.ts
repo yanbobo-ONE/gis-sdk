@@ -40,6 +40,7 @@ const camera = {
   setView: vi.fn(),
   view: { longitude: 116.39, latitude: 39.9, height: 1000, heading: 0, pitch: -90, roll: 0 },
   viewRectangle: undefined,
+  metersPerPixel: 120,
 } satisfies CameraController;
 
 const basemap = {
@@ -193,6 +194,7 @@ describe('MapRuntime', () => {
       roll: 0,
     });
     expect(map.camera.viewRectangle).toBeUndefined();
+    expect(map.camera.metersPerPixel).toBe(120);
     map.camera.setView({ longitude: 116.39, latitude: 39.9 });
     map.basemap.set({ type: 'xyz', url: '/tiles/{z}/{x}/{y}.png' });
     await map.terrain.set({ type: 'ellipsoid' });

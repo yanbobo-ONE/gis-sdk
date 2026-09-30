@@ -43,6 +43,7 @@ const camera = {
   setView: vi.fn(),
   view: { longitude: 116.39, latitude: 39.9, height: 1000, heading: 0, pitch: -90, roll: 0 },
   viewRectangle: undefined,
+  metersPerPixel: 120,
 } satisfies CameraController;
 
 const basemap = {

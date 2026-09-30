@@ -15,7 +15,22 @@ const cesium = vi.hoisted(() => {
 });
 
 vi.mock('cesium', () => ({
-  Cartesian3: { fromDegrees: cesium.fromDegrees },
+  BoundingSphere: class BoundingSphere {
+    constructor(
+      readonly center: unknown,
+      readonly radius: number,
+    ) {}
+  },
+  Cartesian2: class Cartesian2 {
+    constructor(
+      readonly x: number,
+      readonly y: number,
+    ) {}
+  },
+  Cartesian3: {
+    fromDegrees: cesium.fromDegrees,
+    fromElements: (x: number, y: number, z: number) => ({ x, y, z }),
+  },
   Math: { toRadians: cesium.toRadians, toDegrees: cesium.toDegrees },
 }));
 
@@ -27,6 +42,10 @@ function createCamera(overrides: Record<string, unknown> = {}) {
     flyTo: vi.fn(),
     setView: vi.fn(),
     positionCartographic: { longitude: Math.PI / 2, latitude: Math.PI / 4, height: 1200 },
+    positionWC: { x: 1, y: 2, z: 3 },
+    // 屏幕中心的射线命中椭球：返回一个世界坐标点作为深度锚点。
+    pickEllipsoid: vi.fn(() => ({ x: 6_378_137, y: 0, z: 0 })),
+    getPixelSize: vi.fn(() => 24.5),
     heading: Math.PI,
     pitch: -Math.PI / 2,
     roll: Math.PI / 6,
@@ -204,5 +223,55 @@ describe('CesiumCameraController', () => {
     expect(missing).toBeUndefined();
     expect(throwing).toBeUndefined();
     expect(notFinite).toBeUndefined();
+  });
+
+  it('reports meters per pixel at the screen center', () => {
+    const camera = createCamera();
+    const controller = new CesiumCameraController(camera, {
+      drawingBufferWidth: 1600,
+      drawingBufferHeight: 800,
+      globe: { ellipsoid: {} },
+    });
+
+    expect(controller.metersPerPixel).toBe(24.5);
+    // 深度锚点取屏幕中心与椭球的交点。
+    expect((camera.pickEllipsoid as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0]).toEqual({
+      x: 800,
+      y: 400,
+    });
+  });
+
+  it('returns undefined meters per pixel without a scene or when the center misses the globe', () => {
+    const noScene = new CesiumCameraController(createCamera());
+    expect(noScene.metersPerPixel).toBeUndefined();
+
+    const missing = new CesiumCameraController(
+      createCamera({ pickEllipsoid: vi.fn(() => undefined) }),
+      { drawingBufferWidth: 800, drawingBufferHeight: 600, globe: { ellipsoid: {} } },
+    );
+    expect(missing.metersPerPixel).toBeUndefined();
+
+    const throwing = new CesiumCameraController(
+      createCamera({
+        pickEllipsoid: vi.fn(() => {
+          throw new Error('2d mode');
+        }),
+      }),
+      { drawingBufferWidth: 800, drawingBufferHeight: 600, globe: { ellipsoid: {} } },
+    );
+    expect(throwing.metersPerPixel).toBeUndefined();
+
+    const zeroViewport = new CesiumCameraController(createCamera(), {
+      drawingBufferWidth: 0,
+      drawingBufferHeight: 0,
+      globe: { ellipsoid: {} },
+    });
+    expect(zeroViewport.metersPerPixel).toBeUndefined();
+
+    const notFinite = new CesiumCameraController(
+      createCamera({ getPixelSize: vi.fn(() => Number.NaN) }),
+      { drawingBufferWidth: 800, drawingBufferHeight: 600, globe: { ellipsoid: {} } },
+    );
+    expect(notFinite.metersPerPixel).toBeUndefined();
   });
 });

@@ -1,4 +1,4 @@
-import { Cartesian3, Math as CesiumMath } from 'cesium';
+import { BoundingSphere, Cartesian2, Cartesian3, Math as CesiumMath } from 'cesium';
 import type { Camera } from 'cesium';
 
 import type {
@@ -20,6 +20,20 @@ interface ReadableCartographic {
   readonly height: number;
 }
 
+/** 世界坐标点（结构兼容 Cesium `Cartesian3`）。 */
+interface WorldPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/** 场景的最小读数形状：视口尺寸与椭球（用于屏幕中心的深度锚点）。 */
+interface ReadableScene {
+  readonly drawingBufferWidth: number;
+  readonly drawingBufferHeight: number;
+  readonly globe: { readonly ellipsoid: unknown } | undefined;
+}
+
 /** 相机视口四至的最小读数形状（Cesium `Rectangle` 结构兼容）。 */
 interface ReadableRectangle {
   readonly west: number;
@@ -33,12 +47,16 @@ interface ReadableRectangle {
  *
  * 只依赖四个边界值与位姿字段，不依赖 Cesium 的类方法，便于其它终端替换实现。
  */
-type ReadableCamera = Pick<Camera, 'cancelFlight' | 'flyTo' | 'setView'> & {
+type ReadableCamera = Pick<Camera, 'cancelFlight' | 'flyTo' | 'getPixelSize' | 'setView'> & {
   readonly positionCartographic: ReadableCartographic;
+  /** 相机在世界坐标里的位置。 */
+  readonly positionWC: WorldPoint;
   readonly heading?: number | undefined;
   readonly pitch?: number | undefined;
   readonly roll?: number | undefined;
   computeViewRectangle(ellipsoid?: unknown): ReadableRectangle | undefined;
+  /** 屏幕坐标 → 椭球交点；打不到椭球时返回 `undefined`。 */
+  pickEllipsoid(windowPosition: unknown, ellipsoid?: unknown): WorldPoint | undefined;
 };
 
 interface ActiveFlight {
@@ -121,7 +139,10 @@ export class CesiumCameraController implements CameraController {
   private activeFlight: ActiveFlight | undefined;
   private disposed = false;
 
-  constructor(private readonly camera: ReadableCamera) {}
+  constructor(
+    private readonly camera: ReadableCamera,
+    private readonly scene?: ReadableScene,
+  ) {}
 
   get view(): CameraViewSnapshot {
     const position = this.camera.positionCartographic;
@@ -140,6 +161,36 @@ export class CesiumCameraController implements CameraController {
       pitch: CesiumMath.toDegrees(this.camera.pitch ?? -Math.PI / 2),
       roll: CesiumMath.toDegrees(this.camera.roll ?? 0),
     };
+  }
+
+  /**
+   * 屏幕中心处每像素多少米；中心射线打不到椭球时返回 `undefined`。
+   *
+   * 用屏幕中心与椭球的交点作为深度锚点交给 `camera.getPixelSize()`，因此透视与正交视锥
+   * （三维 / 二维）都由 Cesium 自己算，SDK 不做视锥假设。
+   */
+  get metersPerPixel(): number | undefined {
+    const scene = this.scene;
+    if (!scene) {
+      return undefined;
+    }
+    const { drawingBufferWidth: width, drawingBufferHeight: height } = scene;
+    if (!(width > 0) || !(height > 0)) {
+      return undefined;
+    }
+    let focus: WorldPoint | undefined;
+    try {
+      focus = this.camera.pickEllipsoid(new Cartesian2(width / 2, height / 2), scene.globe?.ellipsoid);
+    } catch {
+      // 二维模式或相机指向天空时可能抛错，统一按"算不出"处理。
+      focus = undefined;
+    }
+    if (!focus) {
+      return undefined;
+    }
+    const anchor = Cartesian3.fromElements(focus.x, focus.y, focus.z);
+    const size = this.camera.getPixelSize(new BoundingSphere(anchor, 0), width, height);
+    return Number.isFinite(size) && size > 0 ? size : undefined;
   }
 
   get viewRectangle(): GeoBBox | undefined {

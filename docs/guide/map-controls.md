@@ -68,6 +68,7 @@ await map.camera.flyTo({
 | ---------------- | -------------- | --------------------------------------------- | ------------------------------------------------ |
 | `view`           | 无（只读）     | 当前位姿快照：经纬高（度 / 米）与航向 / 俯仰 / 翻滚 | `CAMERA_VIEW_UNAVAILABLE`                        |
 | `viewRectangle`  | 无（只读）     | 当前视口在地表覆盖的经纬四至；不可用时为 `undefined` | -                                                |
+| `metersPerPixel` | 无（只读）     | 屏幕中心处每像素多少米；中心射线打不到椭球时为 `undefined` | -                                                |
 | `setView(view)`  | `CameraView`   | 立即切换视角，并先取消进行中的飞行            | `INVALID_CAMERA_VIEW`                            |
 | `flyTo(view)`    | `CameraFlight` | 平滑飞行；完成时 Promise resolve              | `INVALID_CAMERA_VIEW`、`CAMERA_FLIGHT_CANCELLED` |
 | `cancelFlight()` | 无             | 取消 SDK 发起的当前飞行；无进行中飞行时无操作 | 当前飞行以 `CAMERA_FLIGHT_CANCELLED` reject      |
@@ -90,6 +91,20 @@ map.camera.setView(view); // 快照可以直接传回 setView() / flyTo()
 
 - `view` 在相机位姿退化（例如相机落到地心、位姿为 `NaN`）时抛 `CAMERA_VIEW_UNAVAILABLE`；这类位姿会被地图创建时安装的退化保护在下一帧修复，因此调用方按可重试错误处理即可。
 - `viewRectangle` 在相机看不到椭球（例如指向天空）或视野覆盖全球时返回 `undefined`，而不是给出全球范围的假四至。二维模式下同样是当前视口范围，可直接用于按图幅查询业务数据。
+
+### 按屏幕像素换算世界尺度
+
+`metersPerPixel` 把"屏幕上多少像素"和"地面上多少米"接起来，用于聚合网格、符号大小、LOD 阈值这类按像素设计的策略：
+
+```ts
+const perPixel = map.camera.metersPerPixel; // 屏幕中心处，二维 / 三维都适用
+if (perPixel !== undefined) {
+  // 每 48 像素合并成一个聚合簇
+  const clusters = clusterPoints(points, { cellSizeMeters: perPixel * 48 });
+}
+```
+
+深度基准是**屏幕中心与椭球的交点**，因此它随缩放和倾斜变化；中心射线打不到椭球（指向天空）时返回 `undefined`——不要用一个猜的近似值替代，那会让聚合在天空视角下行为突变。
 
 `setView()` 会先取消进行中的飞行。Cesium 的原生 `setView` 不会取消飞行，若不先取消，飞行会继续按帧覆写刚设置的视角。参数校验在取消之前完成，因此非法视角不会打断已有飞行。
 

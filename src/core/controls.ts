@@ -309,6 +309,15 @@ export interface CameraController {
    * 相机看不到椭球（例如指向天空）或视角覆盖全球时返回 `undefined`。
    */
   readonly viewRectangle: GeoBBox | undefined;
+  /**
+   * 屏幕中心处每像素代表多少米。
+   *
+   * 用相机视锥与屏幕中心射线在地表（椭球）上的交点作为深度基准，因此二维与三维模式都适用；
+   * 中心射线打不到椭球（例如相机指向天空）时返回 `undefined`，不猜一个近似值。
+   *
+   * 用途是按**屏幕像素**换算世界尺度：聚合网格边长、符号与标签的大小、LOD 阈值等。
+   */
+  readonly metersPerPixel: number | undefined;
   /** 立即设置相机视角。 */
   setView(view: CameraView): void;
   /** 平滑飞行到指定视角；飞行被取消时拒绝。 */
