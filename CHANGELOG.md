@@ -29,6 +29,7 @@
 - 姿态数学补完：四元数 ↔ 航向/俯仰/翻滚互转（与 Cesium 逐位一致）、最短弧 `slerp()` 与 `normalizeQuaternion()`。
 - 增加分析 Worker 池 `createAnalysisWorkerPool()`：最小在途优先调度、有界排队（超出以 `ANALYSIS_WORKER_QUEUE_FULL` 拒绝）、统计与统一销毁。
 - 增加轨迹回放桥 `createTrackTimeline()` / `sampleTrackPose()`：CZML 轨迹装入 `ReplayTimeline`，位置按最短弧插值、姿态走四元数 slerp，默认不外推。
+- 增加 CZML 图层 `type: 'czml'`：受管的 `CzmlDataSource` 生命周期、原子 `setData()`、`entityCount` 读数与统一释放；时钟联动仍由业务接。
 - 增加位置批量归一化 `normalizePositions()`：坐标校验、按 id 合并最新、可转移的 Float64Array 输出。
 - 增加折线图层与五种内置材质：PolylineCollection 批量渲染、逐条样式覆盖、原子替换与整层样式调整；画布快照契约改为可移植形状，core 层不再依赖 DOM 类型。
 - 增加运行时场景模式切换 `map.scene.setMode()`：形变完成结算、同模式立即结算、被取代语义与销毁处理。

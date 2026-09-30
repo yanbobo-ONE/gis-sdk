@@ -7,6 +7,7 @@ import type { GisError } from '../core/errors.js';
 /** 当前稳定支持的图层类型。 */
 export type LayerType =
   | 'geojson'
+  | 'czml'
   | 'wms'
   | 'tms'
   | 'wmts'
@@ -67,6 +68,41 @@ export interface GeoJsonLayerSpec extends BaseLayerSpec {
   readonly data: GeoJsonSource;
   /** 加载时应用到未自带样式要素的默认样式。 */
   readonly style?: GeoJsonStyle;
+}
+
+/**
+ * CZML 图层的初始数据源。
+ *
+ * 数组形式直接交给 Cesium（可用 `@yanbobo/gis-sdk/core` 的 `czmlFromPositions()` /
+ * `czmlFromSamples()` 生成）；字符串形式按同源或 CORS 可访问的 URL 拉取 JSON。
+ */
+export type CzmlSource = string | readonly Readonly<Record<string, unknown>>[];
+
+/** CZML 动态实体图层。 */
+export interface CzmlLayerSpec extends BaseLayerSpec {
+  /** 判别 CZML 图层。 */
+  readonly type: 'czml';
+  /** 初始 CZML 文档数组或可访问的 URL。 */
+  readonly data: CzmlSource;
+}
+
+/** CZML 图层句柄。 */
+export interface CzmlLayerHandle extends LayerHandle {
+  /** 判别 CZML 图层。 */
+  readonly type: 'czml';
+  /**
+   * 当前文档里的实体数量。
+   *
+   * 用于验收与断言（"文档是否真的解析出了实体"），也可以在面板上做读数。
+   */
+  readonly entityCount: number;
+  /**
+   * 替换 CZML 文档：旧实体一直有效，直到新文档加载成功。
+   *
+   * 文档里的 `clock` **不会**被 SDK 应用到地图时钟——时间轴联动属于业务编排，
+   * 需要时用 `map.raw.viewer` 自己接。
+   */
+  setData(data: CzmlSource, options?: OperationOptions): Promise<void>;
 }
 
 /** WMS 自定义请求参数允许的稳定标量。 */
@@ -355,6 +391,7 @@ export interface Tiles3dLayerSpec extends BaseLayerSpec {
 /** 图层配置的判别联合。 */
 export type LayerSpec =
   | GeoJsonLayerSpec
+  | CzmlLayerSpec
   | WmsLayerSpec
   | TmsLayerSpec
   | WmtsLayerSpec
@@ -532,6 +569,8 @@ export interface LayerInfo {
 /** 根据配置类型推导具备对应能力的句柄。 */
 export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayerSpec
   ? GeoJsonLayerHandle
+  : TSpec extends CzmlLayerSpec
+    ? CzmlLayerHandle
   : TSpec extends WmsLayerSpec
     ? WmsLayerHandle
     : TSpec extends TmsLayerSpec | WmtsLayerSpec | SingleImageLayerSpec

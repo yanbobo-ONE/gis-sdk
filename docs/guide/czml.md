@@ -78,6 +78,31 @@ tracksFromCzml(document);    // CzmlTrack[]：再加上 modelUrl 与每条的 at
 - 没有 `position` 的包（只有 `billboard`、`label` 等）会被跳过，因此同一份文档可以既喂给 Cesium，也喂给 SDK 图层；
 - 结构非法（采样数组长度既不是 3 也不是 4 的倍数、时间或坐标非有限值、`availability` 区间不合法）会抛 `INVALID_CZML`，不做静默跳过。
 
+## 作为图层渲染：`type: 'czml'`
+
+生成或拿到的文档可以直接交给图层管理器，实体生命周期由 SDK 负责：
+
+```ts
+const layer = await map.layers.add({
+  id: 'satellites',
+  type: 'czml',
+  data: czmlFromPositions('sat-1', orbitPositions, { intervalSeconds: 5 }), // 或 '/data/satellites.czml'
+});
+
+layer.entityCount; // 文档解析出的实体数
+await layer.setData(nextDocument); // 原子替换：旧实体一直有效，直到新文档加载成功
+layer.setVisible(false);
+await layer.remove();
+```
+
+| 能力         | 语义                                                                        |
+| ------------ | --------------------------------------------------------------------------- |
+| 加载         | 文档数组直接交给 Cesium；字符串按同源 / CORS 可访问的 URL 拉取 JSON          |
+| `setData()`  | 新文档加载成功后才替换旧实体；取消时旧文档继续生效，图层不进入错误态          |
+| 生命周期     | `setVisible()`、`remove()`、`map.destroy()` 统一释放 `DataSource`            |
+| 可观测       | `state`、`errorCount`、`layer.events.on('error')`、`entityCount` 与其它图层一致 |
+| 时钟         | **不联动**：文档里的 `clock` 不会改地图时钟，时间轴编排由业务用 `map.raw.viewer` 自己做 |
+
 ## 装进回放时间轴
 
 ```ts
@@ -102,5 +127,5 @@ const pose = sampleTrackPose(timeline, track.id, clock.snapshot().currentTime ??
 ## 边界
 
 - **最小集之外的属性不解析**：`billboard`、`label`、`path`、`polyline` 等渲染属性原样忽略；业务字段不会由 SDK 生成，需要时在文档上追加；
-- **不做数据源**：SDK 没有 `map.dataSources`；加载、时钟同步与实体生命周期由业务使用 `map.raw.viewer` 管理；
+- **CZML 图层只管实体生命周期**：文档里的 `clock` 与地图时钟的联动仍属业务编排（实体动画由 Cesium 自己按 `clock` 推进）；直接操作 `viewer.dataSources` 时资源由业务释放；
 - **不做时间轴联动**：CZML 的 `clock` 与地图时钟的联动属于业务编排；把解析出的采样喂给[回放时间轴](./replay-timeline.md)即可。

@@ -37,7 +37,7 @@
 | CSV 点位导入        | 可用 | `parseCsv`、`readPointCsv`、`guessCsvPointColumns`、`describeCsvColumn`（包根或 `/core`）                                                                          | RFC4180 解析、BOM 与编码校验、列数不一致拒绝、严格十进制坐标、列名显式映射与拒绝行样本                                             |
 | CRS 坐标转换        | 可用 | `registerCrs`、`registerChinaCrs`、`transformGeoPoint/Path/Ring`、`listCrs`、`describeCrs`                                                                         | proj4 封装、CGCS2000 高斯带按公式登记并校验带号、往返残差与基准值有单测锁定                                                        |
 | 轨道与姿态数学      | 可用 | `calculateOrbitalElements`、`propagateTwoBody`、`sampleOrbitPositions`、`AttitudeDynamics`、`slerp` 等                                                                  | 六根数求解、二体传播、锚点轨道与采样、最近接近、四元数姿态积分，以及与 Cesium 逐位一致的四元数 ↔ 航向/俯仰/翻滚互转与最短弧插值 |
-| CZML 生成与解析     | 可用 | `czmlFromPositions`、`positionsFromCzml`、`tracksFromCzml`、`createTrackTimeline`                                                                           | 位置采样与可用区间往返一致、姿态四元数采样、`model` 报文，以及轨迹到回放时间轴的桥（最短弧位置插值 + 姿态 slerp） |
+| CZML 生成、解析与图层 | 可用 | `czmlFromPositions`、`positionsFromCzml`、`tracksFromCzml`、`createTrackTimeline`、`type: 'czml'`                                                                       | 位置采样与可用区间往返一致、姿态四元数采样、`model` 报文、轨迹到回放时间轴的桥，以及按图层管理的 CZML 实体生命周期（含原子替换与实体计数） |
 | 仿真 / 回放时钟     | 可用 | `SimulationClock`（包根或 `/core`）                                                                                                                                | 播放状态机（idle/playing/paused/ended/stalled）、倍率与方向、seek/step、水位线限速、停滞原因与订阅                                 |
 | 数据管线核心        | 可用 | `DataPipeline`（包根或 `/core`）                                                                                                                                   | 有界队列、同键最新值合并、溢出策略、批量读取和统计快照                                                                             |
 | 消息输入适配器      | 可用 | `DataPipelineMessageAdapter`（包根或 `/core`）                                                                                                                     | Worker / MessagePort 监听、业务解码转发、拒绝/丢弃统计与监听释放                                                                   |
@@ -56,7 +56,7 @@
 | 模块                                 | 当前状态 | 在完成前的边界                                                                                                                         |
 | ------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 企业影像服务                         | 未发布   | 当前未封装企业鉴权、服务专属参数或凭证更新策略；可临时使用原生出口                                                                     |
-| 动态实体与模型动画                   | 未发布   | CZML 生成 / 解析、静态模型与外观策略已可用；CZML 数据源加载、动态实体、动画播放与实体级拾取事件仍无 SDK 方法                        |
+| 动态实体与模型动画                   | 部分可用 | CZML 图层 `type: 'czml'` 可按受管图层加载动态实体（时钟联动与动画编排由业务接）；实体级拾取事件与内置动画仍无 SDK 方法              |
 | Worker 池与协议适配                  | 部分可用 | 分析 Worker 执行接口含 `createAnalysisWorkerPool()`（最小在途优先 + 有界队列）；SSE / MQTT / 二进制协议解码与校验尚未发布              |
 | 实时协议与 Worker 池                 | 未发布   | 长连接链路、水位线、时间戳守卫、会话门禁与重同步已可用；SSE / MQTT / 二进制协议解码与 Worker 池尚未发布                                |
 | 海量数据渲染（聚合 / 标签 / Worker） | 未发布   | 尚无动态渲染器、Primitive / Collection 批处理、自动 LOD 或基准数据承诺                                                                 |

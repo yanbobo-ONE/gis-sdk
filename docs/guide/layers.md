@@ -6,6 +6,7 @@
 | -------------------------- | ----------------------------------- | -------------------------------------- |
 | 添加、查询、移除或清空图层 | [图层管理](./layer-management.md)   | `map.layers.add/get/list/remove/clear` |
 | 加载或整体替换业务要素     | [GeoJSON 图层](./geojson-layer.md)  | `type: 'geojson'`、`setData()`         |
+| 渲染 CZML 动态实体          | [CZML 生成与解析](./czml.md)        | `type: 'czml'`、`setData()`、`entityCount` |
 | 接入 WMS、TMS 或 WMTS 服务 | [影像图层](./imagery-layers.md)     | `type: 'wms' \| 'tms' \| 'wmts'`       |
 | 加载城市模型、倾斜摄影等   | [3D Tiles 图层](./tiles3d-layer.md) | `type: '3d-tiles'`                     |
 | 放置单个 glTF / GLB 模型   | [静态模型图层](./model-layer.md)    | `type: 'model'`                        |

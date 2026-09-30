@@ -25,7 +25,7 @@
 | 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`convexHull`、`simplifyPath`、`validatePolygon`、CRS 注册表 |
 | 通视、视域、坡度坡向、凸包、抽稀                 | [分析工具](./analysis.md)                   | `map.analysis.run(tool, input)`、15 个内置工具与算法版本           |
 | 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics` |
-| 生成或解析 CZML（位置 / 姿态 / 模型）             | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`positionsFromCzml`、`tracksFromCzml`          |
+| 生成 / 解析 CZML，或渲染动态实体                  | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`tracksFromCzml`、`type: 'czml'` 图层          |
 | 接长连接：重连、心跳与按类型分发                       | [实时链路](./realtime-socket.md)            | `RealtimeSocketClient` 的 `connect()` / `subscribe()` / `stats`    |
 | 排查线上问题或做验收自检                           | [诊断快照](./diagnostics.md)                | `map.diagnostics.snapshot()` 一次拿到状态、质量、图层与错误计数     |
 | 把重计算搬到 Worker 里执行                           | [Worker 执行接口](./analysis-worker.md)     | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()` 与消息协议 |

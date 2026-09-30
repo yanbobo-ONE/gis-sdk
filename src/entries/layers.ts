@@ -5,6 +5,9 @@ export {
 } from '../layers/contracts.js';
 export { wmsFilter } from '../cesium/layers/wms-filter.js';
 export type {
+  CzmlLayerHandle,
+  CzmlLayerSpec,
+  CzmlSource,
   GeoJsonLayerHandle,
   GeoJsonLayerSpec,
   GeoJsonMarkerStyle,

@@ -85,6 +85,7 @@ import type {
   TerrainProfilePoint,
 } from '../src/entries/core.js';
 import type {
+  CzmlLayerSpec,
   ImageryLayerHandle,
   LayerManager,
   ModelAppearanceOptions,
@@ -107,6 +108,7 @@ describe('package subpath entrypoints', () => {
       readonly map: GisMap;
       readonly layers: LayerManager;
       readonly tileset: Tiles3dLayerSpec;
+      readonly czml: CzmlLayerSpec;
       readonly wms: WmsLayerSpec;
       readonly tms: TmsLayerSpec;
       readonly wmts: WmtsLayerSpec;

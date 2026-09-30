@@ -3,6 +3,7 @@ import type { Viewer } from 'cesium';
 import type { LayerHandle, LayerSpec } from '../../layers/contracts.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
 import type { CesiumLayerServices } from '../layer-services.js';
+import { createCzmlLayer } from './czml-layer.js';
 import { createGeoJsonLayer } from './geojson-layer.js';
 import { createModelLayer } from './model-layer.js';
 import { createPointsLayer } from './points-layer.js';
@@ -22,6 +23,8 @@ export function createCesiumLayer(
   switch (spec.type) {
     case 'geojson':
       return createGeoJsonLayer(viewer, spec, context);
+    case 'czml':
+      return createCzmlLayer(viewer, spec, context);
     case 'wms':
       return createWmsLayer(viewer, spec, context);
     case 'tms':

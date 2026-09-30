@@ -182,7 +182,7 @@ async function disposeMap() {
 | 空间计算（量算 / 判断 / CRS）                  | 可用                   | `@yanbobo/gis-sdk/core` 的 `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                     |
 | 分析工具                                       | 可用                   | `map.analysis.run('distance' \| 'line-of-sight' \| 'viewshed' \| 'convex-hull' \| ...)`：15 个内置工具、算法版本与 `signal` 取消                                  |
 | 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`、`slerp()`、`quaternionFromHeadingPitchRollDegrees()`（纯计算，零 Cesium） |
-| CZML 生成与解析                                | 可用                   | `czmlFromPositions()` / `tracksFromCzml()` / `createTrackTimeline()`：位置采样、可用区间、姿态四元数与 `model` 报文，以及轨迹到回放的桥                                                                        |
+| CZML 生成、解析与图层                          | 可用                   | `czmlFromPositions()` / `tracksFromCzml()` / `createTrackTimeline()` / `type: 'czml'`：位置采样、姿态与 `model` 报文、轨迹回放桥，以及受管的 CZML 实体图层                                                                        |
 | 仿真 / 回放时钟                                | 可用                   | `SimulationClock`：倍率、暂停、倒放、seek/step 与水位线限速，可订阅状态                                                                                                         |
 | 回放时间轴                                     | 可用                   | `ReplayTimeline`：按对象分组、同刻去重、`sampleAt()` 插值、`window()` / `trackAt()` 切片、有界外推                                                                                |
 | Cesium 公共原生能力                            | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                                                                                |
@@ -194,7 +194,7 @@ async function disposeMap() {
 | 位置批量归一化                                 | 可用                   | `normalizePositions()`：坐标校验、按 id 合并最新、输出可转移的 `Float64Array`                                                                                                   |
 | 实时会话门禁与重同步                           | 可用                   | `RealtimeSessionGate`（丢弃旧会话迟到包）与 `RealtimeResyncController`（序列断档→有界快照请求）                                                                                 |
 | 实时链路（WebSocket）                          | 可用                   | `RealtimeSocketClient`：重连退避与抖动、心跳存活判断、按类型订阅、解码与订阅方异常隔离、链路统计                                                                               |
-| 动态实体与模型动画                             | 未完成                 | CZML 生成 / 解析、静态模型与外观策略已可用；CZML 数据源加载、动态实体与动画播放当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                |
+| 动态实体动画编排                               | 未完成                 | CZML 图层可按受管图层加载动态实体；地图时钟联动、内置动画与实体级拾取事件当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                |
 | Primitive 大数据渲染                           | 未完成                 | 分析 Worker 接口与池已可用；吞吐量与数据规模承诺、Primitive 批处理与自动 LOD 尚未提供                                                                                           |
 | 绘制手势、自定义材质与插件                     | 未完成                 | 绘制、顶点编辑 / 增删 / 吸附、分析工具、诊断快照已可用；顶点增删的交互手势、自定义材质、分析结果图层与插件协议当前没有稳定公开 API                                                  |
 
