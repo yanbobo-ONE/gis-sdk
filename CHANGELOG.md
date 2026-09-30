@@ -4,6 +4,7 @@
 
 ### Minor Changes
 
+- 增加批量分析执行 `runAnalysisBatch()`：有界并发、逐条失败隔离、结果与输入同序、进度回调与取消返回部分结果。
 - 点位图层支持标签：`points[].label` + `labels` 样式（字体/颜色/描边/偏移/上限），用 `LabelCollection` 批量绘制并新增 `labelCount` 读数，`setData()` 与 `setStyle()` 一并处理标签。
 
 ## 0.1.0-alpha.10（已发布）

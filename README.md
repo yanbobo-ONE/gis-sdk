@@ -27,6 +27,7 @@
 - 纯计算性能基准：`pnpm bench` 覆盖量算、几何、剖面判据、姿态、回放、CZML 与位置归一化，实测表见[性能基准](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/performance.md)；
 - 诊断快照 `map.diagnostics.snapshot()`：状态、相机（含安全网恢复次数）、质量与帧率、图层与错误计数、底图、地形、场景、环境与绘制状态；
 - 实时链路 `RealtimeSocketClient`：连接状态机、有上限退避重连与抖动、心跳存活判断、按类型路由与解码容错；
+- 批量分析 `runAnalysisBatch()`：有界并发、逐条失败隔离、进度回调与取消返回部分结果；
 - 分析工具 `map.analysis`：距离 / 地表距离 / 面积 / 方位角 / 地形采样 / 通视 / 视域 / 坡度坡向 / CRS 转换 / 点在面内 / 包围盒 / 质心 / 凸包 / 抽稀，算法全部在 `/core`；
 - 回放时间轴 `ReplayTimeline`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片（不含数据源读取）；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）、可选标签（LabelCollection，含上限与 `labelCount`）与 CSV 点位导入解析；
@@ -181,7 +182,7 @@ async function disposeMap() {
 | 诊断快照                                       | 可用                   | `map.diagnostics.snapshot()`：一次调用汇总运行状态与错误计数，读不到不抛错                                                                                                     |
 | Worker 分析执行接口                            | 可用                   | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()` / `createAnalysisWorkerPool()`：按 id 匹配、取消与超时、错误码跨线程还原、最小在途优先调度 |
 | 空间计算（量算 / 判断 / 聚合 / CRS）           | 可用                   | `measure*`、`isPointInPolygon`、`filterPointsInPolygon`、`convexHull`、`simplifyPath`、`validatePolygon`、`clusterPoints`、`registerChinaCrs`、`transformGeoPoint`；零 Cesium 依赖                                     |
-| 分析工具                                       | 可用                   | `map.analysis.run('distance' \| 'line-of-sight' \| 'viewshed' \| 'convex-hull' \| ...)`：15 个内置工具、算法版本与 `signal` 取消                                  |
+| 分析工具与批量执行                             | 可用                   | `map.analysis.run('distance' \| 'line-of-sight' \| 'convex-hull' \| ...)`：15 个内置工具、算法版本与 `signal` 取消；`runAnalysisBatch()` 有界并发、进度回调与部分结果                                  |
 | 轨道与姿态数学                                 | 可用                   | `calculateOrbitalElements()`、`propagateTwoBody()`、`orbitalElementsFromAnchor()`、`sampleOrbitPositions()`、`findClosestApproaches()`、`AttitudeDynamics`、`slerp()`、`quaternionFromHeadingPitchRollDegrees()`（纯计算，零 Cesium） |
 | CZML 生成、解析与图层                          | 可用                   | `czmlFromPositions()` / `tracksFromCzml()` / `createTrackTimeline()` / `type: 'czml'`：位置采样、姿态与 `model` 报文、轨迹回放桥，以及受管的 CZML 实体图层                                                                        |
 | 仿真 / 回放时钟                                | 可用                   | `SimulationClock`：倍率、暂停、倒放、seek/step 与水位线限速，可订阅状态                                                                                                         |

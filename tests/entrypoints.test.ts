@@ -38,6 +38,7 @@ import {
   RealtimeSocketClient,
   RenderQualityMonitor,
   ReplayTimeline,
+  runAnalysisBatch,
   resolveEnvironmentOptions,
   SimulationClock,
   simplifyPath,
@@ -69,6 +70,7 @@ import { wmsFilter } from '../src/entries/layers.js';
 import type { CreateMapOptions, QualityOptions } from '../src/entries/cesium.js';
 import type { GisMap, TerrainSetOptions } from '../src/entries/core.js';
 import type {
+  AnalysisBatchOutcome,
   AnalysisInputMap,
   AnalysisResultMap,
   CameraViewSnapshot,
@@ -117,6 +119,7 @@ describe('package subpath entrypoints', () => {
       readonly singleImage: SingleImageLayerSpec;
       readonly model: ModelLayerSpec;
       readonly pointLabels: PointsLabelStyle;
+      readonly batchOutcome: AnalysisBatchOutcome;
       readonly modelHandle: ModelLayerHandle;
       readonly modelAppearance: ModelAppearanceOptions;
       readonly modelTransform: ModelTransform;
@@ -220,6 +223,7 @@ describe('package subpath entrypoints', () => {
       positionsFromCzml,
       isEditableGeometry,
       isValidDrawPosition,
+      runAnalysisBatch,
       resolveEnvironmentOptions,
     ]) {
       expect(value).toBeTypeOf('function');
@@ -255,6 +259,7 @@ describe('package subpath entrypoints', () => {
       'validatePolygon',
       'createAnalysisController',
       'createAnalysisWorkerPool',
+      'runAnalysisBatch',
       'createTrackTimeline',
       'tracksFromCzml',
       'DrawingEditMachine',

@@ -168,6 +168,14 @@ export type {
   RealtimeSocketStats,
 } from '../core/realtime-socket.js';
 
+export { runAnalysisBatch } from '../core/analysis-batch.js';
+export type {
+  AnalysisBatchEntry,
+  AnalysisBatchItem,
+  AnalysisBatchOptions,
+  AnalysisBatchOutcome,
+  AnalysisBatchProgress,
+} from '../core/analysis-batch.js';
 export { createAnalysisController } from '../core/analysis-runner.js';
 export { analysisTools } from '../core/analysis-runner.js';
 export { createAnalysisWorkerClient, createAnalysisWorkerHost } from '../core/analysis-worker-client.js';

@@ -78,6 +78,42 @@ map.analysis.list(); // 15 个内置工具的 id / 名称 / 说明
 - 半径非正、坐标非法等输入问题抛 `INVALID_ANALYSIS_INPUT`；未知工具 ID 抛 `UNKNOWN_ANALYSIS_TOOL`。
 - 中止的调用抛 `ANALYSIS_ABORTED`。
 
+## 批量执行
+
+一批分析（逐点坡度、逐对通视、成批抽稀）用 `runAnalysisBatch()` 编排：
+
+```ts
+import { runAnalysisBatch } from '@yanbobo/gis-sdk/core';
+
+const outcome = await runAnalysisBatch(
+  map.analysis,
+  rows.map((row) => ({ id: row.id, tool: 'slope-aspect' as const, input: { center: row, radiusMeters: 200 } })),
+  {
+    concurrency: 4,
+    signal: controller.signal,
+    onProgress: ({ completed, failed, total, running }) => {
+      bar.value = (completed + failed) / total;
+      status.textContent = `${String(completed)} 完成 / ${String(failed)} 失败 / ${String(running)} 进行中`;
+    },
+  },
+);
+
+outcome.cancelled; // 是否被中止
+outcome.entries.forEach((entry) => {
+  if (entry.ok) render(entry.id, entry.value);
+  else console.warn(entry.id, entry.errorCode, entry.errorMessage);
+});
+```
+
+| 语义           | 规则                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| 并发有界       | 同时在跑的任务不超过 `concurrency`（默认 4，1 到 32），不会一次压垮地形采样或 Worker        |
+| 失败隔离       | 某一条抛错只记在它自己的条目里，其余继续执行——一条坏数据不该毁掉整批                       |
+| 顺序稳定       | 返回的 `entries` 与输入**同序**（按下标排列），可以直接与业务行对齐；进度回调则按完成顺序触发 |
+| 取消返回部分结果 | `signal` 中止后不再派发新任务、在途任务拿到同一个信号，函数正常返回并把 `cancelled` 置为 `true` |
+
+与 [`createAnalysisWorkerPool()`](./analysis-worker.md) 的分工：池解决"任务跑在哪个 Worker 上"，批量执行解决"一批任务怎么编排"；把池当 `controller` 传进来即可叠加使用（并发会由池再管一层）。
+
 ## 与 `@yanbobo/gis-sdk/core` 的关系
 
 `map.analysis` 只是一层路由：算法都在 `/core`，零渲染引擎依赖，可以直接在 Worker 或其它终端复用。
