@@ -11,4 +11,6 @@ npm --prefix .tmp/vanilla-consumer run dev -- --host 127.0.0.1 --port 4175
 
 重新运行 `example:prepare` 之前请先停掉正在运行的 dev server：压缩包会在原地替换，仍在运行的 Vite 依赖预构建缓存可能把新旧产物混在一起，表现为页面卡在创建中。必要时删掉 `.tmp/vanilla-consumer/node_modules/.vite` 再启动。
 
-验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析，以及相机位姿读取。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。
+首次加载若一直停在"创建中"，刷新一次即可：Vite 的依赖预构建在首次请求时会边优化边服务，页面可能拿到未完成的依赖图。
+
+验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析、相机位姿读取、点位图层与标签（含 `labelCount` 读数与开关）、按 `metersPerPixel` 驱动的点聚合、CZML 轨迹图层，以及 20 点的批量坡度坡向分析。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。

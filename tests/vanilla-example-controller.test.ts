@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createVanillaExampleController } from '../examples/vanilla/src/example-controller.js';
-import type { AnalysisResultMap } from '../src/entries/core.js';
-import type { GeoJsonLayerSpec, WmsLayerSpec } from '../src/entries/layers.js';
+import type { AnalysisController, AnalysisResultMap, CameraController } from '../src/entries/core.js';
+import type {
+  CzmlLayerHandle,
+  GeoJsonLayerSpec,
+  LayerManager,
+  PointsLayerHandle,
+  WmsLayerSpec,
+} from '../src/entries/layers.js';
 
 function createHarness() {
   const geoJson = {
@@ -24,9 +30,37 @@ function createHarness() {
     setFilter: vi.fn(() => Promise.resolve()),
     reload: vi.fn(() => Promise.resolve()),
   };
-  const add = vi.fn((spec: GeoJsonLayerSpec | WmsLayerSpec) =>
-    Promise.resolve(spec.type === 'geojson' ? geoJson : wms),
-  );
+  const points = {
+    id: 'example-points',
+    type: 'points' as const,
+    state: 'ready' as const,
+    visible: true,
+    count: 200,
+    labelCount: 200,
+    setVisible: vi.fn(),
+    setData: vi.fn(() => Promise.resolve()),
+    setStyle: vi.fn((style: { readonly labels?: { readonly enabled?: boolean } }) => {
+      points.labelCount = style.labels?.enabled === false ? 0 : points.count;
+    }),
+  };
+  const czml = {
+    id: 'example-czml',
+    type: 'czml' as const,
+    state: 'ready' as const,
+    visible: true,
+    entityCount: 1,
+    setVisible: vi.fn(),
+    setData: vi.fn(() => Promise.resolve()),
+  };
+  const add = vi.fn((spec: GeoJsonLayerSpec | WmsLayerSpec | { readonly type: 'points' } | { readonly type: 'czml' }) => {
+    if (spec.type === 'points') {
+      return Promise.resolve(points as unknown as PointsLayerHandle);
+    }
+    if (spec.type === 'czml') {
+      return Promise.resolve(czml as unknown as CzmlLayerHandle);
+    }
+    return Promise.resolve(spec.type === 'geojson' ? geoJson : wms);
+  });
   const environmentSet = vi.fn();
   const environmentClearAll = vi.fn();
   const lineOfSight = vi.fn(
@@ -39,20 +73,32 @@ function createHarness() {
         algorithmVersion: 1,
       }),
   );
+  const slopeAspect = vi.fn(() =>
+    Promise.resolve({
+      slopeDegrees: 12.5,
+      aspectDegrees: 200,
+      sampleCount: 9,
+      centerHeightMeters: 30,
+      algorithmVersion: 1,
+    }),
+  );
+  const analysisRun = vi.fn((tool: string) => (tool === 'line-of-sight' ? lineOfSight() : slopeAspect()));
   const map = {
     state: 'ready' as const,
     camera: {
       view: { longitude: 116.391, latitude: 39.907, height: 1_234, heading: 12, pitch: -45, roll: 0 },
-    },
+      metersPerPixel: 120,
+    } as unknown as Pick<CameraController, 'view' | 'metersPerPixel'>,
     environment: { set: environmentSet, clearAll: environmentClearAll },
-    analysis: { run: lineOfSight },
+    analysis: { list: vi.fn(() => []), run: analysisRun } as unknown as AnalysisController,
     layers: {
       add,
+      remove: vi.fn(() => Promise.resolve(true)),
       list: vi.fn(() => [
         { id: geoJson.id, type: geoJson.type, state: geoJson.state, visible: geoJson.visible },
         { id: wms.id, type: wms.type, state: wms.state, visible: wms.visible },
       ]),
-    },
+    } as unknown as Pick<LayerManager, 'add' | 'list' | 'remove'>,
     raw: {
       viewer: {
         dataSources: { get: vi.fn(() => geoJson) },
@@ -66,14 +112,18 @@ function createHarness() {
   const createActiveFilter = vi.fn(() => filter);
 
   return {
+    analysisRun,
     createActiveFilter,
     createMap,
+    czml,
     environmentClearAll,
     environmentSet,
     filter,
     geoJson,
     lineOfSight,
     map,
+    points,
+    slopeAspect,
     wms,
   };
 }
@@ -174,7 +224,7 @@ describe('Vanilla example controller', () => {
     expect(harness.environmentClearAll).toHaveBeenCalledOnce();
 
     await controller.runLineOfSight();
-    expect(harness.lineOfSight).toHaveBeenCalledWith('line-of-sight', {
+    expect(harness.analysisRun).toHaveBeenCalledWith('line-of-sight', {
       from: { longitude: 116.3, latitude: 39.85, height: 600 },
       to: { longitude: 116.52, latitude: 40.02, height: 600 },
       samples: 32,
@@ -204,5 +254,48 @@ describe('Vanilla example controller', () => {
     expect(snapshot.environment).toBe('clear');
     expect(snapshot.camera).toBeUndefined();
     expect(snapshot.lineOfSight).toBeUndefined();
+  });
+
+  it('adds a labelled point layer, toggles labels, clusters by pixel and loads CZML', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+    });
+    await controller.start('map');
+
+    await controller.addPointLayer();
+    expect(harness.points.count).toBe(200);
+    expect(controller.snapshot().points).toBe('点位 200 / 标签 200');
+
+    controller.togglePointLabels();
+    expect(harness.points.setStyle).toHaveBeenCalledWith({ labels: { enabled: false } });
+    expect(controller.snapshot().points).toBe('点位 200 / 标签 0');
+
+    controller.clusterPoints();
+    // 每像素 120 米 → 网格 5760 米，2000 个点会聚成若干簇。
+    expect(controller.snapshot().clusters).toMatch(/^聚合 \d+ 簇 \/ 2000 点（每簇 48 像素）$/);
+
+    await controller.addCzmlLayer();
+    expect(controller.snapshot().czml).toBe('实体 1（60 个采样点）');
+  });
+
+  it('runs a batch analysis with per-item results and reports progress', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+    });
+    await controller.start('map');
+
+    await controller.runBatchAnalysis();
+
+    expect(harness.analysisRun).toHaveBeenCalledTimes(20);
+    expect(harness.analysisRun.mock.calls[0]?.[0]).toBe('slope-aspect');
+    expect(controller.snapshot().batch).toBe('完成 20 / 失败 0 / 总数 20');
   });
 });

@@ -1,10 +1,15 @@
-import type {
-  AnalysisInputMap,
-  AnalysisResultMap,
-  EnvironmentEffectKind,
-  EnvironmentEffectState,
+import {
+  clusterPoints,
+  czmlFromPositions,
+  runAnalysisBatch,
 } from '@yanbobo/gis-sdk/core';
-import type { GeoJsonLayerSpec, WmsLayerSpec } from '@yanbobo/gis-sdk/layers';
+import type {
+  AnalysisController,
+  CameraController,
+  EnvironmentController,
+  GeoPoint,
+} from '@yanbobo/gis-sdk/core';
+import type { LayerManager } from '@yanbobo/gis-sdk/layers';
 
 type ExampleState = 'idle' | 'starting' | 'ready' | 'destroying' | 'error';
 
@@ -40,36 +45,28 @@ interface LayerHandleLike extends LayerInfoLike {
   setVisible(visible: boolean): void;
 }
 
-type ExampleLayerSpec = GeoJsonLayerSpec | WmsLayerSpec;
-
-/** 相机位姿读数（`map.camera.view`）。 */
-interface CameraViewLike {
+interface ExamplePointSpec {
+  readonly id: string;
   readonly longitude: number;
   readonly latitude: number;
-  readonly height: number;
-  readonly heading: number;
-  readonly pitch: number;
-  readonly roll: number;
+  readonly label?: string;
+}
+
+interface PointsHandleLike extends LayerHandleLike {
+  readonly type: 'points';
+  readonly count: number;
+  readonly labelCount: number;
+  setData(points: readonly ExamplePointSpec[]): Promise<void>;
+  setStyle(style: { readonly labels?: { readonly enabled?: boolean } }): void;
 }
 
 interface ExampleMapLike {
   readonly state: string;
-  readonly camera: { readonly view: CameraViewLike };
-  readonly environment: {
-    set(kind: EnvironmentEffectKind, options?: Record<string, unknown>): EnvironmentEffectState;
-    clearAll(): void;
-  };
-  /** 示例只用到通视分析；其它工具按同一形状接入即可。 */
-  readonly analysis: {
-    run(
-      tool: 'line-of-sight',
-      input: AnalysisInputMap['line-of-sight'],
-    ): Promise<AnalysisResultMap['line-of-sight']>;
-  };
-  readonly layers: {
-    add(spec: ExampleLayerSpec): Promise<LayerHandleLike>;
-    list(): readonly LayerInfoLike[];
-  };
+  /** 直接复用 SDK 的相机读数字段：示例同时验证发布包的类型可用。 */
+  readonly camera: Pick<CameraController, 'view' | 'metersPerPixel'>;
+  readonly environment: Pick<EnvironmentController, 'set' | 'clearAll'>;
+  readonly analysis: AnalysisController;
+  readonly layers: Pick<LayerManager, 'add' | 'list' | 'remove'>;
   readonly raw: {
     readonly viewer: {
       readonly dataSources?: { get(index: number): unknown };
@@ -105,6 +102,14 @@ export interface VanillaExampleSnapshot {
   readonly lineOfSight: string | undefined;
   /** 最近一次读取的相机位姿文本；没读过时为 `undefined`。 */
   readonly camera: string | undefined;
+  /** 点位图层读数：`点数 / 标签数`；没添加过时为 `undefined`。 */
+  readonly points: string | undefined;
+  /** 聚合读数：`N 簇 / M 点（每簇 X 像素）`；没聚合过时为 `undefined`。 */
+  readonly clusters: string | undefined;
+  /** CZML 图层读数：实体数；没加载过时为 `undefined`。 */
+  readonly czml: string | undefined;
+  /** 批量分析读数：`完成 / 失败 / 总数`；没跑过时为 `undefined`。 */
+  readonly batch: string | undefined;
   readonly error?: string;
 }
 
@@ -118,6 +123,11 @@ export interface VanillaExampleController {
   setEnvironment(preset: VanillaEnvironmentPreset): void;
   runLineOfSight(): Promise<void>;
   readCamera(): void;
+  addPointLayer(): Promise<void>;
+  togglePointLabels(): void;
+  clusterPoints(): void;
+  addCzmlLayer(): Promise<void>;
+  runBatchAnalysis(): Promise<void>;
   setWmsFilterEnabled(enabled: boolean): Promise<void>;
   reloadWms(): Promise<void>;
   snapshot(): VanillaExampleSnapshot;
@@ -180,6 +190,12 @@ export function createVanillaExampleController(
   let environment: VanillaEnvironmentPreset = 'clear';
   let lineOfSight: string | undefined;
   let camera: string | undefined;
+  let points: string | undefined;
+  let clusters: string | undefined;
+  let czml: string | undefined;
+  let batch: string | undefined;
+  let pointsHandle: PointsHandleLike | undefined;
+  let pointsLabelsEnabled = true;
   let currentError: string | undefined;
   const listeners = new Set<(snapshot: VanillaExampleSnapshot) => void>();
 
@@ -194,6 +210,10 @@ export function createVanillaExampleController(
       environment,
       lineOfSight,
       camera,
+      points,
+      clusters,
+      czml,
+      batch,
     };
     return currentError ? { ...value, error: currentError } : value;
   };
@@ -261,6 +281,12 @@ export function createVanillaExampleController(
       environment = 'clear';
       lineOfSight = undefined;
       camera = undefined;
+      points = undefined;
+      clusters = undefined;
+      czml = undefined;
+      batch = undefined;
+      pointsHandle = undefined;
+      pointsLabelsEnabled = true;
       const target = nextMap.raw.viewer.dataSources?.get(0) ?? nextGeoJson;
       await nextMap.raw.viewer.flyTo(target);
       state = 'ready';
@@ -349,6 +375,113 @@ export function createVanillaExampleController(
       const handles = requireReady();
       const view = handles.map.camera.view;
       camera = `${view.longitude.toFixed(3)}, ${view.latitude.toFixed(3)} · ${String(Math.round(view.height))} 米 · 朝向 ${view.heading.toFixed(0)}°`;
+      notify();
+    },
+    /** 添加一批带标签的点位（模拟"导入的点位表"）。 */
+    async addPointLayer() {
+      const handles = requireReady();
+      const generated: ExamplePointSpec[] = [];
+      for (let index = 0; index < 200; index += 1) {
+        generated.push({
+          id: `pt-${String(index)}`,
+          // 在机场周边铺一片方形点位，便于观察聚合效果。
+          longitude: 116.2 + ((index % 20) * 0.01),
+          latitude: 39.8 + Math.floor(index / 20) * 0.008,
+          label: `P${String(index)}`,
+        });
+      }
+      if (pointsHandle) {
+        await handles.map.layers.remove(pointsHandle.id);
+        pointsHandle = undefined;
+      }
+      const handle = await handles.map.layers.add({
+        id: 'example-points',
+        type: 'points',
+        points: generated,
+        labels: { enabled: pointsLabelsEnabled, maxLabels: 200 },
+      });
+      pointsHandle = handle;
+      pointsLabelsEnabled = handle.labelCount > 0;
+      points = `点位 ${String(handle.count)} / 标签 ${String(handle.labelCount)}`;
+      notify();
+    },
+    togglePointLabels() {
+      const handle = pointsHandle;
+      if (!handle) {
+        throw new Error('请先添加点位图层。');
+      }
+      pointsLabelsEnabled = !pointsLabelsEnabled;
+      handle.setStyle({ labels: { enabled: pointsLabelsEnabled } });
+      points = `点位 ${String(handle.count)} / 标签 ${String(handle.labelCount)}`;
+      notify();
+    },
+    /** 按屏幕像素聚合并把结果作为新的点位图层渲染（自动 LOD 的最小形态）。 */
+    clusterPoints() {
+      const handles = requireReady();
+      const perPixel = handles.map.camera.metersPerPixel;
+      if (perPixel === undefined) {
+        throw new Error('当前视角算不出每像素米数（相机未看向地表）。');
+      }
+      const source: GeoPoint[] = [];
+      for (let index = 0; index < 2_000; index += 1) {
+        source.push({
+          longitude: 116 + ((index * 37) % 1_000) * 0.0005,
+          latitude: 39.5 + ((index * 61) % 1_000) * 0.0005,
+        });
+      }
+      const grouped = clusterPoints(source, { cellSizeMeters: perPixel * 48 });
+      // 渲染：簇心作为点、大小随计数（这里用图层默认大小，业务可自行按 count 分档）。
+      void handles.map.layers.add({
+        id: 'example-clusters',
+        type: 'points',
+        points: grouped.map((cluster) => ({
+          id: cluster.id,
+          longitude: cluster.center.longitude,
+          latitude: cluster.center.latitude,
+        })),
+      });
+      clusters = `聚合 ${String(grouped.length)} 簇 / ${String(source.length)} 点（每簇 48 像素）`;
+      notify();
+    },
+    /** 用 core 的 CZML 生成 + 图层，把一条轨迹交给 SDK 管理。 */
+    async addCzmlLayer() {
+      const handles = requireReady();
+      const orbit = Array.from({ length: 60 }, (_, index) => ({
+        longitude: 100 + index * 0.3,
+        latitude: 20 + Math.sin(index / 5) * 8,
+        height: 400_000 + index * 1_000,
+      }));
+      const document = czmlFromPositions('example-track', orbit, {
+        intervalSeconds: 5,
+        name: '示例轨迹',
+        model: { url: 'https://example.com/placeholder.glb' },
+      });
+      const handle = await handles.map.layers.add({
+        id: 'example-czml',
+        type: 'czml',
+        data: document,
+      });
+      czml = `实体 ${String(handle.entityCount)}（${String(orbit.length)} 个采样点）`;
+      notify();
+    },
+    /** 批量分析：20 个点各算一次坡度坡向，带进度读数。 */
+    async runBatchAnalysis() {
+      const handles = requireReady();
+      const centers: GeoPoint[] = [];
+      for (let index = 0; index < 20; index += 1) {
+        centers.push({ longitude: 116.3 + index * 0.005, latitude: 39.9 + index * 0.002 });
+      }
+      const outcome = await runAnalysisBatch(
+        handles.map.analysis,
+        centers.map((center, index) => ({
+          id: `cell-${String(index)}`,
+          tool: 'slope-aspect' as const,
+          input: { center, radiusMeters: 200 },
+        })),
+        { concurrency: 4 },
+      );
+      const ok = outcome.entries.filter((entry) => entry.ok).length;
+      batch = `完成 ${String(ok)} / 失败 ${String(outcome.entries.length - ok)} / 总数 ${String(centers.length)}`;
       notify();
     },
     async setWmsFilterEnabled(enabled) {

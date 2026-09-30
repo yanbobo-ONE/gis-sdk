@@ -86,6 +86,28 @@
           <button id="reload-wms" type="button">刷新 Provider</button>
         </section>
 
+        <section class="control-section">
+          <div class="section-heading">
+            <div>
+              <p class="section-label">POINTS / DYNAMIC</p>
+              <h2>点位、聚合与动态数据</h2>
+            </div>
+            <button id="toggle-labels" class="secondary" type="button">切换标签</button>
+          </div>
+          <div class="preset-row">
+            <button id="add-points" type="button">添加点位</button>
+            <button id="cluster-points" type="button">按 48 像素聚合</button>
+          </div>
+          <button id="add-czml" type="button">加载 CZML 轨迹</button>
+          <button id="run-batch" type="button">批量分析（20 点坡度坡向）</button>
+          <dl class="readout">
+            <div><dt>点位</dt><dd id="points-value">未添加</dd></div>
+            <div><dt>聚合</dt><dd id="clusters-value">未聚合</dd></div>
+            <div><dt>CZML</dt><dd id="czml-value">未加载</dd></div>
+            <div><dt>批量</dt><dd id="batch-value">未运行</dd></div>
+          </dl>
+        </section>
+
         <section class="control-section lifecycle-section">
           <div>
             <p class="section-label">LIFECYCLE</p>

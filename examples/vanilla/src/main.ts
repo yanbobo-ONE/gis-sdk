@@ -25,6 +25,10 @@ const wmsOpacity = element('wms-opacity') as HTMLInputElement;
 const environmentValue = element('environment-value');
 const cameraValue = element('camera-value');
 const lineOfSightValue = element('line-of-sight-value');
+const pointsValue = element('points-value');
+const clustersValue = element('clusters-value');
+const czmlValue = element('czml-value');
+const batchValue = element('batch-value');
 
 const controller = createVanillaExampleController({
   createMap,
@@ -45,6 +49,10 @@ controller.subscribe((snapshot) => {
   environmentValue.textContent = snapshot.environment;
   cameraValue.textContent = snapshot.camera ?? '未读取';
   lineOfSightValue.textContent = snapshot.lineOfSight ?? '未分析';
+  pointsValue.textContent = snapshot.points ?? '未添加';
+  clustersValue.textContent = snapshot.clusters ?? '未聚合';
+  czmlValue.textContent = snapshot.czml ?? '未加载';
+  batchValue.textContent = snapshot.batch ?? '未运行';
   if (snapshot.error) {
     operationMessage.textContent = snapshot.error;
     operationMessage.dataset.kind = 'error';
@@ -110,6 +118,30 @@ element('read-camera').addEventListener('click', () => {
   void runOperation('读取相机位姿', () => {
     controller.readCamera();
   });
+});
+
+element('add-points').addEventListener('click', () => {
+  void runOperation('添加 200 个带标签点位', () => controller.addPointLayer());
+});
+
+element('toggle-labels').addEventListener('click', () => {
+  void runOperation('切换点位标签', () => {
+    controller.togglePointLabels();
+  });
+});
+
+element('cluster-points').addEventListener('click', () => {
+  void runOperation('按屏幕像素聚合', () => {
+    controller.clusterPoints();
+  });
+});
+
+element('add-czml').addEventListener('click', () => {
+  void runOperation('加载 CZML 轨迹', () => controller.addCzmlLayer());
+});
+
+element('run-batch').addEventListener('click', () => {
+  void runOperation('批量坡度坡向分析', () => controller.runBatchAnalysis());
 });
 
 element('restart-map').addEventListener('click', () => {
