@@ -96,6 +96,7 @@
     "docs:api": "typedoc --options typedoc.json",
     "docs:dev": "pnpm docs:api && vitepress dev docs",
     "docs:build": "pnpm docs:api && vitepress build docs",
+    "bench": "node scripts/bench.mjs",
     "example:prepare": "pnpm build && node scripts/prepare-vanilla-consumer.mjs",
     "example:build": "pnpm example:prepare && npm --prefix .tmp/vanilla-consumer run build",
     "pack:check": "pnpm build && publint && attw --pack --profile node16 --exclude-entrypoints ./styles.css && npm pack --dry-run",

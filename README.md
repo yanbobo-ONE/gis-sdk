@@ -24,6 +24,7 @@
 - CZML 位置采样的生成与解析（支持 ISO 时间戳与包级 epoch，数据源仍走原生出口）；
 - 仿真 / 回放时钟 `SimulationClock`：播放状态机、倍率与方向、seek/step 与水位线限速；
 - Worker 分析执行接口：SDK 侧协议 + `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()`，失败按错误码还原、支持取消与超时；
+- 纯计算性能基准：`pnpm bench` 覆盖量算、几何、剖面判据、姿态、回放、CZML 与位置归一化，实测表见[性能基准](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/performance.md)；
 - 诊断快照 `map.diagnostics.snapshot()`：状态、相机（含安全网恢复次数）、质量与帧率、图层与错误计数、底图、地形、场景、环境与绘制状态；
 - 实时链路 `RealtimeSocketClient`：连接状态机、有上限退避重连与抖动、心跳存活判断、按类型路由与解码容错；
 - 分析工具 `map.analysis`：距离 / 地表距离 / 面积 / 方位角 / 地形采样 / 通视 / 视域 / 坡度坡向 / CRS 转换 / 点在面内 / 包围盒 / 质心 / 凸包 / 抽稀，算法全部在 `/core`；
@@ -195,7 +196,7 @@ async function disposeMap() {
 | 实时会话门禁与重同步                           | 可用                   | `RealtimeSessionGate`（丢弃旧会话迟到包）与 `RealtimeResyncController`（序列断档→有界快照请求）                                                                                 |
 | 实时链路（WebSocket）                          | 可用                   | `RealtimeSocketClient`：重连退避与抖动、心跳存活判断、按类型订阅、解码与订阅方异常隔离、链路统计                                                                               |
 | 动态实体动画编排                               | 未完成                 | CZML 图层可按受管图层加载动态实体；地图时钟联动、内置动画与实体级拾取事件当前没有 SDK 方法，临时使用 `map.raw.viewer` 时由业务自行清理资源                                |
-| Primitive 大数据渲染                           | 未完成                 | 分析 Worker 接口与池已可用；吞吐量与数据规模承诺、Primitive 批处理与自动 LOD 尚未提供                                                                                           |
+| WebGL 端到端性能矩阵                           | 未完成                 | 纯计算层已公开基准；浏览器端渲染帧率与内存矩阵、性能阈值尚未建立                                                                                           |
 | 绘制手势、自定义材质与插件                     | 未完成                 | 绘制、顶点编辑 / 增删 / 吸附、分析工具、诊断快照已可用；顶点增删的交互手势、自定义材质、分析结果图层与插件协议当前没有稳定公开 API                                                  |
 
 功能完成后会在[功能状态与路线图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/capability-status.md)将状态改为“可用”，补充可运行示例、API 参数页和变更日志，并以新的 npm alpha 版本发布。规划能力不是已发布 API，不能按名称直接调用。
