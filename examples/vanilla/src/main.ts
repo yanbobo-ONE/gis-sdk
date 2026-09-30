@@ -3,6 +3,7 @@ import { wmsFilter } from '@yanbobo/gis-sdk/layers';
 import '@yanbobo/gis-sdk/styles.css';
 
 import { createVanillaExampleController } from './example-controller.js';
+import type { VanillaEnvironmentPreset } from './example-controller.js';
 import './style.css';
 
 function element(id: string): HTMLElement {
@@ -21,6 +22,9 @@ const operationMessage = element('operation-message');
 const geoJsonVisible = element('geojson-visible') as HTMLInputElement;
 const wmsFilterToggle = element('wms-filter') as HTMLInputElement;
 const wmsOpacity = element('wms-opacity') as HTMLInputElement;
+const environmentValue = element('environment-value');
+const cameraValue = element('camera-value');
+const lineOfSightValue = element('line-of-sight-value');
 
 const controller = createVanillaExampleController({
   createMap,
@@ -38,6 +42,9 @@ controller.subscribe((snapshot) => {
   geoJsonVisible.checked = snapshot.geoJsonVisible;
   wmsFilterToggle.checked = snapshot.wmsFilterEnabled;
   wmsOpacity.value = String(snapshot.wmsOpacity);
+  environmentValue.textContent = snapshot.environment;
+  cameraValue.textContent = snapshot.camera ?? '未读取';
+  lineOfSightValue.textContent = snapshot.lineOfSight ?? '未分析';
   if (snapshot.error) {
     operationMessage.textContent = snapshot.error;
     operationMessage.dataset.kind = 'error';
@@ -81,6 +88,28 @@ wmsFilterToggle.addEventListener('change', () => {
 
 element('reload-wms').addEventListener('click', () => {
   void runOperation('WMS Provider 刷新', () => controller.reloadWms());
+});
+
+for (const button of document.querySelectorAll<HTMLButtonElement>('[data-environment]')) {
+  button.addEventListener('click', () => {
+    const preset = button.dataset.environment as VanillaEnvironmentPreset | undefined;
+    if (!preset) {
+      return;
+    }
+    void runOperation(`环境切换 ${preset}`, () => {
+      controller.setEnvironment(preset);
+    });
+  });
+}
+
+element('run-line-of-sight').addEventListener('click', () => {
+  void runOperation('通视分析', () => controller.runLineOfSight());
+});
+
+element('read-camera').addEventListener('click', () => {
+  void runOperation('读取相机位姿', () => {
+    controller.readCamera();
+  });
 });
 
 element('restart-map').addEventListener('click', () => {

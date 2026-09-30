@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createVanillaExampleController } from '../examples/vanilla/src/example-controller.js';
+import type { AnalysisResultMap } from '../src/entries/core.js';
 import type { GeoJsonLayerSpec, WmsLayerSpec } from '../src/entries/layers.js';
 
 function createHarness() {
@@ -26,8 +27,25 @@ function createHarness() {
   const add = vi.fn((spec: GeoJsonLayerSpec | WmsLayerSpec) =>
     Promise.resolve(spec.type === 'geojson' ? geoJson : wms),
   );
+  const environmentSet = vi.fn();
+  const environmentClearAll = vi.fn();
+  const lineOfSight = vi.fn(
+    (): Promise<AnalysisResultMap['line-of-sight']> =>
+      Promise.resolve({
+        visible: false,
+        minClearanceMeters: -12.5,
+        blockedAtIndex: 7,
+        sampleCount: 31,
+        algorithmVersion: 1,
+      }),
+  );
   const map = {
     state: 'ready' as const,
+    camera: {
+      view: { longitude: 116.391, latitude: 39.907, height: 1_234, heading: 12, pitch: -45, roll: 0 },
+    },
+    environment: { set: environmentSet, clearAll: environmentClearAll },
+    analysis: { run: lineOfSight },
     layers: {
       add,
       list: vi.fn(() => [
@@ -47,7 +65,17 @@ function createHarness() {
   const filter = { op: 'eq' as const, property: 'status', value: 'ACTIVE' };
   const createActiveFilter = vi.fn(() => filter);
 
-  return { createActiveFilter, createMap, filter, geoJson, map, wms };
+  return {
+    createActiveFilter,
+    createMap,
+    environmentClearAll,
+    environmentSet,
+    filter,
+    geoJson,
+    lineOfSight,
+    map,
+    wms,
+  };
 }
 
 describe('Vanilla example controller', () => {
@@ -117,5 +145,64 @@ describe('Vanilla example controller', () => {
     expect(harness.wms.reload).toHaveBeenCalledTimes(1);
     expect(harness.map.destroy).toHaveBeenCalledTimes(1);
     expect(harness.createMap).toHaveBeenCalledTimes(2);
+  });
+
+  it('switches environment presets, runs line of sight, and reads the camera', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+    });
+    await controller.start('map');
+
+    controller.setEnvironment('depthFog');
+    expect(harness.environmentSet).toHaveBeenCalledWith('depthFog', {
+      density: 0.45,
+      color: '#9fb6c8',
+    });
+    expect(controller.snapshot().environment).toBe('depthFog');
+
+    controller.setEnvironment('snow');
+    expect(harness.environmentSet).toHaveBeenLastCalledWith('snow', {
+      intensity: 'light',
+      flakeSize: 0.025,
+    });
+
+    controller.setEnvironment('clear');
+    expect(harness.environmentClearAll).toHaveBeenCalledOnce();
+
+    await controller.runLineOfSight();
+    expect(harness.lineOfSight).toHaveBeenCalledWith('line-of-sight', {
+      from: { longitude: 116.3, latitude: 39.85, height: 600 },
+      to: { longitude: 116.52, latitude: 40.02, height: 600 },
+      samples: 32,
+    });
+    expect(controller.snapshot().lineOfSight).toContain('被遮挡');
+
+    controller.readCamera();
+    expect(controller.snapshot().camera).toContain('116.391');
+    expect(controller.snapshot().camera).toContain('朝向 12');
+  });
+
+  it('clears environment and analysis readouts on restart', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+    });
+    await controller.start('map');
+    controller.setEnvironment('rain');
+    controller.readCamera();
+
+    await controller.restart();
+
+    const snapshot = controller.snapshot();
+    expect(snapshot.environment).toBe('clear');
+    expect(snapshot.camera).toBeUndefined();
+    expect(snapshot.lineOfSight).toBeUndefined();
   });
 });

@@ -8,3 +8,5 @@ npm --prefix .tmp/vanilla-consumer run dev -- --host 127.0.0.1 --port 4175
 ```
 
 `example:prepare` 会构建 SDK、生成 `.tgz`、在隔离目录安装该压缩包，并复制 Cesium 静态资源。页面内置本地 WMS fixture，不依赖外部地图服务。
+
+验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析，以及相机位姿读取。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。

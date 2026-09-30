@@ -154,7 +154,7 @@ h2 {
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   border: 1px solid rgba(219, 242, 232, 0.1);
   border-radius: 6px;
   background: #101815;
@@ -170,8 +170,12 @@ h2 {
   border-right: 1px solid rgba(219, 242, 232, 0.08);
 }
 
-.summary div:last-child {
+.summary div:nth-child(2n) {
   border-right: 0;
+}
+
+.summary div:nth-child(-n + 2) {
+  border-bottom: 1px solid rgba(219, 242, 232, 0.08);
 }
 
 .summary span {
@@ -303,4 +307,41 @@ button.secondary {
   * {
     scroll-behavior: auto !important;
   }
+}
+
+.preset-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.preset-row button {
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.readout {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.readout div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.readout dt {
+  color: #71827a;
+  font-size: 11px;
+}
+
+.readout dd {
+  margin: 0;
+  color: #f2faf6;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

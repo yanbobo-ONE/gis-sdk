@@ -39,6 +39,17 @@ const map = createMap({
 
 基址必须只有一个配置入口：推荐始终通过 SDK 的 `cesiumBaseUrl` 配置。若宿主项目已经直接调用 Cesium `buildModuleUrl.setBaseUrl()`，创建地图时必须省略 `cesiumBaseUrl`，SDK 会沿用宿主配置；不要同时使用这两种配置方式。
 
+## 依赖与打包
+
+Cesium 是 SDK 的 peer 依赖，SDK 产物只 `import 'cesium'`，用哪个入口由业务的打包器决定。默认按 Cesium 的 `module` 字段走源码入口（`Source/Cesium.js`）即可，绝大多数项目不需要额外配置。
+
+有一处已知的传递依赖漂移需要注意：`cesium@1.144.0` 的源码入口会按名字转出 `@cesium/engine` 的内部着色器符号（`_shaders*`），而 `@cesium/engine` 从 26.3（对应 Cesium 1.145）起移除了这些导出；Cesium 1.144 的依赖范围是 `^26.2.0`，因此**新装依赖**会解析到 26.3，打包器在依赖预构建阶段直接报 `MISSING_EXPORT`。两种解法：
+
+1. 把 `@cesium/engine` 锁到与 Cesium 1.144 配套的 26.2.x（npm 的 `overrides` / pnpm 的 `pnpm.overrides`）；
+2. 让打包器改用 Cesium 自带的构建产物 `cesium/Build/Cesium/index.js`（自带引擎，不受这条传递依赖漂移影响）。仓库里的 `examples/vanilla` 用的是这一种，配置见 `examples/vanilla/vite.config.ts` 的 `resolve.alias`。
+
+升级 Cesium 主版本时同步检查这两处，再回归一次地图创建与图层加载。
+
 ## 创建与销毁
 
 页面必须先准备一个有明确尺寸的容器：

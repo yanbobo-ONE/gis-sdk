@@ -29,6 +29,29 @@
           <div><span>图层</span><strong id="layer-count">0</strong></div>
           <div><span>数据版本</span><strong id="data-revision">0</strong></div>
           <div><span>WMS alpha</span><strong id="opacity-value">0.72</strong></div>
+          <div><span>环境</span><strong id="environment-value">clear</strong></div>
+        </section>
+
+        <section class="control-section">
+          <div class="section-heading">
+            <div>
+              <p class="section-label">ENVIRONMENT / ANALYSIS</p>
+              <h2>环境与分析</h2>
+            </div>
+            <button id="read-camera" class="secondary" type="button">读取相机</button>
+          </div>
+          <div class="preset-row">
+            <button data-environment="clear" type="button">晴</button>
+            <button data-environment="depthFog" type="button">雾</button>
+            <button data-environment="haze" type="button">霾</button>
+            <button data-environment="rain" type="button">雨</button>
+            <button data-environment="snow" type="button">雪</button>
+          </div>
+          <button id="run-line-of-sight" type="button">通视分析（两点）</button>
+          <dl class="readout">
+            <div><dt>相机</dt><dd id="camera-value">未读取</dd></div>
+            <div><dt>通视</dt><dd id="line-of-sight-value">未分析</dd></div>
+          </dl>
         </section>
 
         <section class="control-section">
