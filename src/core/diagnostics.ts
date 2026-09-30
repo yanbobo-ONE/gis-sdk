@@ -56,6 +56,8 @@ export interface BasemapDiagnostics {
 export interface TerrainDiagnostics {
   /** 当前已安装地形的类型。 */
   readonly type: string;
+  /** 是否有地形安装在途（含 `createMap({ terrain })` 声明的初始加载）。 */
+  readonly pending: boolean;
 }
 
 /** 场景诊断读数。 */

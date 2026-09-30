@@ -203,6 +203,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       terrainRuntime = new CesiumTerrainController(
         viewerInstance,
         new CesiumTerrainSampler(viewerInstance, modelLoad),
+        options.terrain,
       );
       const coordinates = new CesiumCoordinateTransform(viewerInstance);
       pickingRuntime = new CesiumPickingController(viewerInstance, coordinates);
@@ -274,6 +275,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
 
   setErrorReporter(reporter: (error: GisError) => void): void {
     this.basemapRuntime.setErrorReporter(reporter);
+    this.terrainRuntime.setErrorReporter(reporter);
   }
 
   resize(): void {

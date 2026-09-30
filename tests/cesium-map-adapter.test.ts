@@ -98,6 +98,7 @@ const cesium = vi.hoisted(() => {
     resetBaseUrl() {
       currentBaseUrl = 'https://auto.example/cesium/';
     },
+    terrainFromUrl: vi.fn(),
     Viewer,
     setBaseUrl,
   };
@@ -105,7 +106,7 @@ const cesium = vi.hoisted(() => {
 
 vi.mock('cesium', () => ({
   buildModuleUrl: cesium.buildModuleUrl,
-  CesiumTerrainProvider: { fromUrl: vi.fn() },
+  CesiumTerrainProvider: { fromUrl: cesium.terrainFromUrl },
   Cartesian3: { fromDegrees: vi.fn() },
   Color: {
     WHITE: { css: 'white' },
@@ -169,6 +170,7 @@ describe('CesiumMapAdapter', () => {
     );
     cesium.resetBaseUrl();
     cesium.setBaseUrl.mockClear();
+    cesium.terrainFromUrl.mockReset();
     cesium.Viewer.instances.splice(0);
     cesium.Viewer.constructionError = undefined;
     cesium.Viewer.imageryError = undefined;
@@ -242,6 +244,58 @@ describe('CesiumMapAdapter', () => {
     cesium.Viewer.imageryError = undefined;
     const retry = new CesiumMapAdapter(createOptions('map-2', 'https://b.example/cesium/'));
     expect(retry.raw.viewer).toBe(cesium.Viewer.instances[1]);
+  });
+
+  it('installs the terrain declared at creation without waiting for the caller', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const provider = { kind: 'terrain' };
+    cesium.terrainFromUrl.mockResolvedValueOnce(provider);
+    const reported: { code: string }[] = [];
+
+    const adapter = new CesiumMapAdapter(
+      Object.freeze({
+        ...createOptions('map-1'),
+        terrain: Object.freeze({ type: 'cesium-terrain' as const, url: '/terrain/' }),
+      }),
+    );
+    adapter.setErrorReporter((error) => reported.push(error));
+
+    expect(cesium.terrainFromUrl).toHaveBeenCalledWith('/terrain/', {});
+    expect(adapter.terrain.pending).toBe(true);
+    expect(adapter.terrain.type).toBe('ellipsoid');
+
+    await adapter.terrain.ready;
+
+    expect(adapter.terrain.type).toBe('cesium-terrain');
+    expect(adapter.terrain.pending).toBe(false);
+    expect(adapter.terrain.ready).toBe(adapter.terrain.ready);
+    expect(cesium.Viewer.instances[0]?.terrainProvider).toBe(provider);
+    expect(reported).toEqual([]);
+  });
+
+  it('keeps ellipsoid terrain and reports once when the initial terrain URL fails', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    cesium.terrainFromUrl.mockRejectedValueOnce(new Error('offline'));
+    const reported: { code: string; retryable: boolean }[] = [];
+
+    const adapter = new CesiumMapAdapter(
+      Object.freeze({
+        ...createOptions('map-1'),
+        terrain: Object.freeze({ type: 'cesium-terrain' as const, url: '/terrain/' }),
+      }),
+    );
+    adapter.setErrorReporter((error) => reported.push(error));
+
+    await expect(adapter.terrain.ready).rejects.toMatchObject({
+      code: 'TERRAIN_LOAD_FAILED',
+      retryable: true,
+    });
+
+    expect(adapter.terrain.type).toBe('ellipsoid');
+    expect(adapter.terrain.pending).toBe(false);
+    expect(cesium.Viewer.instances[0]?.terrainProvider).toEqual({ kind: 'ellipsoid' });
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatchObject({ code: 'TERRAIN_LOAD_FAILED', retryable: true });
   });
 
   it('locks automatic base URL resolution when the first Viewer is created', async () => {

@@ -1,7 +1,7 @@
 import type { Viewer } from 'cesium';
 
 import type { GisMap } from '../core/contracts.js';
-import type { XyzBasemapSpec } from '../core/controls.js';
+import type { TerrainSpec, XyzBasemapSpec } from '../core/controls.js';
 import type { QualityProfileId, RenderQuality } from '../core/quality.js';
 
 export type { XyzBasemapSpec } from '../core/controls.js';
@@ -77,6 +77,18 @@ export interface CreateMapOptions {
   };
   /** 初始 XYZ 底图；省略时不加载在线影像。 */
   readonly basemap?: XyzBasemapSpec;
+  /**
+   * 初始地形；省略时保持 Cesium 的椭球地形，不发出任何地形请求。
+   *
+   * 语义与 `map.terrain.set()` 一致，只是把地形服务地址声明在创建处：
+   * `{ type: 'ellipsoid' }` 同步生效且无网络请求；`{ type: 'cesium-terrain', url }`
+   * 异步拉取元数据，失败时 `map.terrain.type` 保持 `'ellipsoid'`，并经
+   * `map.terrain.ready` 拒绝与 `map:error` 上报，不会静默改用其他地形服务。
+   *
+   * 配置本身不合法（类型未知、`url` 为空、开关不是布尔）会在创建时同步抛
+   * `INVALID_TERRAIN_CONFIG`，不会先建出地图再失败。
+   */
+  readonly terrain?: TerrainSpec;
   /** Viewer 控件开关。 */
   readonly widgets?: CesiumWidgetOptions;
   /** 渲染质量与模型并发策略；省略时使用 `default` 档并开启自动画质。 */

@@ -39,6 +39,28 @@ function timedOut(timeoutMs: number): GisError {
   });
 }
 
+function busy(): GisError {
+  return new GisError('A terrain change is already in progress.', {
+    code: 'TERRAIN_BUSY',
+    module: 'terrain',
+    operation: 'set',
+    retryable: true,
+  });
+}
+
+function terrainLoadFailed(cause: unknown): GisError {
+  if (cause instanceof GisError) {
+    return cause;
+  }
+  return new GisError('Failed to load Cesium terrain.', {
+    code: 'TERRAIN_LOAD_FAILED',
+    module: 'terrain',
+    operation: 'set',
+    retryable: true,
+    cause,
+  });
+}
+
 /** 在超时后拒绝，避免服务端长时间无响应时永久占用切换状态。 */
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -63,30 +85,87 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 /** @internal */
 export class CesiumTerrainController implements TerrainController {
   private currentType: TerrainSpec['type'] = 'ellipsoid';
-  private pending: Promise<void> | undefined;
+  private inFlight: Promise<void> | undefined;
+  private readyPromise: Promise<void> = Promise.resolve();
+  private reporter: ((error: GisError) => void) | undefined;
   private disposed = false;
 
   constructor(
     private readonly viewer: Pick<Viewer, 'terrainProvider'>,
     private readonly sampler: CesiumTerrainSampler,
-  ) {}
+    initial?: TerrainSpec,
+  ) {
+    if (initial) {
+      this.readyPromise = this.installInitial(initial);
+    }
+  }
 
   get type(): TerrainSpec['type'] {
     return this.currentType;
   }
 
+  get pending(): boolean {
+    return this.inFlight !== undefined;
+  }
+
+  get ready(): Promise<void> {
+    return this.readyPromise;
+  }
+
+  setErrorReporter(reporter: (error: GisError) => void): void {
+    this.reporter = reporter;
+  }
+
   set(spec: TerrainSpec, options: TerrainSetOptions = {}): Promise<void> {
     this.assertActive();
-    if (this.pending) {
-      return Promise.reject(
-        new GisError('A terrain change is already in progress.', {
-          code: 'TERRAIN_BUSY',
-          module: 'terrain',
-          operation: 'set',
-          retryable: true,
-        }),
-      );
+    if (this.inFlight) {
+      return Promise.reject(busy());
     }
+    return this.start(spec, options);
+  }
+
+  sample(
+    points: readonly TerrainSamplePoint[],
+    options: TerrainSampleOptions = {},
+  ): Promise<readonly TerrainSample[]> {
+    this.assertActive();
+    return this.sampler.sample(points, options);
+  }
+
+  destroy(): void {
+    this.disposed = true;
+    this.sampler.dispose();
+  }
+
+  private start(spec: TerrainSpec, options: TerrainSetOptions): Promise<void> {
+    const tracked = this.apply(spec, options).finally(() => {
+      if (this.inFlight === tracked) {
+        this.inFlight = undefined;
+      }
+    });
+    this.inFlight = tracked;
+    return tracked;
+  }
+
+  /**
+   * 安装创建期声明的初始地形。
+   *
+   * 失败同时经 `ready` 拒绝与 `map:error` 上报：`createMap` 是同步 API，调用方未必
+   * await `ready`，只走拒绝会丢错误。上报器由 `MapRuntime` 在构造时接入，而这里的
+   * 失败回调总是在本同步段之后（微任务或网络回调）才执行，因此不会早于上报器挂载。
+   */
+  private installInitial(spec: TerrainSpec): Promise<void> {
+    const initial = this.start(spec, {}).catch((cause: unknown) => {
+      const error = terrainLoadFailed(cause);
+      this.reporter?.(error);
+      throw error;
+    });
+    // 保持"错误已上报"，同时避免未 await 的调用方收到未处理拒绝。
+    void initial.catch(() => undefined);
+    return initial;
+  }
+
+  private apply(spec: TerrainSpec, options: TerrainSetOptions): Promise<void> {
     if (spec.type === 'ellipsoid') {
       this.viewer.terrainProvider = new EllipsoidTerrainProvider();
       this.currentType = 'ellipsoid';
@@ -111,7 +190,7 @@ export class CesiumTerrainController implements TerrainController {
         : { requestVertexNormals: spec.requestVertexNormals }),
       ...(spec.requestWaterMask === undefined ? {} : { requestWaterMask: spec.requestWaterMask }),
     });
-    const operation = (timeoutMs > 0 ? withTimeout(request, timeoutMs) : request).then(
+    return (timeoutMs > 0 ? withTimeout(request, timeoutMs) : request).then(
       (provider) => {
         this.assertActive();
         this.viewer.terrainProvider = provider;
@@ -119,35 +198,9 @@ export class CesiumTerrainController implements TerrainController {
         this.sampler.clearCache();
       },
       (cause: unknown) => {
-        if (cause instanceof GisError) {
-          throw cause;
-        }
-        throw new GisError('Failed to load Cesium terrain.', {
-          code: 'TERRAIN_LOAD_FAILED',
-          module: 'terrain',
-          operation: 'set',
-          retryable: true,
-          cause,
-        });
+        throw terrainLoadFailed(cause);
       },
     );
-    this.pending = operation.finally(() => {
-      this.pending = undefined;
-    });
-    return this.pending;
-  }
-
-  sample(
-    points: readonly TerrainSamplePoint[],
-    options: TerrainSampleOptions = {},
-  ): Promise<readonly TerrainSample[]> {
-    this.assertActive();
-    return this.sampler.sample(points, options);
-  }
-
-  destroy(): void {
-    this.disposed = true;
-    this.sampler.dispose();
   }
 
   private assertActive(): void {

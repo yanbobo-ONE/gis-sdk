@@ -4,7 +4,11 @@ import type {
   AnalysisRunOptions,
   AnalysisToolId,
 } from './analysis.js';
-import type { DiagnosticsController, LayerDiagnostics, MapDiagnosticsSnapshot } from './diagnostics.js';
+import type {
+  DiagnosticsController,
+  LayerDiagnostics,
+  MapDiagnosticsSnapshot,
+} from './diagnostics.js';
 import { createAnalysisController } from './analysis-runner.js';
 import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { GisMap, MapEngineAdapter, MapEventMap, MapState } from './contracts.js';
@@ -36,7 +40,11 @@ import type {
   XyzBasemapSpec,
 } from './controls.js';
 import { GisError } from './errors.js';
-import type { EnvironmentController, EnvironmentEffectKind, EnvironmentOptionsMap } from './environment.js';
+import type {
+  EnvironmentController,
+  EnvironmentEffectKind,
+  EnvironmentOptionsMap,
+} from './environment.js';
 import { EventHub } from './event-hub.js';
 import type { QualityController, QualityProfileId, RenderQuality } from './quality.js';
 import type { LayerManager } from '../layers/contracts.js';
@@ -299,6 +307,12 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       get type() {
         return adapter.terrain.type;
       },
+      get pending() {
+        return adapter.terrain.pending;
+      },
+      get ready() {
+        return adapter.terrain.ready;
+      },
       set: (spec: TerrainSpec) => {
         this.assertReady('terrain.set');
         return this.adapter.terrain.set(spec);
@@ -422,7 +436,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
         opacity: this.adapter.basemap.opacity,
         errorCount: this.adapter.basemap.errorCount,
       },
-      terrain: { type: this.adapter.terrain.type },
+      terrain: { type: this.adapter.terrain.type, pending: this.adapter.terrain.pending },
       scene: {
         mode: this.adapter.scene.mode,
         morphing: this.adapter.scene.morphing,

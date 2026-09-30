@@ -58,6 +58,8 @@ const basemap = {
 } satisfies BasemapController;
 
 const terrain = {
+  pending: false,
+  ready: Promise.resolve(),
   sample: vi.fn(() => Promise.resolve([])),
   set: vi.fn(() => Promise.resolve()),
   type: 'ellipsoid',
@@ -242,6 +244,56 @@ describe('createMapWithFactory', () => {
     expect(Object.isFrozen(context.options)).toBe(true);
     expect(Object.isFrozen(context.options?.scene)).toBe(true);
     expect(Object.isFrozen(context.options?.widgets)).toBe(true);
+  });
+
+  it('passes a normalized initial terrain to the adapter factory', () => {
+    const context = createFactory();
+
+    createMapWithFactory(
+      {
+        container: 'map',
+        terrain: {
+          type: 'cesium-terrain',
+          url: ' https://terrain.example.com/ ',
+          requestVertexNormals: true,
+          // 未知键不应透传进地形服务请求。
+          ...({ bogus: 'ignored' } as object),
+        },
+      },
+      context.factory,
+    );
+
+    expect(context.options?.terrain).toEqual({
+      type: 'cesium-terrain',
+      url: 'https://terrain.example.com/',
+      requestVertexNormals: true,
+    });
+    expect(Object.isFrozen(context.options?.terrain)).toBe(true);
+  });
+
+  it('drops unknown keys from an initial ellipsoid terrain', () => {
+    const context = createFactory();
+
+    createMapWithFactory(
+      { container: 'map', terrain: { type: 'ellipsoid', ...({ url: '/ignored/' } as object) } },
+      context.factory,
+    );
+
+    expect(context.options?.terrain).toEqual({ type: 'ellipsoid' });
+  });
+
+  it.each([
+    ['an unknown type', { type: 'arcgis' }],
+    ['an empty URL', { type: 'cesium-terrain', url: '   ' }],
+    ['a non-boolean switch', { type: 'cesium-terrain', url: '/terrain/', requestWaterMask: 'yes' }],
+  ])('rejects an initial terrain with %s before constructing the adapter', (_label, terrain) => {
+    const context = createFactory();
+
+    expect(() => {
+      createMapWithFactory({ container: 'map', terrain: terrain as never }, context.factory);
+    }).toThrow(expect.objectContaining({ code: 'INVALID_TERRAIN_CONFIG', operation: 'createMap' }));
+
+    expect(context.options).toBeUndefined();
   });
 
   it('returns a map that exposes raw context and delegates lifecycle', async () => {

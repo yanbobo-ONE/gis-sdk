@@ -425,8 +425,18 @@ export interface TerrainSampleOptions {
 
 /** 地形控制器。 */
 export interface TerrainController {
-  /** 当前已安装地形的类型。 */
+  /** 当前**已安装**地形的类型；加载失败或加载中时保持 `'ellipsoid'`。 */
   readonly type: TerrainSpec['type'];
+  /** 是否有地形安装在途，含 `createMap({ terrain })` 声明的初始加载。 */
+  readonly pending: boolean;
+  /**
+   * `createMap({ terrain })` 声明的初始地形何时安装完毕。
+   *
+   * 未声明初始地形时立即兑现。加载失败时以可重试的 `TERRAIN_LOAD_FAILED` 拒绝，
+   * 同时经 `map:error` 上报一次，`type` 保持 `'ellipsoid'`——不会静默改用其他地形服务。
+   * 因此"不 await"与"await 后处理失败"两种写法都不会丢错误。
+   */
+  readonly ready: Promise<void>;
   /** 异步加载并在成功后切换地形。 */
   set(spec: TerrainSpec, options?: TerrainSetOptions): Promise<void>;
   /**

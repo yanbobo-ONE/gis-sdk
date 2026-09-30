@@ -1,4 +1,5 @@
 import type { GisMap, MapEngineAdapter } from '../core/contracts.js';
+import type { TerrainSpec } from '../core/controls.js';
 import { GisError } from '../core/errors.js';
 import { resolveRenderQuality } from '../core/quality.js';
 import type { RenderQuality } from '../core/quality.js';
@@ -26,6 +27,7 @@ export interface NormalizedCreateMapOptions {
   readonly quality: Readonly<RenderQuality>;
   readonly qualityAdaptive: boolean;
   readonly basemap?: Readonly<XyzBasemapSpec>;
+  readonly terrain?: Readonly<TerrainSpec>;
 }
 
 /** @internal */
@@ -118,6 +120,51 @@ function normalizeBasemap(spec: XyzBasemapSpec): Readonly<XyzBasemapSpec> {
   return Object.freeze({ ...spec, url });
 }
 
+function invalidTerrain(message: string): GisError {
+  return new GisError(message, {
+    code: 'INVALID_TERRAIN_CONFIG',
+    module: 'terrain',
+    operation: 'createMap',
+  });
+}
+
+function normalizeTerrain(spec: TerrainSpec): Readonly<TerrainSpec> {
+  const requested = spec as unknown as {
+    readonly type: string;
+    readonly url?: unknown;
+    readonly requestVertexNormals?: unknown;
+    readonly requestWaterMask?: unknown;
+  };
+  if (requested.type === 'ellipsoid') {
+    return Object.freeze({ type: 'ellipsoid' });
+  }
+  if (requested.type !== 'cesium-terrain') {
+    throw invalidTerrain('Initial terrain type must be "ellipsoid" or "cesium-terrain".');
+  }
+
+  const url = typeof requested.url === 'string' ? requested.url.trim() : '';
+  if (!url) {
+    throw invalidTerrain('Cesium terrain URL must be non-empty.');
+  }
+
+  const requestVertexNormals = requested.requestVertexNormals;
+  if (requestVertexNormals !== undefined && typeof requestVertexNormals !== 'boolean') {
+    throw invalidTerrain('Terrain requestVertexNormals must be a boolean.');
+  }
+  const requestWaterMask = requested.requestWaterMask;
+  if (requestWaterMask !== undefined && typeof requestWaterMask !== 'boolean') {
+    throw invalidTerrain('Terrain requestWaterMask must be a boolean.');
+  }
+
+  // 按已知字段重建：未知键不会透传进地形服务请求。
+  return Object.freeze({
+    type: 'cesium-terrain',
+    url,
+    ...(requestVertexNormals === undefined ? {} : { requestVertexNormals }),
+    ...(requestWaterMask === undefined ? {} : { requestWaterMask }),
+  });
+}
+
 function normalizeQuality(options: QualityOptions | undefined): NormalizedQualityOptions {
   const quality = resolveRenderQuality(options?.profile ?? 'default', {
     ...(options?.resolutionScale === undefined ? {} : { resolutionScale: options.resolutionScale }),
@@ -140,6 +187,7 @@ function normalizeQuality(options: QualityOptions | undefined): NormalizedQualit
 function normalizeOptions(options: CreateMapOptions): NormalizedCreateMapOptions {
   const cesiumBaseUrl = normalizeBaseUrl(options.cesiumBaseUrl);
   const basemap = options.basemap ? normalizeBasemap(options.basemap) : undefined;
+  const terrain = options.terrain ? normalizeTerrain(options.terrain) : undefined;
   const normalizedOptions = {
     container: normalizeContainer(options.container),
     id: options.id ?? globalThis.crypto.randomUUID(),
@@ -147,6 +195,7 @@ function normalizeOptions(options: CreateMapOptions): NormalizedCreateMapOptions
     widgets: Object.freeze({ ...defaultWidgets, ...options.widgets }),
     ...normalizeQuality(options.quality),
     ...(basemap ? { basemap } : {}),
+    ...(terrain ? { terrain } : {}),
   } satisfies Omit<NormalizedCreateMapOptions, 'cesiumBaseUrl'>;
 
   return Object.freeze(cesiumBaseUrl ? { ...normalizedOptions, cesiumBaseUrl } : normalizedOptions);
@@ -165,6 +214,8 @@ export function createMapWithFactory<TRaw>(
  * 创建一个可直接使用的 Cesium 地图实例。
  *
  * 默认不创建在线底图，也不启用 Cesium ion，因此无需 ion token 即可启动空白地球。
+ * 底图瓦片与地形服务的地址都由调用方通过 `basemap` / `terrain` 给出，SDK 不内置任何
+ * 外部服务地址。
  *
  * @example
  * ```ts

@@ -8,3 +8,9 @@ export type {
   QualityOptions,
   XyzBasemapSpec,
 } from '../cesium/types.js';
+export type {
+  CesiumTerrainSpec,
+  EllipsoidTerrainSpec,
+  TerrainSetOptions,
+  TerrainSpec,
+} from '../core/controls.js';

@@ -55,6 +55,8 @@ const basemap = {
 } satisfies BasemapController;
 
 const terrain = {
+  pending: false,
+  ready: Promise.resolve(),
   sample: vi.fn(() => Promise.resolve([])),
   set: vi.fn(() => Promise.resolve()),
   type: 'ellipsoid',
@@ -293,13 +295,17 @@ describe('MapRuntime', () => {
     }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.clear' }));
     expect(() => {
       map.environment.clearAll();
-    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.clearAll' }));
+    }).toThrow(
+      expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'environment.clearAll' }),
+    );
   });
 
   it('exposes analysis on the terrain port and gates it after destroy', async () => {
     const adapter = createAdapter();
     const map = new MapRuntime('map-1', adapter);
-    (adapter.terrain.sample as Mock).mockResolvedValue([{ longitude: 1, latitude: 2, height: 30, status: 'ok' }]);
+    (adapter.terrain.sample as Mock).mockResolvedValue([
+      { longitude: 1, latitude: 2, height: 30, status: 'ok' },
+    ]);
 
     expect(map.analysis.list().length).toBeGreaterThan(0);
     const samples = await map.analysis.run('terrain-sample', {
@@ -491,7 +497,7 @@ describe('MapRuntime', () => {
       { id: 'roads', type: 'polyline', state: 'ready', visible: true, errorCount: 2 },
     ]);
     expect(snapshot.basemap).toEqual({ type: 'none', visible: false, opacity: 1, errorCount: 0 });
-    expect(snapshot.terrain).toEqual({ type: 'ellipsoid' });
+    expect(snapshot.terrain).toEqual({ type: 'ellipsoid', pending: false });
     expect(snapshot.scene).toEqual({ mode: '3d', morphing: false });
     expect(snapshot.environment).toEqual([]);
     expect(snapshot.drawing).toEqual({ mode: undefined, vertexCount: 0, editing: false });
