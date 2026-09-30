@@ -169,6 +169,8 @@ export type {
 export { createAnalysisController } from '../core/analysis-runner.js';
 export { analysisTools } from '../core/analysis-runner.js';
 export { createAnalysisWorkerClient, createAnalysisWorkerHost } from '../core/analysis-worker-client.js';
+export { createTrackTimeline, sampleTrackPose } from '../core/czml-track.js';
+export type { TrackPose, TrackTimelineOptions, TrackTimelineSample } from '../core/czml-track.js';
 export { createAnalysisWorkerPool } from '../core/analysis-worker-pool.js';
 export type {
   AnalysisWorkerPool,

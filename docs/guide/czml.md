@@ -78,6 +78,27 @@ tracksFromCzml(document);    // CzmlTrack[]：再加上 modelUrl 与每条的 at
 - 没有 `position` 的包（只有 `billboard`、`label` 等）会被跳过，因此同一份文档可以既喂给 Cesium，也喂给 SDK 图层；
 - 结构非法（采样数组长度既不是 3 也不是 4 的倍数、时间或坐标非有限值、`availability` 区间不合法）会抛 `INVALID_CZML`，不做静默跳过。
 
+## 装进回放时间轴
+
+```ts
+import { createTrackTimeline, sampleTrackPose, SimulationClock } from '@yanbobo/gis-sdk/core';
+
+const track = tracksFromCzml(document)[0];
+const timeline = createTrackTimeline(track);
+
+const clock = new SimulationClock({ mode: 'replay', startTime: 0, endTime: 60 });
+const pose = sampleTrackPose(timeline, track.id, clock.snapshot().currentTime ?? 0);
+// pose = { position, attitude } → 交给模型图层 setTransform() 或相机
+```
+
+`createTrackTimeline()` 把轨迹装成 `ReplayTimeline`，查询时：
+
+- 位置按**最短弧**插值经度（跨 180° 不会绕地球一圈），纬度与高度线性；
+- 姿态用四元数**球面线性插值**（`slerp()`）；只有一端有姿态时取更近那一端的姿态——保证采样时刻恰好返回该采样自身的姿态，不会在缺失姿态的点上凭空补一个；
+- 默认不外推：超出采样范围返回 `undefined`，按 `maxExtrapolationSeconds` 可以放宽。
+
+时间轴只管"什么时刻是什么姿态"，播放、倍率与暂停交给 `SimulationClock`，渲染交给模型图层。
+
 ## 边界
 
 - **最小集之外的属性不解析**：`billboard`、`label`、`path`、`polyline` 等渲染属性原样忽略；业务字段不会由 SDK 生成，需要时在文档上追加；
