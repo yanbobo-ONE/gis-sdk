@@ -12,6 +12,7 @@ import type {
   SceneController,
   TerrainController,
 } from '../core/controls.js';
+import type { EngineDiagnostics } from '../core/diagnostics.js';
 import type { EnvironmentController } from '../core/environment.js';
 import { rethrowAfterCleanup } from '../core/dispose-resources.js';
 import { GisError } from '../core/errors.js';
@@ -264,6 +265,11 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         },
       });
     }
+  }
+
+  /** 引擎侧诊断读数：目前只有相机位姿安全网的恢复次数。 */
+  getEngineDiagnostics(): EngineDiagnostics {
+    return { cameraRecoveryCount: this.cameraPoseGuard.getRecoveryCount() };
   }
 
   setErrorReporter(reporter: (error: GisError) => void): void {

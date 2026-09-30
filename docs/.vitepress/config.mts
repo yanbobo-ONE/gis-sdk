@@ -81,6 +81,7 @@ export default defineConfig({
         {
           text: '可靠性与参考',
           items: [
+            { text: '诊断快照', link: '/guide/diagnostics' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: 'TypeScript 类型索引', link: '/api/' },
@@ -126,6 +127,7 @@ export default defineConfig({
             { text: '位置批量归一化', link: '/guide/position-batch' },
             { text: '仿真 / 回放时钟', link: '/guide/simulation-clock' },
             { text: '回放时间轴', link: '/guide/replay-timeline' },
+            { text: '诊断快照', link: '/guide/diagnostics' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: 'TypeScript 类型索引', link: '/api/' },

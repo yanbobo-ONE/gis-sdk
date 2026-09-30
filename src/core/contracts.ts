@@ -13,6 +13,7 @@ import type {
   TerrainController,
 } from './controls.js';
 import type { AnalysisController } from './analysis.js';
+import type { DiagnosticsController, EngineDiagnostics } from './diagnostics.js';
 import type { EnvironmentController } from './environment.js';
 import type { QualityController } from './quality.js';
 
@@ -68,6 +69,12 @@ export interface GisMap<TRaw = unknown> {
   /** 类型化环境效果控制器。 */
   readonly environment: EnvironmentController;
   /**
+   * 类型化诊断控制器。
+   *
+   * 汇总地图当前的关键读数，供线上排查与验收自检使用；生成快照不会抛错。
+   */
+  readonly diagnostics: DiagnosticsController;
+  /**
    * 类型化分析控制器。
    *
    * 需要地形高度的工具走 `map.terrain.sample()`；其余工具是纯计算，不依赖渲染引擎。
@@ -109,6 +116,8 @@ export interface MapEngineAdapter<TRaw> {
   readonly scene: SceneController;
   readonly drawing: MapDrawingController;
   readonly environment: EnvironmentController;
+  /** 引擎侧诊断读数；不提供时按缺省值处理（恢复次数为 0）。 */
+  getEngineDiagnostics?(): EngineDiagnostics;
   /** 引擎内部异步失败的上报入口；`MapRuntime` 在构造时接入 `map:error`。 */
   setErrorReporter?(reporter: (error: GisError) => void): void;
   resize(): void;

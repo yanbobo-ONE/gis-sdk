@@ -139,6 +139,17 @@ export type {
 } from '../core/realtime-socket.js';
 
 export { createAnalysisController } from '../core/analysis-runner.js';
+export type {
+  BasemapDiagnostics,
+  CameraDiagnostics,
+  DiagnosticsController,
+  DrawingDiagnostics,
+  EngineDiagnostics,
+  LayerDiagnostics,
+  MapDiagnosticsSnapshot,
+  SceneDiagnostics,
+  TerrainDiagnostics,
+} from '../core/diagnostics.js';
 export type { AnalysisControllerOptions, AnalysisTerrainPort } from '../core/analysis-runner.js';
 export {
   curvatureDropMeters,

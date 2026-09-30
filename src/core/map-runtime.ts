@@ -4,6 +4,7 @@ import type {
   AnalysisRunOptions,
   AnalysisToolId,
 } from './analysis.js';
+import type { DiagnosticsController, LayerDiagnostics, MapDiagnosticsSnapshot } from './diagnostics.js';
 import { createAnalysisController } from './analysis-runner.js';
 import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { GisMap, MapEngineAdapter, MapEventMap, MapState } from './contracts.js';
@@ -51,6 +52,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly drawing: MapDrawingController;
   readonly environment: EnvironmentController;
   readonly analysis: AnalysisController;
+  readonly diagnostics: DiagnosticsController;
 
   private currentState: MapState = 'ready';
   private destroyPromise: Promise<void> | undefined;
@@ -220,6 +222,9 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
         return analysisRuntime.run(tool, input, runOptions);
       },
     });
+    this.diagnostics = Object.freeze({
+      snapshot: (): MapDiagnosticsSnapshot => this.collectDiagnostics(),
+    });
     this.environment = Object.freeze({
       get active() {
         return adapter.environment.active;
@@ -363,6 +368,53 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
     } catch {
       // Listener failures must not replace the operation error being reported.
     }
+  }
+
+  /** 汇总诊断读数；任何一个读数不可用都不影响其它字段，也不抛错。 */
+  private collectDiagnostics(): MapDiagnosticsSnapshot {
+    const engine = this.adapter.getEngineDiagnostics?.();
+    let view: MapDiagnosticsSnapshot['camera']['view'];
+    let viewRectangle: MapDiagnosticsSnapshot['camera']['viewRectangle'];
+    try {
+      view = this.adapter.camera.view;
+      viewRectangle = this.adapter.camera.viewRectangle;
+    } catch {
+      // 位姿不可读是诊断场景本身要暴露的信息，不在快照里抛出来。
+      view = undefined;
+      viewRectangle = undefined;
+    }
+    const layers: LayerDiagnostics[] = this.adapter.layers.list().map((info) => ({
+      ...info,
+      errorCount: this.adapter.layers.get(info.id)?.errorCount ?? 0,
+    }));
+    return {
+      id: this.id,
+      state: this.currentState,
+      camera: {
+        view,
+        viewRectangle,
+        recoveryCount: engine?.cameraRecoveryCount ?? 0,
+      },
+      quality: this.adapter.quality.snapshot,
+      layers,
+      basemap: {
+        type: this.adapter.basemap.type,
+        visible: this.adapter.basemap.visible,
+        opacity: this.adapter.basemap.opacity,
+        errorCount: this.adapter.basemap.errorCount,
+      },
+      terrain: { type: this.adapter.terrain.type },
+      scene: {
+        mode: this.adapter.scene.mode,
+        morphing: this.adapter.scene.morphing,
+      },
+      environment: this.adapter.environment.active,
+      drawing: {
+        mode: this.adapter.drawing.mode,
+        vertexCount: this.adapter.drawing.vertexCount,
+        editing: this.adapter.drawing.editing !== undefined,
+      },
+    };
   }
 
   private assertReady(operation: string): void {

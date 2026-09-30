@@ -99,11 +99,24 @@ const quality = {
   setAdaptive: vi.fn(),
 } satisfies QualityController;
 
+const layers = {
+  add: vi.fn(),
+  get: vi.fn((id: string) =>
+    id === 'roads'
+      ? { id, type: 'polyline', state: 'ready', visible: true, errorCount: 2 }
+      : undefined,
+  ),
+  list: vi.fn(() => [{ id: 'roads', type: 'polyline', state: 'ready', visible: true }]),
+  remove: vi.fn(),
+  clear: vi.fn(),
+} as unknown as LayerManager;
+
 function createAdapter(): TestAdapter {
   let reporter: ((error: GisError) => void) | undefined;
   return {
     raw: { name: 'fake' },
-    layers: {} as LayerManager,
+    layers,
+    getEngineDiagnostics: () => ({ cameraRecoveryCount: 3 }),
     camera,
     environment,
     basemap,
@@ -450,5 +463,46 @@ describe('MapRuntime', () => {
 
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatchObject({ id: 'map-1' });
+  });
+
+  it('collects a diagnostics snapshot without throwing', () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+
+    const snapshot = map.diagnostics.snapshot();
+
+    expect(snapshot.id).toBe('map-1');
+    expect(snapshot.state).toBe('ready');
+    expect(snapshot.camera.recoveryCount).toBe(3);
+    expect(snapshot.camera.view?.longitude).toBe(116.39);
+    expect(snapshot.layers).toEqual([
+      { id: 'roads', type: 'polyline', state: 'ready', visible: true, errorCount: 2 },
+    ]);
+    expect(snapshot.basemap).toEqual({ type: 'none', visible: false, opacity: 1, errorCount: 0 });
+    expect(snapshot.terrain).toEqual({ type: 'ellipsoid' });
+    expect(snapshot.scene).toEqual({ mode: '3d', morphing: false });
+    expect(snapshot.environment).toEqual([]);
+    expect(snapshot.drawing).toEqual({ mode: undefined, vertexCount: 0, editing: false });
+    expect(snapshot.quality.adaptive).toBe(true);
+  });
+
+  it('reports an unreadable camera pose as undefined instead of throwing', () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+    Object.defineProperty(adapter.camera, 'view', {
+      get() {
+        throw new GisError('camera is gone', {
+          code: 'CAMERA_VIEW_UNAVAILABLE',
+          module: 'camera',
+          operation: 'view',
+        });
+      },
+      configurable: true,
+    });
+
+    const snapshot = map.diagnostics.snapshot();
+
+    expect(snapshot.camera.view).toBeUndefined();
+    expect(snapshot.camera.viewRectangle).toBeUndefined();
   });
 });

@@ -30,6 +30,7 @@
 | 回放时间轴          | 可用 | `ReplayTimeline`（`/core`，零 Cesium）                                                                                                                             | 按对象分组、时间排序与同刻去重、容量上限、按时刻查询与插值、窗口与轨迹切片、有界外推                    |
 | 渲染质量            | 可用 | `map.quality`、`createMap({ quality })`、`RenderQualityMonitor`                                                                                                    | 四档预设、分辨率/地形误差/模型并发联动、按帧率自动升降档与降档诊断                                                                 |
 | 图层错误可观测      | 可用 | `LayerHandle.errorCount`、`layer.events.on('error')`、`map.basemap.errorCount`                                                                                     | 影像瓦片失败累计计数并只上报首个；底图首个失败经 `map:error` 上报                                                                  |
+| 诊断快照            | 可用 | `map.diagnostics.snapshot()`（`/core` 契约 + 适配器读数）                                                                                                          | 一次调用汇总生命周期、相机（含安全网恢复次数）、质量与帧率、图层与错误计数、底图、地形、场景、环境与绘制状态；读不到不抛错 |
 | 分析工具            | 可用 | `map.analysis.run(tool, input)`、`map.analysis.list()`、`createAnalysisController()`                                                                             | 13 个内置工具、按工具窄化的输入输出、算法版本、地形采样端口、无数据不伪造、`signal` 取消与稳定错误码 |
 | 空间量算            | 可用 | `measureDistance`、`measureArea`、`measureBBox`、`nearestPointOnPath` 等（包根或 `/core`）                                                                         | 球面量算：距离、折线长度、面积（含洞）、方位、目标点、包围盒、质心、沿线取点、最近点                                               |
 | 空间判断            | 可用 | `isPointInPolygon`、`filterPointsInPolygon`、`normalizeRingWinding`（包根或 `/core`）                                                                              | 外环 + 内环判断、边界归属可配、批量判断带包围盒预筛、绕向规范化                                                                    |
@@ -62,7 +63,7 @@
 | 绘制捕捉与顶点增删                   | 未发布   | 绘制与顶点拖动已可用；捕捉、顶点插入与删除尚无 API                                                                                     |
 | 体积类环境效果与自定义材质           | 未发布   | 深度雾、基础雾与降水已可用；体积云、热力图、三维风场、闪电、水面与自定义 GLSL 材质尚无 SDK 方法                                        |
 | 分析任务模型与结果图层               | 未发布   | `map.analysis` 已可用（13 个内置工具：量算 / 判断 / CRS / 地形采样 / 通视 / 视域 / 坡度坡向）；任务队列、进度上报、结果图层与 Worker 执行接口尚未发布 |
-| 插件、诊断和框架绑定                 | 未发布   | 图层与底图已提供错误计数与首个失败事件；尚无插件协议、完整监控 API 或官方 Vue / React 组件                                             |
+| 插件与框架绑定                       | 未发布   | 错误计数、首个失败事件与 `map.diagnostics` 快照已可用；插件注册协议与官方 Vue / React 组件尚未发布                                     |
 | 多浏览器性能验证                     | 未完成   | 尚未建立真实 WebGL 端到端矩阵、性能阈值和公开压测结果                                                                                  |
 | 旧项目迁移适配                       | 未完成   | 尚未提供兼容层；接入以当前公开 SDK 契约为准                                                                                            |
 
