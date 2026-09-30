@@ -37,6 +37,7 @@ export default defineConfig({
           items: [
             { text: '地图生命周期', link: '/guide/map-lifecycle' },
             { text: '地图控制', link: '/guide/map-controls' },
+            { text: '外部接入点（瓦片 / 地形 / 数据地址）', link: '/guide/external-endpoints' },
             { text: '2D / 3D 场景切换', link: '/guide/scene-mode' },
             { text: '坐标转换', link: '/guide/coordinates' },
             { text: '渲染质量与自动降档', link: '/guide/quality' },
@@ -101,6 +102,7 @@ export default defineConfig({
             { text: 'API 使用参考', link: '/guide/api-reference' },
             { text: '地图生命周期', link: '/guide/map-lifecycle' },
             { text: '地图控制', link: '/guide/map-controls' },
+            { text: '外部接入点（瓦片 / 地形 / 数据地址）', link: '/guide/external-endpoints' },
             { text: '2D / 3D 场景切换', link: '/guide/scene-mode' },
             { text: '坐标转换', link: '/guide/coordinates' },
             { text: '渲染质量与自动降档', link: '/guide/quality' },

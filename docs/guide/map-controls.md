@@ -64,14 +64,14 @@ await map.camera.flyTo({
 });
 ```
 
-| 方法             | 参数           | 运行效果                                      | 可能抛出 / 拒绝                                  |
-| ---------------- | -------------- | --------------------------------------------- | ------------------------------------------------ |
-| `view`           | 无（只读）     | 当前位姿快照：经纬高（度 / 米）与航向 / 俯仰 / 翻滚 | `CAMERA_VIEW_UNAVAILABLE`                        |
-| `viewRectangle`  | 无（只读）     | 当前视口在地表覆盖的经纬四至；不可用时为 `undefined` | -                                                |
+| 方法             | 参数           | 运行效果                                                   | 可能抛出 / 拒绝                                  |
+| ---------------- | -------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| `view`           | 无（只读）     | 当前位姿快照：经纬高（度 / 米）与航向 / 俯仰 / 翻滚        | `CAMERA_VIEW_UNAVAILABLE`                        |
+| `viewRectangle`  | 无（只读）     | 当前视口在地表覆盖的经纬四至；不可用时为 `undefined`       | -                                                |
 | `metersPerPixel` | 无（只读）     | 屏幕中心处每像素多少米；中心射线打不到椭球时为 `undefined` | -                                                |
-| `setView(view)`  | `CameraView`   | 立即切换视角，并先取消进行中的飞行            | `INVALID_CAMERA_VIEW`                            |
-| `flyTo(view)`    | `CameraFlight` | 平滑飞行；完成时 Promise resolve              | `INVALID_CAMERA_VIEW`、`CAMERA_FLIGHT_CANCELLED` |
-| `cancelFlight()` | 无             | 取消 SDK 发起的当前飞行；无进行中飞行时无操作 | 当前飞行以 `CAMERA_FLIGHT_CANCELLED` reject      |
+| `setView(view)`  | `CameraView`   | 立即切换视角，并先取消进行中的飞行                         | `INVALID_CAMERA_VIEW`                            |
+| `flyTo(view)`    | `CameraFlight` | 平滑飞行；完成时 Promise resolve                           | `INVALID_CAMERA_VIEW`、`CAMERA_FLIGHT_CANCELLED` |
+| `cancelFlight()` | 无             | 取消 SDK 发起的当前飞行；无进行中飞行时无操作              | 当前飞行以 `CAMERA_FLIGHT_CANCELLED` reject      |
 
 `longitude` 必须在 `-180` 到 `180`，`latitude` 必须在 `-90` 到 `90`；`height`、姿态和 `duration` 必须是有限数，且 `duration` 不能为负数。再次调用 `flyTo()` 会先取消 SDK 的上一段飞行。
 
@@ -114,6 +114,17 @@ if (perPixel !== undefined) {
 
 默认是无网络请求的椭球地形。Cesium Terrain 服务采用异步加载：新 Provider 成功创建前，旧地形持续可用；加载失败不会留下半切换状态。
 
+地形服务地址既可以在创建时声明，也可以之后切换：
+
+```ts
+const map = createMap({
+  container: 'map',
+  terrain: { type: 'cesium-terrain', url: 'https://terrain.example.com/' },
+});
+
+await map.terrain.ready; // 创建期声明的地形安装完成；失败则在这里拒绝
+```
+
 ```ts
 await map.terrain.set({
   type: 'cesium-terrain',
@@ -128,10 +139,16 @@ await map.terrain.set({ type: 'ellipsoid' });
 | 成员                  | 参数             | 运行效果                                             | 可能拒绝                                                        |
 | --------------------- | ---------------- | ---------------------------------------------------- | --------------------------------------------------------------- |
 | `type`                | 无               | 返回当前已安装的 `'ellipsoid'` 或 `'cesium-terrain'` | -                                                               |
+| `pending`             | 无               | 是否有地形安装在途（含创建期声明的初始加载）         | -                                                               |
+| `ready`               | 无               | `createMap({ terrain })` 的初始地形何时可用          | `TERRAIN_LOAD_FAILED`                                           |
 | `set(spec, options?)` | `TerrainSpec`    | 加载并替换地形；椭球模式立即生效                     | `INVALID_TERRAIN_CONFIG`、`TERRAIN_BUSY`、`TERRAIN_LOAD_FAILED` |
 |                       | `{ timeoutMs? }` | 元数据请求超时，默认 `30000`；`0` 表示不限制         | `INVALID_TERRAIN_CONFIG`                                        |
 
+创建期声明地形的语义与 `set()` 一致，只是把地址写在创建处；`INVALID_TERRAIN_CONFIG`（类型未知、`url` 为空、开关不是布尔）在 `createMap` 时同步抛出，不会先建出地图再失败。初始加载失败时 `map.terrain.type` 保持 `'ellipsoid'`——不会静默改用其他地形服务——错误同时经 `map.terrain.ready` 拒绝与 `map:error` 上报一次，因此不 `await` 也不会丢错误。初始加载在途时调用 `set()` 会以可重试的 `TERRAIN_BUSY` 拒绝。
+
 地形元数据请求默认 30 秒超时。超时后当前地形保持不变并抛出可重试的 `TERRAIN_LOAD_FAILED`，切换状态随即释放，因此不会出现服务端一直无响应时永久 `TERRAIN_BUSY`、无法再次切换地形的情况。
+
+外部服务地址（瓦片、地形、影像、数据）的统一约定见[外部接入点](./external-endpoints.md)。
 
 ### 地形高度采样
 

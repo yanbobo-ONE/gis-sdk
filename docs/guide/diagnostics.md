@@ -5,15 +5,16 @@
 ```ts
 const snapshot = map.diagnostics.snapshot();
 
-snapshot.state;                          // 'ready' | 'destroying' | 'destroyed'
-snapshot.camera.view;                    // { longitude, latitude, height, heading, pitch, roll } | undefined
-snapshot.camera.recoveryCount;           // 相机位姿安全网累计恢复次数
-snapshot.quality.fps;                    // 滑动窗口平均帧率
-snapshot.quality.degraded;               // 是否已降到初始质量之下
-snapshot.layers;                         // [{ id, type, state, visible, errorCount }]
-snapshot.basemap.errorCount;             // 底图首个远端失败后的累计计数
-snapshot.environment;                    // 当前生效的环境效果状态
-snapshot.drawing.editing;                // 是否在编辑会话中
+snapshot.state; // 'ready' | 'destroying' | 'destroyed'
+snapshot.camera.view; // { longitude, latitude, height, heading, pitch, roll } | undefined
+snapshot.camera.recoveryCount; // 相机位姿安全网累计恢复次数
+snapshot.quality.fps; // 滑动窗口平均帧率
+snapshot.quality.degraded; // 是否已降到初始质量之下
+snapshot.layers; // [{ id, type, state, visible, errorCount }]
+snapshot.basemap.errorCount; // 底图首个远端失败后的累计计数
+snapshot.terrain; // { type, pending }：已安装地形与是否有安装 / 切换在途
+snapshot.environment; // 当前生效的环境效果状态
+snapshot.drawing.editing; // 是否在编辑会话中
 ```
 
 ## 采集口径

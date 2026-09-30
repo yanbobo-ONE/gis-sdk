@@ -84,7 +84,7 @@ const map = createMap({
 });
 ```
 
-SDK 默认设置 `baseLayer: false`，不会自动请求 Cesium ion 影像，因此创建空白地球不需要 ion token。GeoJSON、WMS、TMS、WMTS 与 3D Tiles 都通过[图层管理](./layer-management.md)创建；XYZ 底图、相机和地形使用[地图控制](./map-controls.md)中的类型化句柄。尚未覆盖的单图服务、模型或 Primitive 可以暂时通过 `map.raw.viewer` 使用 Cesium 公共接口。
+SDK 默认设置 `baseLayer: false`，不会自动请求 Cesium ion 影像，因此创建空白地球不需要 ion token。GeoJSON、WMS、TMS、WMTS 与 3D Tiles 都通过[图层管理](./layer-management.md)创建；XYZ 底图、相机和地形使用[地图控制](./map-controls.md)中的类型化句柄。尚未覆盖的单图服务、模型或 Primitive 可以暂时通过 `map.raw.viewer` 使用 Cesium 公共接口。瓦片、地形、影像与数据服务的地址一律由调用方给出，清单见[外部接入点](./external-endpoints.md)。
 
 组件卸载、路由离开或场景切换时释放地图：
 
