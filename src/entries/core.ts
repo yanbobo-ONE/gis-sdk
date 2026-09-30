@@ -128,6 +128,16 @@ export type {
 } from '../core/position-batch.js';
 export { RealtimeResyncController } from '../core/realtime-resync.js';
 export { ReplayTimeline } from '../core/replay-timeline.js';
+export { REALTIME_SOCKET_WILDCARD, RealtimeSocketClient } from '../core/realtime-socket.js';
+export type {
+  RealtimeSocketHeartbeat,
+  RealtimeSocketLike,
+  RealtimeSocketMessage,
+  RealtimeSocketOptions,
+  RealtimeSocketState,
+  RealtimeSocketStats,
+} from '../core/realtime-socket.js';
+
 export { createAnalysisController } from '../core/analysis-runner.js';
 export type { AnalysisControllerOptions, AnalysisTerrainPort } from '../core/analysis-runner.js';
 export {

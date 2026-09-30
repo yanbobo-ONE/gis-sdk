@@ -27,7 +27,7 @@ try {
 | `retryable` | `boolean`      | 是否适合由业务重试            |
 | `cause`     | `unknown`      | 原始异常，用于日志诊断        |
 
-常见的可恢复错误包括 `LAYER_LOAD_FAILED`、`TERRAIN_LOAD_FAILED`、`CAMERA_VIEW_UNAVAILABLE` 与 `MAP_DESTROY_FAILED`；是否自动重试取决于业务的网络、鉴权和路由策略。参数类错误（如 `INVALID_ENVIRONMENT_CONFIG`、`INVALID_ANALYSIS_INPUT`）与能力类错误（如 `ENVIRONMENT_UNSUPPORTED`、`UNKNOWN_ANALYSIS_TOOL`）不适合重试，应修正调用方式或换用其它效果。
+常见的可恢复错误包括 `LAYER_LOAD_FAILED`、`TERRAIN_LOAD_FAILED`、`CAMERA_VIEW_UNAVAILABLE` 与 `MAP_DESTROY_FAILED`；是否自动重试取决于业务的网络、鉴权和路由策略。参数类错误（如 `INVALID_ENVIRONMENT_CONFIG`、`INVALID_ANALYSIS_INPUT`、`INVALID_REALTIME_SOCKET_CONFIG`）与能力类错误（如 `ENVIRONMENT_UNSUPPORTED`、`UNKNOWN_ANALYSIS_TOOL`）不适合重试，应修正调用方式或换用其它效果。
 
 ## 使用原生 Cesium：map.raw.viewer
 
