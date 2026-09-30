@@ -21,6 +21,33 @@ const cesium = vi.hoisted(() => {
     }
   }
 
+  class FakeLabelCollection {
+    show = true;
+    readonly labels: Record<string, unknown>[] = [];
+    readonly destroy = vi.fn();
+
+    get length(): number {
+      return this.labels.length;
+    }
+
+    add(options: Record<string, unknown>): Record<string, unknown> {
+      const label = { ...options };
+      this.labels.push(label);
+      return label;
+    }
+
+    get(index: number): Record<string, unknown> | undefined {
+      return this.labels[index];
+    }
+  }
+
+  class FakeCartesian2 {
+    constructor(
+      readonly x: number,
+      readonly y: number,
+    ) {}
+  }
+
   const fromDegrees = vi.fn((longitude: number, latitude: number, height: number) => ({
     longitude,
     latitude,
@@ -28,6 +55,8 @@ const cesium = vi.hoisted(() => {
   }));
 
   return {
+    Cartesian2: FakeCartesian2,
+    FakeCartesian2,
     Cartesian3: { fromDegrees },
     Color: {
       WHITE: { css: 'white' },
@@ -37,13 +66,17 @@ const cesium = vi.hoisted(() => {
     },
     PointPrimitiveCollection: FakePointPrimitiveCollection,
     FakePointPrimitiveCollection,
+    FakeLabelCollection,
+    LabelCollection: FakeLabelCollection,
     fromDegrees,
   };
 });
 
 vi.mock('cesium', () => ({
+  Cartesian2: cesium.Cartesian2,
   Cartesian3: cesium.Cartesian3,
   Color: cesium.Color,
+  LabelCollection: cesium.LabelCollection,
   PointPrimitiveCollection: cesium.PointPrimitiveCollection,
 }));
 
@@ -52,6 +85,11 @@ import { MAX_POINT_LAYER_POINTS } from '../src/layers/contracts.js';
 import type { LayerFactoryContext } from '../src/layers/layer-runtime.js';
 
 type FakeCollection = InstanceType<typeof cesium.FakePointPrimitiveCollection>;
+type FakeLabels = InstanceType<typeof cesium.FakeLabelCollection>;
+
+/** 从场景里挑出第一个标签集合。 */
+const labelsOf = (items: unknown[]): FakeLabels | undefined =>
+  items.find((item): item is FakeLabels => item instanceof cesium.FakeLabelCollection);
 
 function createViewer() {
   const items: FakeCollection[] = [];
@@ -319,5 +357,148 @@ describe('points layer', () => {
     expect(view.items[0]?.points[1]?.id).toEqual({ layerId: 'targets' });
 
     await layer.dispose();
+  });
+
+  it('renders one label per point that has text and writes the picking marker', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+    const layer = await createPointsLayer(
+      view.viewer as never,
+      {
+        id: 'targets',
+        type: 'points',
+        points: [
+          { id: 'a', longitude: 116.39, latitude: 39.9, label: '目标 A' },
+          { id: 'b', longitude: 121.47, latitude: 31.23 },
+          { id: 'c', longitude: 113.26, latitude: 23.13, label: '  目标 C  ' },
+        ],
+        labels: { enabled: true, font: '14px serif', color: '#ffee00', offsetPixels: [4, -20] },
+      },
+      context,
+    );
+
+    const labels = labelsOf(view.items);
+    expect(labels?.labels).toHaveLength(2);
+    expect(labels?.labels[0]).toMatchObject({
+      text: '目标 A',
+      font: '14px serif',
+      fillColor: { css: '#ffee00' },
+      outlineColor: { css: '#0b1310' },
+      outlineWidth: 2,
+      id: { layerId: 'targets', objectId: 'a' },
+    });
+    // 偏移按像素传入，文本两端空白会被去掉。
+    expect(labels?.labels[1]).toMatchObject({ text: '目标 C' });
+    const offset = labels?.labels[1]?.pixelOffset as { x: number; y: number } | undefined;
+    expect(offset).toEqual({ x: 4, y: -20 });
+    expect(layer.count).toBe(3);
+    expect(layer.labelCount).toBe(2);
+
+    layer.setVisible(false);
+    expect(labels?.show).toBe(false);
+    await layer.dispose();
+    expect(view.items).toHaveLength(0);
+  });
+
+  it('truncates labels at maxLabels while keeping every point', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+    const points = Array.from({ length: 10 }, (_, index) => ({
+      longitude: 116 + index * 0.001,
+      latitude: 39.9,
+      label: `P${String(index)}`,
+    }));
+    const layer = await createPointsLayer(
+      view.viewer as never,
+      { id: 'targets', type: 'points', points, labels: { enabled: true, maxLabels: 4 } },
+      context,
+    );
+
+    expect(layer.count).toBe(10);
+    expect(layer.labelCount).toBe(4);
+    expect(labelsOf(view.items)?.labels.map((label) => label.text)).toEqual(['P0', 'P1', 'P2', 'P3']);
+
+    // maxLabels 为 0 时不建标签集合。
+    const noLabels = await createPointsLayer(
+      view.viewer as never,
+      { id: 'none', type: 'points', points, labels: { enabled: true, maxLabels: 0 } },
+      context,
+    );
+    expect(noLabels.labelCount).toBe(0);
+    expect(labelsOf(view.items)).toBeDefined();
+  });
+
+  it('replaces labels together with points and toggles them through setStyle', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+    const layer = await createPointsLayer(
+      view.viewer as never,
+      {
+        id: 'targets',
+        type: 'points',
+        points: [{ longitude: 1, latitude: 2, label: 'first' }],
+        labels: { enabled: true },
+      },
+      context,
+    );
+    expect(layer.labelCount).toBe(1);
+
+    await layer.setData([{ longitude: 3, latitude: 4, label: 'second' }]);
+    expect(labelsOf(view.items)?.labels[0]).toMatchObject({ text: 'second' });
+    expect(layer.labelCount).toBe(1);
+    // 旧标签集合已从场景移除，只留一套点 + 一套标签。
+    expect(view.items).toHaveLength(2);
+
+    // 关闭标签：集合被移除，点还在。
+    layer.setStyle({ labels: { enabled: false } });
+    expect(layer.labelCount).toBe(0);
+    expect(view.items).toHaveLength(1);
+
+    // 重新打开：按当前点位重建，字体颜色生效。
+    layer.setStyle({ labels: { enabled: true, font: '16px serif', color: '#ff0000' } });
+    expect(layer.labelCount).toBe(1);
+    expect(labelsOf(view.items)?.labels[0]).toMatchObject({
+      text: 'second',
+      font: '16px serif',
+      fillColor: { css: '#ff0000' },
+    });
+  });
+
+  it('validates label configuration and text', () => {
+    const view = createViewer();
+    const context = createContext().context;
+    const base = { id: 'targets', type: 'points' as const, points: [{ longitude: 1, latitude: 2 }] };
+
+    // 与点位校验一致：建点是同步过程，工厂直接抛出。
+    const cases: readonly [Parameters<typeof createPointsLayer>[1]][] = [
+      [{ ...base, labels: { enabled: true, font: '  ' } }],
+      [{ ...base, labels: { enabled: true, offsetPixels: [1] as never } }],
+      [{ ...base, labels: { enabled: true, outlineWidth: 20 } }],
+      [{ ...base, labels: { enabled: true, maxLabels: 99_999 } }],
+      [{ ...base, points: [{ longitude: 1, latitude: 2, label: 'x'.repeat(65) }] }],
+    ];
+    for (const [spec] of cases) {
+      expect(() => createPointsLayer(view.viewer as never, spec, context)).toThrow(
+        expect.objectContaining({ code: 'INVALID_LAYER_CONFIG' }),
+      );
+    }
+
+    // 颜色错误沿用图层既有的 INVALID_LAYER_COLOR 代码。
+    expect(() =>
+      createPointsLayer(
+        view.viewer as never,
+        { ...base, labels: { enabled: true, color: 'invalid-color' } },
+        context,
+      ),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_LAYER_COLOR' }));
+
+    // 空白标签按"没有标签"处理，不报错也不建标签。
+    expect(() =>
+      createPointsLayer(
+        view.viewer as never,
+        { ...base, points: [{ longitude: 1, latitude: 2, label: '   ' }], labels: { enabled: true } },
+        context,
+      ),
+    ).not.toThrow();
   });
 });

@@ -115,6 +115,7 @@ describe('package subpath entrypoints', () => {
       readonly wmts: WmtsLayerSpec;
       readonly singleImage: SingleImageLayerSpec;
       readonly model: ModelLayerSpec;
+      readonly pointLabels: PointsLabelStyle;
       readonly modelHandle: ModelLayerHandle;
       readonly modelAppearance: ModelAppearanceOptions;
       readonly modelTransform: ModelTransform;

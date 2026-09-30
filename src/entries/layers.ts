@@ -31,6 +31,7 @@ export type {
   ModelTransform,
   OperationOptions,
   PointSpec,
+  PointsLabelStyle,
   PointsLayerHandle,
   PointsLayerSpec,
   PointsLayerStyle,

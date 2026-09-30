@@ -1,4 +1,4 @@
-import { Cartesian3, Color, PointPrimitiveCollection } from 'cesium';
+import { Cartesian2, Cartesian3, Color, LabelCollection, PointPrimitiveCollection } from 'cesium';
 import type { PointPrimitive, Viewer } from 'cesium';
 
 import type { PickingMarker } from '../../core/controls.js';
@@ -9,6 +9,7 @@ import type {
   LayerState,
   OperationOptions,
   PointSpec,
+  PointsLabelStyle,
   PointsLayerHandle,
   PointsLayerSpec,
   PointsLayerStyle,
@@ -27,11 +28,35 @@ const MAX_PIXEL_SIZE = 40;
 /** 轮廓宽度的取值范围。 */
 const MAX_OUTLINE_WIDTH = 16;
 
+/** 标签默认字体与颜色。 */
+const DEFAULT_LABEL_FONT = '13px sans-serif';
+const DEFAULT_LABEL_COLOR = '#ffffff';
+const DEFAULT_LABEL_OUTLINE_COLOR = '#0b1310';
+const DEFAULT_LABEL_OUTLINE_WIDTH = 2;
+const DEFAULT_LABEL_OFFSET: readonly [number, number] = [0, -18];
+const DEFAULT_MAX_LABELS = 2_000;
+const MAX_LABELS_LIMIT = 50_000;
+const MAX_OUTLINE_WIDTH_LABEL = 8;
+/** 单条标签文本上限，避免把整段业务描述灌进 GPU。 */
+const MAX_LABEL_LENGTH = 64;
+
+interface NormalizedLabelStyle {
+  readonly enabled: boolean;
+  readonly font: string;
+  readonly color: Color;
+  readonly outlineColor: Color;
+  readonly outlineWidth: number;
+  readonly offsetX: number;
+  readonly offsetY: number;
+  readonly maxLabels: number;
+}
+
 interface NormalizedStyle {
   readonly color: Color;
   readonly pixelSize: number;
   readonly outlineWidth: number;
   readonly outlineColor: Color;
+  readonly labels: NormalizedLabelStyle;
 }
 
 function layerError(
@@ -58,6 +83,11 @@ function operationAborted(id: string, operation: string, cause?: unknown): GisEr
 
 function finite(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+/** 运行期数组判断；单独写一层是为了不让 `Array.isArray` 把类型塌成 `any[]`。 */
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
 }
 
 function parseColor(id: string, value: unknown, operation: string): Color {
@@ -97,6 +127,69 @@ function normalizeStyle(id: string, style: PointsLayerStyle, operation: string):
     pixelSize,
     outlineWidth,
     outlineColor: parseColor(id, style.outlineColor ?? style.color ?? DEFAULT_COLOR, operation),
+    labels: normalizeLabelStyle(id, style.labels, operation),
+  };
+}
+
+/** 标签样式：默认关闭；开启时校验字体、颜色、偏移与上限。 */
+function normalizeLabelStyle(
+  id: string,
+  labels: PointsLabelStyle | undefined,
+  operation: string,
+): NormalizedLabelStyle {
+  if (labels === undefined) {
+    return {
+      enabled: false,
+      font: DEFAULT_LABEL_FONT,
+      color: Color.WHITE,
+      outlineColor: parseColor(id, DEFAULT_LABEL_OUTLINE_COLOR, operation),
+      outlineWidth: DEFAULT_LABEL_OUTLINE_WIDTH,
+      offsetX: DEFAULT_LABEL_OFFSET[0],
+      offsetY: DEFAULT_LABEL_OFFSET[1],
+      maxLabels: DEFAULT_MAX_LABELS,
+    };
+  }
+  const font = labels.font ?? DEFAULT_LABEL_FONT;
+  if (typeof font !== 'string' || font.trim().length === 0) {
+    throw layerError(id, 'labels.font must be a non-empty CSS font string.', operation);
+  }
+  const outlineWidth = labels.outlineWidth ?? DEFAULT_LABEL_OUTLINE_WIDTH;
+  if (
+    !Number.isFinite(outlineWidth) ||
+    outlineWidth < 0 ||
+    outlineWidth > MAX_OUTLINE_WIDTH_LABEL
+  ) {
+    throw layerError(
+      id,
+      `labels.outlineWidth must be a finite number between 0 and ${String(MAX_OUTLINE_WIDTH_LABEL)}.`,
+      operation,
+    );
+  }
+  // 运行期可能收到任意值：先收窄成 unknown[] 再逐项校验，避免直接信任类型标注。
+  const rawOffset: unknown = labels.offsetPixels ?? DEFAULT_LABEL_OFFSET;
+  const offsetValues: readonly unknown[] | undefined = isUnknownArray(rawOffset) ? rawOffset : undefined;
+  const offsetX = offsetValues?.[0];
+  const offsetY = offsetValues?.[1];
+  if (offsetValues?.length !== 2 || !finite(offsetX) || !finite(offsetY)) {
+    throw layerError(id, 'labels.offsetPixels must be a pair of finite numbers.', operation);
+  }
+  const maxLabels = labels.maxLabels ?? DEFAULT_MAX_LABELS;
+  if (!Number.isInteger(maxLabels) || maxLabels < 0 || maxLabels > MAX_LABELS_LIMIT) {
+    throw layerError(
+      id,
+      `labels.maxLabels must be an integer between 0 and ${String(MAX_LABELS_LIMIT)}.`,
+      operation,
+    );
+  }
+  return {
+    enabled: labels.enabled === true,
+    font,
+    color: parseColor(id, labels.color ?? DEFAULT_LABEL_COLOR, operation),
+    outlineColor: parseColor(id, labels.outlineColor ?? DEFAULT_LABEL_OUTLINE_COLOR, operation),
+    outlineWidth,
+    offsetX,
+    offsetY,
+    maxLabels,
   };
 }
 
@@ -104,6 +197,8 @@ interface NormalizedPoint {
   readonly position: Cartesian3;
   readonly color: Color | undefined;
   readonly pixelSize: number | undefined;
+  /** 标签文本；没有或空白时为 `undefined`。 */
+  readonly label: string | undefined;
   /** 拾取标记；命中后由拾取控制器还原图层与对象 id。 */
   readonly marker: PickingMarker;
 }
@@ -145,10 +240,19 @@ function normalizePoint(id: string, point: unknown, operation: string): Normaliz
       operation,
     );
   }
+  const rawLabel = typeof candidate.label === 'string' ? candidate.label.trim() : '';
+  if (rawLabel.length > MAX_LABEL_LENGTH) {
+    throw layerError(
+      id,
+      `point label must be at most ${String(MAX_LABEL_LENGTH)} characters.`,
+      operation,
+    );
+  }
   return {
     position: Cartesian3.fromDegrees(longitude, latitude, height),
     color: candidate.color === undefined ? undefined : parseColor(id, candidate.color, operation),
     pixelSize: candidate.pixelSize,
+    label: rawLabel.length === 0 ? undefined : rawLabel,
     marker,
   };
 }
@@ -191,19 +295,60 @@ function buildCollection(
   return collection;
 }
 
+/**
+ * 按样式批量建标签；标签关闭或没有带文本的点时返回 `undefined`。
+ *
+ * 超过 `labels.maxLabels` 的点只渲染点、不渲染标签，`labelCount` 会反映实际数量。
+ */
+function buildLabels(
+  points: readonly NormalizedPoint[],
+  style: NormalizedStyle,
+): LabelCollection | undefined {
+  const labels = style.labels;
+  if (!labels.enabled || labels.maxLabels === 0) {
+    return undefined;
+  }
+  const candidates = points.filter((point) => point.label !== undefined);
+  if (candidates.length === 0) {
+    return undefined;
+  }
+  const collection = new LabelCollection();
+  for (const point of candidates.slice(0, labels.maxLabels)) {
+    const text = point.label;
+    if (text === undefined) {
+      continue;
+    }
+    collection.add({
+      position: point.position,
+      text,
+      font: labels.font,
+      fillColor: labels.color,
+      outlineColor: labels.outlineColor,
+      outlineWidth: labels.outlineWidth,
+      pixelOffset: new Cartesian2(labels.offsetX, labels.offsetY),
+      id: point.marker,
+    });
+  }
+  return collection;
+}
+
 class CesiumPointsLayerHandle implements PointsLayerHandle {
   readonly type = 'points' as const;
   private readonly lifecycle: LayerHandleRuntime;
   private currentCollection: PointPrimitiveCollection;
+  private currentLabels: LabelCollection | undefined;
   private currentCount: number;
   private currentStyle: NormalizedStyle;
   private currentStyleSource: PointsLayerStyle;
+  private currentPoints: readonly NormalizedPoint[];
   private updatePromise: Promise<void> | undefined;
 
   constructor(
     private readonly viewer: Viewer,
     readonly id: string,
     initialCollection: PointPrimitiveCollection,
+    initialLabels: LabelCollection | undefined,
+    initialPoints: readonly NormalizedPoint[],
     initialCount: number,
     style: NormalizedStyle,
     styleSource: PointsLayerStyle,
@@ -211,6 +356,8 @@ class CesiumPointsLayerHandle implements PointsLayerHandle {
     onDisposed: () => void,
   ) {
     this.currentCollection = initialCollection;
+    this.currentLabels = initialLabels;
+    this.currentPoints = initialPoints;
     this.currentCount = initialCount;
     this.currentStyle = style;
     this.currentStyleSource = styleSource;
@@ -220,9 +367,16 @@ class CesiumPointsLayerHandle implements PointsLayerHandle {
       visible,
       onSetVisible: (nextVisible) => {
         this.currentCollection.show = nextVisible;
+        if (this.currentLabels) {
+          this.currentLabels.show = nextVisible;
+        }
       },
       onDispose: () => {
         this.removeCollection(this.currentCollection);
+        if (this.currentLabels) {
+          this.removeCollection(this.currentLabels);
+          this.currentLabels = undefined;
+        }
       },
       onDisposed,
     });
@@ -248,6 +402,10 @@ class CesiumPointsLayerHandle implements PointsLayerHandle {
     return this.currentCount;
   }
 
+  get labelCount(): number {
+    return this.currentLabels?.length ?? 0;
+  }
+
   setVisible(visible: boolean): void {
     this.lifecycle.setVisible(visible);
   }
@@ -266,6 +424,37 @@ class CesiumPointsLayerHandle implements PointsLayerHandle {
       point.outlineWidth = normalized.outlineWidth;
       point.outlineColor = normalized.outlineColor;
     }
+    // 标签的颜色 / 字体 / 偏移是逐条属性：开关或外观变化都按新样式整层重建。
+    const labels = this.currentLabels;
+    if (labels) {
+      this.removeCollection(labels);
+      this.currentLabels = undefined;
+    }
+    const next = this.currentStyle.labels.enabled ? this.buildLabelsForCurrentPoints() : undefined;
+    if (next) {
+      next.show = this.visible;
+      this.currentLabels = next;
+    }
+  }
+
+  /**
+   * 用当前样式重建标签集合。
+   *
+   * 标签属性（字体、颜色、偏移）是逐条写入的，没有整层批量接口，因此样式变化时按当前点位重建；
+   * 点位本身在 `currentCollection` 里只存了 Cartesian3，重建标签需要文本，所以这里保住原始规格。
+   */
+  private buildLabelsForCurrentPoints(): LabelCollection | undefined {
+    const collection = buildLabels(this.currentPoints, this.currentStyle);
+    if (!collection) {
+      return undefined;
+    }
+    try {
+      this.viewer.scene.primitives.add(collection);
+    } catch (cause: unknown) {
+      collection.destroy();
+      throw cause;
+    }
+    return collection;
   }
 
   setData(points: readonly PointSpec[], options: OperationOptions = {}): Promise<void> {
@@ -299,11 +488,30 @@ class CesiumPointsLayerHandle implements PointsLayerHandle {
           next.destroy();
           throw cause;
         }
+        const nextLabels = buildLabels(normalized, this.currentStyle);
+        if (nextLabels) {
+          try {
+            this.viewer.scene.primitives.add(nextLabels);
+          } catch (cause: unknown) {
+            nextLabels.destroy();
+            this.removeCollection(next);
+            throw cause;
+          }
+        }
         const previous = this.currentCollection;
+        const previousLabels = this.currentLabels;
         this.currentCollection = next;
+        this.currentLabels = nextLabels;
+        this.currentPoints = normalized;
         this.currentCollection.show = this.visible;
+        if (nextLabels) {
+          nextLabels.show = this.visible;
+        }
         this.currentCount = normalized.length;
         this.removeCollection(previous);
+        if (previousLabels) {
+          this.removeCollection(previousLabels);
+        }
       })
       .then(
         () => {
@@ -331,7 +539,7 @@ class CesiumPointsLayerHandle implements PointsLayerHandle {
     return this.lifecycle.dispose();
   }
 
-  private removeCollection(collection: PointPrimitiveCollection): void {
+  private removeCollection(collection: PointPrimitiveCollection | LabelCollection): void {
     const removed = this.viewer.scene.primitives.remove(collection);
     if (!removed) {
       collection.destroy();
@@ -356,6 +564,7 @@ export function createPointsLayer(
       ...(spec.pixelSize === undefined ? {} : { pixelSize: spec.pixelSize }),
       ...(spec.outlineWidth === undefined ? {} : { outlineWidth: spec.outlineWidth }),
       ...(spec.outlineColor === undefined ? {} : { outlineColor: spec.outlineColor }),
+      ...(spec.labels === undefined ? {} : { labels: spec.labels }),
     };
     const style = normalizeStyle(spec.id, styleSource, 'add');
     const points = normalizePoints(spec.id, spec.points, 'add');
@@ -364,12 +573,19 @@ export function createPointsLayer(
     collection.show = visible;
     viewer.scene.primitives.add(collection);
     added = true;
+    const labels = buildLabels(points, style);
+    if (labels) {
+      labels.show = visible;
+      viewer.scene.primitives.add(labels);
+    }
     // 建点是同步过程，工厂契约要求返回 Promise，这里显式包一层。
     return Promise.resolve(
       new CesiumPointsLayerHandle(
         viewer,
         spec.id,
         collection,
+        labels,
+        points,
         points.length,
         style,
         styleSource,

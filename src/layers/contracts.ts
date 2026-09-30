@@ -331,10 +331,47 @@ export interface PointSpec {
   readonly color?: string;
   /** 覆盖图层默认尺寸的像素直径，范围 2 到 40。 */
   readonly pixelSize?: number;
+  /**
+   * 标签文本，最长 64 个字符；空白字符串按"没有标签"处理。
+   *
+   * 只有图层样式里 `labels.enabled` 为真时才渲染；标签用 `LabelCollection` 批量绘制，
+   * 不创建 Entity 或 DataSource，因此和点位一样支持大数量（单层标签上限见 `labels.maxLabels`）。
+   */
+  readonly label?: string;
+}
+
+/**
+ * 点位图层的标签样式。
+ *
+ * 标签是**可选的**：默认关闭。打开后每个带 `label` 的点会生成一条文字，位置与点相同
+ * （可用 `offsetPixels` 抬高），文字本身也带拾取标记，悬停文字就能命中该点。
+ */
+export interface PointsLabelStyle {
+  /** 是否显示标签，默认 `false`。 */
+  readonly enabled?: boolean;
+  /** CSS font 简写，默认 `'13px sans-serif'`。 */
+  readonly font?: string;
+  /** 文字颜色，默认 `#ffffff`。 */
+  readonly color?: string;
+  /** 文字描边颜色，默认 `#0b1310`；深色描边保证浅色底图上也能读。 */
+  readonly outlineColor?: string;
+  /** 描边宽度，单位为像素，范围 0 到 8，默认 2。 */
+  readonly outlineWidth?: number;
+  /** 相对点的像素偏移 `[x, y]`，默认 `[0, -18]`（标签在点上方）。 */
+  readonly offsetPixels?: readonly [number, number];
+  /**
+   * 单层标签上限，默认 2000，范围 0 到 50000。
+   *
+   * 超出的点位只渲染点、不渲染标签：文字是逐条绘制的，几千条以上会明显吃 GPU。
+   * 实际渲染数量可以从 `handle.labelCount` 读到。
+   */
+  readonly maxLabels?: number;
 }
 
 /** 点位图层样式；整层生效。 */
 export interface PointsLayerStyle {
+  /** 标签样式；省略时沿用上一次的设置（默认关闭）。 */
+  readonly labels?: PointsLabelStyle;
   /** 点颜色，CSS 颜色字符串。 */
   readonly color?: string;
   /** 点直径，单位为像素，范围 2 到 40。 */
@@ -359,6 +396,8 @@ export interface PointsLayerSpec extends BaseLayerSpec {
   readonly outlineWidth?: number;
   /** 轮廓颜色，默认与点颜色相同。 */
   readonly outlineColor?: string;
+  /** 标签样式；省略时不渲染标签。 */
+  readonly labels?: PointsLabelStyle;
 }
 
 /** 单层点位数量上限。 */
@@ -370,6 +409,13 @@ export interface PointsLayerHandle extends LayerHandle {
   readonly type: 'points';
   /** 当前渲染的点数。 */
   readonly count: number;
+  /**
+   * 当前实际渲染的标签数。
+   *
+   * 标签关闭时为 0；开启时等于"带标签的点数"与 `labels.maxLabels` 的较小值，
+   * 因此可以用它核对"是否因为超限被截断"。
+   */
+  readonly labelCount: number;
   /** 原子替换点位；失败或取消时保留旧点位。 */
   setData(points: readonly PointSpec[], options?: OperationOptions): Promise<void>;
   /** 整层调整样式；非法取值抛 `INVALID_LAYER_CONFIG` 或 `INVALID_LAYER_COLOR`。 */

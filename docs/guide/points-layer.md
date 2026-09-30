@@ -29,9 +29,46 @@ targets.count; // 当前渲染的点数
 | `pixelSize`    | `number`      | 否   | 点直径（像素），2–40，默认 8   |
 | `outlineWidth` | `number`      | 否   | 轮廓宽度（像素），0–16，默认 0 |
 | `outlineColor` | `string`      | 否   | 轮廓颜色，默认与 `color` 相同  |
+| `labels`       | 见下          | 否   | 标签样式，默认关闭             |
 | `visible`      | `boolean`     | 否   | 默认 `true`                    |
 
-`PointSpec` 是 `{ longitude, latitude, height?, color?, pixelSize? }`：单个点可以用 `color` / `pixelSize` 覆盖图层默认值，`height` 省略时按 0（椭球面）处理。
+`PointSpec` 是 `{ longitude, latitude, height?, color?, pixelSize?, label? }`
+
+## 标签
+
+给带 `label` 的点打开标签（用 Cesium 的 `LabelCollection` 批量绘制，同样不创建 Entity）：
+
+```ts
+const layer = await map.layers.add({
+  id: 'targets',
+  type: 'points',
+  points: [
+    { id: 'a', longitude: 116.39, latitude: 39.9, label: '目标 A' },
+    { id: 'b', longitude: 121.47, latitude: 31.23 }, // 没有 label 就不画文字
+  ],
+  labels: { enabled: true, font: '13px sans-serif', color: '#ffffff', offsetPixels: [0, -18] },
+});
+
+layer.labelCount; // 实际渲染的标签数（可能因 maxLabels 截断）
+```
+
+| 标签字段         | 类型             | 默认值            | 说明                                             |
+| ---------------- | ---------------- | ----------------- | ------------------------------------------------ |
+| `enabled`        | `boolean`        | `false`           | 是否显示标签                                     |
+| `font`           | `string`         | `13px sans-serif` | CSS font 简写                                    |
+| `color`          | `string`         | `#ffffff`         | 文字颜色                                         |
+| `outlineColor`   | `string`         | `#0b1310`         | 描边颜色（浅色底图上的可读性保障）               |
+| `outlineWidth`   | `number`         | `2`               | 描边宽度，0–8                                    |
+| `offsetPixels`   | `[number, number]` | `[0, -18]`      | 相对点的像素偏移，默认把文字放在点上方           |
+| `maxLabels`      | `number`         | `2000`            | 单层标签上限，0–50000；超出部分只画点、不画字     |
+
+行为约定：
+
+- **只有带 `label` 的点会画文字**；`label` 两端空白会被去掉，空白字符串按"没有标签"处理，超过 64 字符直接报错（避免把整段描述灌进 GPU）。
+- **超过 `maxLabels` 的部分静默只画点**，`labelCount` 会如实反映渲染了多少条，便于业务判断是否需要按视野过滤。
+- **文字本身也带拾取标记**，悬停文字命中的是同一个点和同一个业务 id。
+- **`setData()` 会把点和标签一起原子替换**，`setStyle({ labels: … })` 可以随时开关标签或改外观（标签的字体 / 颜色 / 偏移是逐条属性，改样式时按当前点位重建标签集合）。
+- **默认上限 2000 是经验值**：文字是逐条绘制且始终朝向屏幕，比点贵得多；需要成千上万条标签时，建议先按视野或缩放级别筛选要标注的点，而不是一味提高上限。：单个点可以用 `color` / `pixelSize` 覆盖图层默认值，`height` 省略时按 0（椭球面）处理。
 
 ## 运行时更新
 

@@ -17,7 +17,7 @@
 | 单图影像            | 可用 | `type: 'single-image'`、`ImageryLayerHandle`                                                                                                                       | WGS84 度数范围、异步加载、显隐、透明度、取消加载和统一资源释放                                                                     |
 | 3D Tiles            | 可用 | `type: '3d-tiles'`                                                                                                                                                 | 加载标准 Tileset、显隐、基础 LOD 配置、取消后的延迟资源清理和释放                                                                  |
 | 静态模型            | 可用 | `type: 'model'`、`ModelLayerHandle`、`createMap({ quality })`                                                                                                      | glTF / GLB 加载、WGS84 位置朝向与朝向补偿、颜色叠加、外观策略（提亮 / 无光照）、就地变换、取消加载、并发上限与统一资源释放         |
-| 点位图层            | 可用 | `type: 'points'`、`PointsLayerHandle`、`MAX_POINT_LAYER_POINTS`                                                                                                    | PointPrimitive 批量渲染、单层 20 万点、逐点样式覆盖、原子替换点位、整层样式调整与统一资源释放                                      |
+| 点位图层与标签      | 可用 | `type: 'points'`、`PointsLayerHandle`、`PointsLabelStyle`、`MAX_POINT_LAYER_POINTS`                                                                            | PointPrimitive 批量渲染、单层 20 万点、逐点样式覆盖、原子替换点位、整层样式调整、LabelCollection 标签（数量上限与 `labelCount` 读数）与统一资源释放 |
 | 折线图层            | 可用 | `type: 'polyline'`、`PolylineLayerHandle`、`MAX_POLYLINES_PER_LAYER`                                                                                               | PolylineCollection 批量渲染、五种内置材质（solid / glow / outline / arrow / dash）、逐条样式覆盖、原子替换、整层样式调整与拾取标记 |
 | 拾取交互            | 可用 | `map.picking.on('click' \| 'hover')`、`map.picking.setEnabled()`                                                                                                   | 类型化命中信息（图层 / 对象 / 地球 / 原生对象）、地表经纬高、按帧合并悬停、相机变化期间暂停拾取、点击向下钻取                      |
 | 交互绘制与编辑      | 可用 | `map.drawing`、`DrawingStateMachine`、`DrawRendererPort`、`DrawingEditMachine`、`setSnap()`、`insertVertex()` / `removeVertex()`                                    | 点 / 折线 / 面绘制、预览与确认、完成图形管理、顶点拖动 / 插入 / 删除、提交与回退、顶点与线段吸附（像素阈值）                        |
@@ -60,7 +60,7 @@
 | 动态实体与模型动画                   | 部分可用 | CZML 图层 `type: 'czml'` 可按受管图层加载动态实体（时钟联动与动画编排由业务接）；实体级拾取事件与内置动画仍无 SDK 方法              |
 | Worker 池与协议适配                  | 部分可用 | 分析 Worker 执行接口含 `createAnalysisWorkerPool()`（最小在途优先 + 有界队列）；SSE / MQTT / 二进制协议解码与校验尚未发布              |
 | 实时协议与 Worker 池                 | 未发布   | 长连接链路、水位线、时间戳守卫、会话门禁与重同步已可用；SSE / MQTT / 二进制协议解码与 Worker 池尚未发布                                |
-| 海量数据渲染（标签 / 自动 LOD）      | 未发布   | 点位/折线批量渲染与纯计算点聚合已可用；标签、自动 LOD 与数据规模基准承诺尚未提供                                                      |
+| 海量数据渲染（自动 LOD）             | 未发布   | 点位/折线批量渲染、标签与纯计算点聚合已可用；自动 LOD 与数据规模基准承诺尚未提供                                                      |
 | 绘制交互手势                         | 未发布   | 顶点增删已提供程序化 API 与纯函数；SDK 不绑定右键菜单 / 双击线段等手势，交互由业务自己接                                               |
 | 体积类环境效果与自定义材质           | 未发布   | 深度雾、基础雾与降水已可用；体积云、热力图、三维风场、闪电、水面与自定义 GLSL 材质尚无 SDK 方法                                        |
 | 分析任务模型与结果图层               | 未发布   | `map.analysis`（15 个工具）与 Worker 执行接口已可用；任务队列、进度上报与结果图层尚未发布                                                |

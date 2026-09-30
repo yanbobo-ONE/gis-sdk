@@ -29,7 +29,7 @@
 - 实时链路 `RealtimeSocketClient`：连接状态机、有上限退避重连与抖动、心跳存活判断、按类型路由与解码容错；
 - 分析工具 `map.analysis`：距离 / 地表距离 / 面积 / 方位角 / 地形采样 / 通视 / 视域 / 坡度坡向 / CRS 转换 / 点在面内 / 包围盒 / 质心 / 凸包 / 抽稀，算法全部在 `/core`；
 - 回放时间轴 `ReplayTimeline`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片（不含数据源读取）；
-- 点位图层（PointPrimitive 批量渲染，单层 20 万点）与 CSV 点位导入解析；
+- 点位图层（PointPrimitive 批量渲染，单层 20 万点）、可选标签（LabelCollection，含上限与 `labelCount`）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
 - 类型化拾取交互（`map.picking`）：点击与悬停命中信息、地表经纬高，悬停按帧合并避免卡顿；
@@ -169,7 +169,7 @@ async function disposeMap() {
 | 单图影像                                       | 可用                   | `map.layers.add({ type: 'single-image', url, rectangle?, ... })`，范围使用 WGS84 度数，返回 `ImageryLayerHandle`                                                                |
 | 3D Tiles                                       | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                                                                                         |
 | 静态模型                                       | 可用                   | `map.layers.add({ type: 'model', url, position, ... })`，支持 `setTransform()`、`setColor()`、`setAppearance()` 与 `headingOffset`，并发上限由 `createMap({ quality })` 控制    |
-| 点位图层与 CSV 导入                            | 可用                   | `map.layers.add({ type: 'points', points })` 支持 `setData()` / `setStyle()`；`@yanbobo/gis-sdk/core` 的 `parseCsv()`、`readPointCsv()` 解析点位表                              |
+| 点位图层、标签与 CSV 导入                      | 可用                   | `map.layers.add({ type: 'points', points, labels })` 支持 `setData()` / `setStyle()` / `labelCount`；`parseCsv()`、`readPointCsv()` 解析点位表                              |
 | 折线图层                                       | 可用                   | `map.layers.add({ type: 'polyline', polylines })`：五种内置材质（solid/glow/outline/arrow/dash）、`setData()` / `setStyle()`                                                    |
 | 拾取交互                                       | 可用                   | `map.picking.on('click' \| 'hover')`，命中信息含图层与对象 id；悬停按帧合并、相机移动期间暂停                                                                                   |
 | 交互绘制与编辑                                 | 可用                   | `map.drawing.start('point' \| 'polyline' \| 'polygon')`：左键落点、移动预览、右键/双击确认、Esc 取消；`edit()` 拖动顶点；`setSnap()` 顶点吸附；`insertVertex()` / `removeVertex()` 增删顶点                                                                            |
