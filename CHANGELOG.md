@@ -4,6 +4,7 @@
 
 ### Minor Changes
 
+- 影像图层（WMS / TMS / WMTS / 单图）与 XYZ 底图支持自定义请求头 `headers`，用于 Bearer token、租户标识或 API Key 鉴权；名称按 HTTP 字段名校验，凭证刷新由业务控制。
 - 增加相机分辨率读数 `map.camera.metersPerPixel`：屏幕中心处每像素多少米（二维 / 三维通用，打不到椭球时为 `undefined`），配 `clusterPoints()` 即可按屏幕像素驱动聚合。
 - 增加批量分析执行 `runAnalysisBatch()`：有界并发、逐条失败隔离、结果与输入同序、进度回调与取消返回部分结果。
 - 点位图层支持标签：`points[].label` + `labels` 样式（字体/颜色/描边/偏移/上限），用 `LabelCollection` 批量绘制并新增 `labelCount` 读数，`setData()` 与 `setStyle()` 一并处理标签。

@@ -335,6 +335,12 @@ export interface XyzBasemapSpec {
   readonly type: 'xyz';
   /** 必须包含 `{z}`、`{x}`、`{y}` 的瓦片地址模板。 */
   readonly url: string;
+  /**
+   * 自定义请求头，例如 `{ Authorization: 'Bearer …' }` 或租户标识头。
+   *
+   * 名称必须是合法 HTTP 字段名、值必须是字符串；凭证刷新由业务控制。
+   */
+  readonly headers?: Readonly<Record<string, string>>;
   /** 初始透明度，范围 0 到 1，默认 1。 */
   readonly opacity?: number;
   /** 初始可见性，默认 true。 */

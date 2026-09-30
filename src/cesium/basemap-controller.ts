@@ -3,6 +3,10 @@ import type { ImageryLayer, ImageryProvider, Viewer } from 'cesium';
 
 import type { BasemapController, BasemapType, XyzBasemapSpec } from '../core/controls.js';
 import { GisError } from '../core/errors.js';
+import { normalizeRequestHeaders, withRequestHeaders } from './layers/request-headers.js';
+
+/** 归一化后的底图配置：透明度与显隐一定存在，请求头可选。 */
+type NormalizedBasemap = Required<Omit<XyzBasemapSpec, 'headers'>> & Pick<XyzBasemapSpec, 'headers'>;
 
 function invalidConfig(message: string): GisError {
   return new GisError(message, {
@@ -25,17 +29,19 @@ function validateOpacity(opacity: number): number {
 
 function normalize(
   spec: XyzBasemapSpec,
-  current: Readonly<Pick<Required<XyzBasemapSpec>, 'opacity' | 'visible'>>,
-): Required<XyzBasemapSpec> {
+  current: Readonly<Pick<NormalizedBasemap, 'opacity' | 'visible'>>,
+): NormalizedBasemap {
   const url = spec.url.trim();
   if (!url || !url.includes('{z}') || !url.includes('{x}') || !url.includes('{y}')) {
     throw invalidConfig('XYZ basemap URL must contain {z}, {x}, and {y} placeholders.');
   }
+  const headers = normalizeRequestHeaders(spec.headers, 'basemap', 'set');
   return {
     type: 'xyz',
     url,
     opacity: validateOpacity(spec.opacity ?? current.opacity),
     visible: spec.visible ?? current.visible,
+    ...(headers === undefined ? {} : { headers }),
   };
 }
 
@@ -84,7 +90,7 @@ export class CesiumBasemapController implements BasemapController {
       visible: this.currentLayer ? this.currentVisible : true,
     });
     const candidate = this.viewer.imageryLayers.addImageryProvider(
-      new UrlTemplateImageryProvider({ url: config.url }),
+      new UrlTemplateImageryProvider({ url: withRequestHeaders(config.url, config.headers) }),
       0,
     );
     candidate.alpha = config.opacity;

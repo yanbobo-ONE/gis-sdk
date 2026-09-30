@@ -48,6 +48,36 @@ await roads.reload();
 
 `setStyle`、`setFilter` 或 `reload` 失败时旧画面继续显示。CQL 是 GeoServer 扩展，其他 WMS 服务是否支持由服务端决定。
 
+## 带鉴权的服务：自定义请求头
+
+企业影像服务常把凭证放在 **HTTP 头**里（Bearer token、租户标识、API Key），而不是查询串——查询串会进日志与浏览器历史，头不会。四种影像图层与 XYZ 底图都支持 `headers`：
+
+```ts
+await map.layers.add({
+  id: 'secure-wms',
+  type: 'wms',
+  url: 'https://maps.example.com/geoserver/wms',
+  layers: 'city:coverage',
+  headers: { Authorization: `Bearer ${token}`, 'X-Tenant-Id': 'tenant-1' },
+});
+
+map.basemap.set({
+  type: 'xyz',
+  url: 'https://tiles.example.com/{z}/{x}/{y}.png',
+  headers: { Authorization: `Bearer ${token}` },
+});
+```
+
+| 规则     | 说明                                                                                     |
+| -------- | ---------------------------------------------------------------------------------------- |
+| 名称校验 | 必须是合法 HTTP 字段名（RFC 7230 token），含空格或换行的名称会被拒绝并报 `INVALID_LAYER_CONFIG` |
+| 值校验   | 必须是字符串；允许空值（某些服务用"存在即生效"的标记头）                                   |
+| 生效范围 | 该图层的**每一次**瓦片 / 图片请求；底层把地址包成 Cesium 的 `Resource`                     |
+| 凭证刷新 | **不在 SDK 范围**：token 过期后由业务重建图层或更新配置，SDK 不做自动续期                 |
+| 传输安全 | 头里的凭证仍会出现在网络面板与代理日志里，请配合 HTTPS 与最小权限 token 使用               |
+
+**不要**把凭证塞进 `url` 查询串再交给 SDK——那样它会出现在日志、错误上报与截图里；能放头就放头。
+
 ## TMS：目录或 tilemapresource.xml
 
 ```ts

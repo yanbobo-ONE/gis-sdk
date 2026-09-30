@@ -1,7 +1,8 @@
 import { TileMapServiceImageryProvider, WebMapTileServiceImageryProvider } from 'cesium';
-import type { ImageryLayer, ImageryProvider, Viewer } from 'cesium';
+import type { ImageryLayer, ImageryProvider, Resource as CesiumResource, Viewer } from 'cesium';
 
 import { GisError } from '../../core/errors.js';
+import { normalizeRequestHeaders, withRequestHeaders } from './request-headers.js';
 import type { EventHub } from '../../core/event-hub.js';
 import type {
   ImageryLayerHandle,
@@ -117,7 +118,7 @@ function normalizeUrl(url: string, id: string): string {
 }
 
 function normalizeTms(spec: TmsLayerSpec): {
-  readonly url: string;
+  readonly url: string | CesiumResource;
   readonly options: TmsProviderOptions;
 } {
   const url = normalizeUrl(spec.url, spec.id);
@@ -133,11 +134,11 @@ function normalizeTms(spec: TmsLayerSpec): {
   if (tileWidth !== undefined) options.tileWidth = tileWidth;
   if (tileHeight !== undefined) options.tileHeight = tileHeight;
   if (spec.flipXY !== undefined) options.flipXY = spec.flipXY;
-  return { url, options };
+  return { url: withRequestHeaders(url, normalizeRequestHeaders(spec.headers, spec.id)), options };
 }
 
 function normalizeWmts(spec: WmtsLayerSpec): {
-  readonly url: string;
+  readonly url: string | CesiumResource;
   readonly options: WmtsProviderOptions;
 } {
   const url = normalizeUrl(spec.url, spec.id);
@@ -181,7 +182,7 @@ function normalizeWmts(spec: WmtsLayerSpec): {
     options.subdomains =
       typeof spec.subdomains === 'string' ? spec.subdomains : [...spec.subdomains];
   }
-  return { url, options };
+  return { url: withRequestHeaders(url, normalizeRequestHeaders(spec.headers, spec.id)), options };
 }
 
 class CesiumTiledImageryLayerHandle implements ImageryLayerHandle {

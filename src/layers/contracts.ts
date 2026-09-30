@@ -156,6 +156,13 @@ export interface WmsLayerSpec extends BaseLayerSpec {
   readonly filter?: WmsFilter;
   /** 附加 GetMap 参数；不能包含 `layers`、`styles` 或 `cql_filter`。 */
   readonly parameters?: Readonly<Record<string, WmsParameterValue>>;
+  /**
+   * 自定义请求头，例如 `{ Authorization: 'Bearer …' }`、`X-Tenant-Id` 或 API Key。
+   *
+   * 名称必须是合法 HTTP 字段名、值必须是字符串；凭证刷新策略由业务控制（重建图层或更新配置），
+   * SDK 不做自动续期。
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /** TMS 瓦片影像图层配置。 */
@@ -178,6 +185,13 @@ export interface TmsLayerSpec extends BaseLayerSpec {
   readonly tileHeight?: number;
   /** 是否兼容旧版 gdal2tiles 的 X/Y 翻转。 */
   readonly flipXY?: boolean;
+  /**
+   * 自定义请求头，例如 `{ Authorization: 'Bearer …' }`、`X-Tenant-Id` 或 API Key。
+   *
+   * 名称必须是合法 HTTP 字段名、值必须是字符串；凭证刷新策略由业务控制（重建图层或更新配置），
+   * SDK 不做自动续期。
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /** WMTS 瓦片影像图层配置。 */
@@ -206,6 +220,13 @@ export interface WmtsLayerSpec extends BaseLayerSpec {
   readonly tileMatrixLabels?: readonly string[];
   /** REST 模板中的子域名集合。 */
   readonly subdomains?: string | readonly string[];
+  /**
+   * 自定义请求头，例如 `{ Authorization: 'Bearer …' }`、`X-Tenant-Id` 或 API Key。
+   *
+   * 名称必须是合法 HTTP 字段名、值必须是字符串；凭证刷新策略由业务控制（重建图层或更新配置），
+   * SDK 不做自动续期。
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /** 单图影像覆盖范围，使用 WGS84 经度/纬度度数。 */
@@ -230,6 +251,13 @@ export interface SingleImageLayerSpec extends BaseLayerSpec {
   readonly opacity?: number;
   /** 图像实际覆盖范围；省略时覆盖整个地球。 */
   readonly rectangle?: SingleImageRectangle;
+  /**
+   * 自定义请求头，例如 `{ Authorization: 'Bearer …' }`、`X-Tenant-Id` 或 API Key。
+   *
+   * 名称必须是合法 HTTP 字段名、值必须是字符串；凭证刷新策略由业务控制（重建图层或更新配置），
+   * SDK 不做自动续期。
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /** 静态模型的位置，使用 WGS84 经度/纬度度数与相对椭球高度（米）。 */

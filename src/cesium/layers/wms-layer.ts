@@ -2,6 +2,8 @@ import { WebMapServiceImageryProvider } from 'cesium';
 import type { ImageryLayer, Viewer } from 'cesium';
 
 import { GisError } from '../../core/errors.js';
+import { normalizeRequestHeaders, withRequestHeaders } from './request-headers.js';
+import type { RequestHeaders } from './request-headers.js';
 import type { EventHub } from '../../core/event-hub.js';
 import type {
   LayerEventMap,
@@ -104,6 +106,7 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
     private readonly viewer: Viewer,
     readonly id: string,
     private readonly url: string,
+    private readonly headers: RequestHeaders | undefined,
     private readonly layerNames: string,
     private readonly parameters: Readonly<Record<string, WmsParameterValue>>,
     initialLayer: ImageryLayer,
@@ -231,7 +234,7 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
     filter: WmsFilter | undefined,
   ): WebMapServiceImageryProvider {
     return new WebMapServiceImageryProvider({
-      url: this.url,
+      url: withRequestHeaders(this.url, this.headers),
       layers: this.layerNames,
       parameters: buildParameters(this.parameters, style, filter),
     });
@@ -249,12 +252,13 @@ export function createWmsLayer(
       throw operationAborted(spec.id, 'add', context.signal.reason);
     }
     const config = normalizeConfig(spec);
+    const headers = normalizeRequestHeaders(spec.headers, spec.id, 'add');
     const visible = spec.visible ?? true;
     const opacity = validateOpacity(spec.opacity ?? 1, spec.id, 'add');
     const style = normalizeStyle(spec.style);
     const parameters = buildParameters(config.parameters, style, spec.filter);
     const provider = new WebMapServiceImageryProvider({
-      url: config.url,
+      url: withRequestHeaders(config.url, headers),
       layers: config.layers,
       parameters,
     });
@@ -267,6 +271,7 @@ export function createWmsLayer(
         viewer,
         spec.id,
         config.url,
+        headers,
         config.layers,
         config.parameters,
         imageryLayer,

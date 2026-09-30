@@ -18,6 +18,9 @@ const cesium = vi.hoisted(() => {
 });
 
 vi.mock('cesium', () => ({
+  Resource: class Resource {
+    constructor(readonly options: { readonly url: string; readonly headers?: Record<string, string> }) {}
+  },
   WebMapServiceImageryProvider: cesium.WebMapServiceImageryProvider,
 }));
 
@@ -225,5 +228,47 @@ describe('createWmsLayer', () => {
     expect(view.remove).toHaveBeenCalledWith(expect.anything(), true);
     expect(onDisposed).toHaveBeenCalledOnce();
     expect(view.items).toEqual([]);
+  });
+
+  it('passes custom headers through a Resource', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+
+    await createWmsLayer(
+      view.viewer as never,
+      {
+        id: 'secure',
+        type: 'wms',
+        url: 'https://example.com/wms',
+        layers: 'demo:coverage',
+        headers: { Authorization: 'Bearer token' },
+      },
+      context,
+    );
+
+    const url = view.items[0]?.provider.options.url as { options?: { headers?: unknown } } | undefined;
+    expect(url).toBeInstanceOf((await import('cesium')).Resource);
+    expect(url?.options?.headers).toEqual({ Authorization: 'Bearer token' });
+  });
+
+  it('rejects an invalid header name before creating a provider', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+
+    // WMS 图层的校验失败走 Promise 拒绝（与其余非法配置一致）。
+    await expect(
+      createWmsLayer(
+        view.viewer as never,
+        {
+          id: 'secure',
+          type: 'wms',
+          url: 'https://example.com/wms',
+          layers: 'demo:coverage',
+          headers: { 'Bad Header': 'x' },
+        },
+        context,
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_LAYER_CONFIG' });
+    expect(view.items).toHaveLength(0);
   });
 });
