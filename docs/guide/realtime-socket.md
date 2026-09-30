@@ -57,6 +57,8 @@ socket.stats; // { state, messages, decodeFailures, retries, totalRetries, lastM
 
 SSE、MQTT、自定义二进制协议都可以实现同一个形状后接入，SDK 不做协议绑定。
 
+完整的装配示例见[实时链路组装](./realtime-cookbook.md)。
+
 ## 与相邻模块的分工
 
 一条完整的实时链路按职责拆成四层，每层都可以单独使用：

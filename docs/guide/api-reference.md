@@ -27,6 +27,7 @@
 | 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics` |
 | 生成 / 解析 CZML，或渲染动态实体                  | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`tracksFromCzml`、`type: 'czml'` 图层          |
 | 接长连接：重连、心跳与按类型分发                       | [实时链路](./realtime-socket.md)            | `RealtimeSocketClient` 的 `connect()` / `subscribe()` / `stats`    |
+| 把实时数据从链路接到画面上                           | [实时链路组装](./realtime-cookbook.md)      | 链路 → 会话门禁 → 水位线 → 缓冲 → 每帧消费 → 图层   |
 | 排查线上问题或做验收自检                           | [诊断快照](./diagnostics.md)                | `map.diagnostics.snapshot()` 一次拿到状态、质量、图层与错误计数     |
 | 评估纯计算吞吐、做容量估算                           | [性能基准](./performance.md)                | `pnpm bench` 的实测表与方法学                                   |
 | 把重计算搬到 Worker 里执行                           | [Worker 执行接口](./analysis-worker.md)     | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()` 与消息协议 |
