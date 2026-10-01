@@ -171,6 +171,18 @@ export {
   WGS84_SEMI_MINOR_AXIS,
 } from '../spatial/geodesy.js';
 export type { LocalFrame } from '../spatial/geodesy.js';
+export {
+  createSeededRandom,
+  generateLightningBolt,
+  LightningFlashChannel,
+  lightningEnvelope,
+} from '../core/lightning.js';
+export type {
+  LightningBoltOptions,
+  LightningBranchDensity,
+  LightningPath,
+  LightningShape,
+} from '../core/lightning.js';
 export { planPointImport } from '../core/point-import.js';
 export type {
   ImportedPoint,
