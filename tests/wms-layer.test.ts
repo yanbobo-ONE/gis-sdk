@@ -56,13 +56,50 @@ function createViewer() {
     return index >= 0;
   });
   const indexOf = vi.fn((layer: FakeImageryLayer) => items.indexOf(layer));
+  // 堆叠顺序要的那几个集合方法：按 Cesium 语义在同一个 items 数组上换位。
+  const imageryLayers = {
+    addImageryProvider,
+    remove,
+    indexOf,
+    get length() {
+      return items.length;
+    },
+    add(layer: FakeImageryLayer, index?: number) {
+      items.splice(index ?? items.length, 0, layer);
+    },
+    raise(layer: FakeImageryLayer) {
+      const index = items.indexOf(layer);
+      if (index < 0 || index >= items.length - 1) {
+        return;
+      }
+      items.splice(index, 1);
+      items.splice(index + 1, 0, layer);
+    },
+    lower(layer: FakeImageryLayer) {
+      const index = items.indexOf(layer);
+      if (index <= 0) {
+        return;
+      }
+      items.splice(index, 1);
+      items.splice(index - 1, 0, layer);
+    },
+    raiseToTop(layer: FakeImageryLayer) {
+      const index = items.indexOf(layer);
+      if (index < 0) {
+        return;
+      }
+      items.splice(index, 1);
+      items.push(layer);
+    },
+  };
 
   return {
-    viewer: { imageryLayers: { addImageryProvider, remove, indexOf } },
+    viewer: { imageryLayers },
     items,
     operations,
     addImageryProvider,
     remove,
+    imageryLayers,
   };
 }
 
@@ -273,5 +310,37 @@ describe('createWmsLayer', () => {
       ),
     ).rejects.toMatchObject({ code: 'INVALID_LAYER_CONFIG' });
     expect(view.items).toHaveLength(0);
+  });
+
+  it('exposes imagery stacking on the handle', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+    const spec = {
+      type: 'wms' as const,
+      url: 'https://example.com/wms',
+      layers: 'demo:coverage',
+    };
+
+    const first = await createWmsLayer(view.viewer as never, { ...spec, id: 'first' }, context);
+    const second = await createWmsLayer(view.viewer as never, { ...spec, id: 'second' }, context);
+
+    // 没有底图时下限是 0：两个业务图层依次落在 0 / 1。
+    expect(first.stackIndex).toBe(0);
+    expect(second.stackIndex).toBe(1);
+
+    // 句柄把操作转给影像集合：换序后两者互换，读数跟着变。
+    expect(first.raiseToTop()).toBe(true);
+    expect(first.stackIndex).toBe(1);
+    expect(second.stackIndex).toBe(0);
+    expect(first.raiseToTop()).toBe(false);
+    expect(first.lowerToBottom()).toBe(true);
+    expect(first.stackIndex).toBe(0);
+
+    // 释放之后不再报告序号，并且顺序操作被生命周期拦住。
+    await second.dispose();
+    expect(second.stackIndex).toBeUndefined();
+    expect(() => {
+      second.raise();
+    }).toThrow(expect.objectContaining({ code: 'LAYER_DISPOSED' }));
   });
 });
