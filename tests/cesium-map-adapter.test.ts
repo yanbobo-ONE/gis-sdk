@@ -137,16 +137,12 @@ vi.mock('cesium', () => ({
     fromCssColorString: vi.fn((value: string) => ({ css: value })),
   },
   ColorBlendMode: { HIGHLIGHT: 'HIGHLIGHT', MIX: 'MIX' },
-  ConstantProperty: class ConstantProperty {
-    constructor(readonly value: unknown) {}
-  },
-  Event: class Event {
-    addEventListener(): () => void {
-      return () => undefined;
-    }
-    raiseEvent(): void {
-      return undefined;
-    }
+  Material: {
+    fromType: (type: string, uniforms: Record<string, unknown> = {}) => ({
+      type,
+      shaderSource: '// mock',
+      uniforms: { ...uniforms },
+    }),
   },
   PolylineCollection: class PolylineCollection {
     readonly items: unknown[] = [];
@@ -161,16 +157,6 @@ vi.mock('cesium', () => ({
       }
       this.items.splice(index, 1);
       return true;
-    }
-  },
-  PolylineGlowMaterialProperty: class PolylineGlowMaterialProperty {
-    color: unknown;
-    glowPower: unknown;
-    taperPower: unknown;
-    constructor(options: Record<string, unknown> = {}) {
-      this.color = options.color;
-      this.glowPower = options.glowPower;
-      this.taperPower = options.taperPower;
     }
   },
   PostProcessStage: class PostProcessStage {

@@ -35,29 +35,11 @@ const cesium = vi.hoisted(() => {
     }
   }
 
-  class PolylineGlowMaterialProperty {
-    color: unknown;
-    glowPower: { getValue(): number; set(value: number): void } | undefined;
-    taperPower: unknown;
-
-    constructor(options: Record<string, unknown> = {}) {
-      this.color = options.color;
-      this.glowPower = options.glowPower as PolylineGlowMaterialProperty['glowPower'];
-      this.taperPower = options.taperPower;
-    }
-  }
-
-  class Event {
-    addEventListener(): () => void {
-      return () => undefined;
-    }
-    removeEventListener(): void {
-      return undefined;
-    }
-    raiseEvent(): void {
-      return undefined;
-    }
-  }
+  const fromType = vi.fn((type: string, uniforms: Record<string, unknown> = {}) => ({
+    type,
+    shaderSource: '// mock',
+    uniforms: { ...uniforms },
+  }));
 
   class PostProcessStage {
     enabled = true;
@@ -69,12 +51,11 @@ const cesium = vi.hoisted(() => {
   }
 
   return {
-    Event,
     Polyline,
     PolylineCollection,
-    PolylineGlowMaterialProperty,
     PostProcessStage,
     fromDegreesArrayHeights: vi.fn((values: readonly number[]) => values),
+    fromType,
   };
 });
 
@@ -83,12 +64,8 @@ vi.mock('cesium', () => ({
   Color: {
     fromCssColorString: (value: string) => ({ red: 1, green: 1, blue: 1, alpha: 1, css: value }),
   },
-  ConstantProperty: class ConstantProperty {
-    constructor(readonly value: unknown) {}
-  },
-  Event: cesium.Event,
+  Material: { fromType: cesium.fromType },
   PolylineCollection: cesium.PolylineCollection,
-  PolylineGlowMaterialProperty: cesium.PolylineGlowMaterialProperty,
   PostProcessStage: cesium.PostProcessStage,
 }));
 

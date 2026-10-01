@@ -1,6 +1,6 @@
 # 空间闪电 map.lightning
 
-程序化生成的空间闪电：触发一次，形状按种子随机生成一次，之后逐帧只改材质参数推进亮度包络，结束时释放几何。**只使用 Cesium 公开 API**（`PolylineCollection`、`PolylineGlowMaterialProperty`、`PostProcessStage`），不注册自定义材质、不碰私有字段。
+程序化生成的空间闪电：触发一次，形状按种子随机生成一次，之后逐帧只改材质参数推进亮度包络，结束时释放几何。**只使用 Cesium 公开 API**（`PolylineCollection`、内置 `Material` 的 `PolylineGlow` 类型、`PostProcessStage`），不注册自定义材质、不碰私有字段。
 
 ```ts
 const id = map.lightning.strike({
@@ -59,7 +59,7 @@ lightningEnvelope(0.51, 3); // 第三次脉冲的相位
 lightningEnvelope(1, 2); // 余辉，低于 0.25
 ```
 
-折线辉光与屏幕闪光共用同一条包络；屏幕闪光是附加反馈（权重 0.28），不是主光效，`setStyle({ screenFlash: false })` 可关掉。亮度通道 `LightningFlashChannel` 单独导出：写入、读取、按真实秒数衰减——暂停推进就不再衰减，因此回放暂停时闪击会冻结。
+折线辉光与屏幕闪光共用同一条包络；屏幕闪光是附加反馈（权重 0.28），不是主光效，`setStyle({ screenFlash: false })` 可关掉。每次闪击共用一份材质：`PolylineCollection` 按材质分组命令，共享材质既少一次 draw，也让主干与分支走同一条亮度曲线。亮度通道 `LightningFlashChannel` 单独导出：写入、读取、按真实秒数衰减——暂停推进就不再衰减，因此回放暂停时闪击会冻结。
 
 ## 几何与精度
 

@@ -1,13 +1,5 @@
-import {
-  Cartesian3,
-  Color,
-  ConstantProperty,
-  Event,
-  PolylineCollection,
-  PolylineGlowMaterialProperty,
-  PostProcessStage,
-} from 'cesium';
-import type { Polyline, Property } from 'cesium';
+import { Cartesian3, Color, Material, PolylineCollection, PostProcessStage } from 'cesium';
+import type { Polyline } from 'cesium';
 
 import type {
   LightningStrikeOptions,
@@ -56,35 +48,6 @@ interface StageLike {
   readonly uniforms: Record<string, unknown>;
 }
 
-/**
- * 由控制器逐帧写入的数值属性。
- *
- * `PolylineGlowMaterialProperty` 的 `glowPower` 在类型上是 `Property`，而 `ConstantProperty`
- * 没有公开的写入入口（改内部字段属于私有 API）。这里实现 Cesium 公开的 `Property` 接口：
- * 引擎每帧调用 `getValue()`，我们在帧回调里 `set()`，因此不碰任何内部字段。
- */
-class LightningValueProperty implements Property {
-  readonly isConstant = false;
-  readonly definitionChanged = new Event();
-  private current: number;
-
-  constructor(initial: number) {
-    this.current = initial;
-  }
-
-  set(value: number): void {
-    this.current = value;
-  }
-
-  getValue(): number {
-    return this.current;
-  }
-
-  equals(other: unknown): boolean {
-    return this === other;
-  }
-}
-
 /** 可注入的时钟来源；测试用假时钟推进闪击。 */
 export type LightningNow = () => number;
 
@@ -103,9 +66,12 @@ export interface LightningViewer {
 interface ActiveStrike {
   readonly id: string;
   readonly polylines: readonly Polyline[];
-  /** 逐帧改写的辉光属性：材质持有的是同一批实例。 */
-  readonly glows: readonly LightningValueProperty[];
-  readonly colors: readonly Color[];
+  /**
+   * 每次闪击共用一份材质：`PolylineCollection` 按材质分组命令，共享材质既少一次 draw，
+   * 也让所有分支走同一条亮度曲线；逐帧只改 `uniforms`。
+   */
+  readonly material: Material;
+  readonly uniforms: { glowPower?: number; color?: Color };
   readonly durationMs: number;
   readonly pulses: number;
   readonly intensity: number;
@@ -136,10 +102,11 @@ function flattenPath(path: LightningPath): number[] {
 /**
  * Cesium 侧空间闪电控制器。
  *
- * 用公开 API 渲染：主干与分支各是一条 `Polyline`（`PolylineCollection` 承载），材质用内置的
- * `PolylineGlowMaterialProperty`，逐帧按亮度包络改 `glowPower` 与颜色 alpha；屏幕闪光是一个
- * `PostProcessStage`，uniform 由亮度通道写入。几何在触发时生成一次，之后只改材质参数，
- * 因此每帧成本与顶点数无关。
+ * 用公开 API 渲染：主干与分支各是一条 `Polyline`（`PolylineCollection` 承载），每次闪击共用一份
+ * `Material.fromType('PolylineGlow')`——`PolylineCollection` 直接读 `material.shaderSource`，只接受
+ * 真正的 `Material`（传 `MaterialProperty` 会在渲染循环里抛错并停渲染），因此这里逐帧改写
+ * `material.uniforms` 的 `glowPower` 与颜色 alpha。屏幕闪光是一个 `PostProcessStage`，uniform 由
+ * 亮度通道写入。几何在触发时生成一次，之后只改材质参数，因此每帧成本与顶点数无关。
  *
  * @internal
  */
@@ -214,34 +181,33 @@ export class CesiumLightningController implements MapLightningController {
       this.disposeStrike(oldest);
     }
 
+    // PolylineCollection 只接受真正的 Material（它直接读 material.shaderSource），
+    // 不接受 MaterialProperty；因此这里建一份可逐帧改 uniform 的内置辉光材质。
+    const coreColor = Color.fromCssColorString(this.currentStyle.coreColor);
+    coreColor.alpha = 0;
+    const material = Material.fromType('PolylineGlow', {
+      color: coreColor,
+      glowPower: 0,
+      taperPower: 0.6,
+    });
+    const uniforms = material.uniforms as { glowPower?: number; color?: Color };
     const polylines: Polyline[] = [];
-    const glows: LightningValueProperty[] = [];
-    const colors: Color[] = [];
     for (const path of shape.paths) {
-      const color = Color.fromCssColorString(this.currentStyle.coreColor);
-      color.alpha = 0;
-      // 材质持有属性实例，之后逐帧只写它的值，不重新分配属性。
-      const colorProperty = new ConstantProperty(color);
-      const glow = new LightningValueProperty(0);
-      const material = new PolylineGlowMaterialProperty({ taperPower: 0.6 });
-      material.color = colorProperty;
-      material.glowPower = glow;
-      const polyline = this.collection.add({
-        positions: Cartesian3.fromDegreesArrayHeights(flattenPath(path)),
-        width: this.currentStyle.thickness,
-        material,
-        show: false,
-      });
-      polylines.push(polyline);
-      glows.push(glow);
-      colors.push(color);
+      polylines.push(
+        this.collection.add({
+          positions: Cartesian3.fromDegreesArrayHeights(flattenPath(path)),
+          width: this.currentStyle.thickness,
+          material,
+          show: false,
+        }),
+      );
     }
 
     this.strikes.set(id, {
       id,
       polylines,
-      glows,
-      colors,
+      material,
+      uniforms,
       durationMs,
       pulses,
       intensity,
@@ -292,7 +258,8 @@ export class CesiumLightningController implements MapLightningController {
       for (const polyline of strike.polylines) {
         polyline.width = this.currentStyle.thickness;
       }
-      for (const color of strike.colors) {
+      const color = strike.uniforms.color;
+      if (color) {
         const next = Color.fromCssColorString(this.currentStyle.coreColor);
         color.red = next.red;
         color.green = next.green;
@@ -326,13 +293,11 @@ export class CesiumLightningController implements MapLightningController {
       const level =
         lightningEnvelope(strike.elapsedMs / strike.durationMs, strike.pulses) * strike.intensity;
       peak = Math.max(peak, level);
-      strike.glows.forEach((glow, index) => {
-        glow.set(Math.min(1, level * 1.2));
-        const color = strike.colors[index];
-        if (color) {
-          color.alpha = level;
-        }
-      });
+      strike.uniforms.glowPower = Math.min(1, level * 1.2);
+      const color = strike.uniforms.color;
+      if (color) {
+        color.alpha = level;
+      }
       for (const polyline of strike.polylines) {
         polyline.show = level > VISIBLE_LEVEL;
       }
