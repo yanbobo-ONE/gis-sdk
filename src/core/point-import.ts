@@ -161,21 +161,19 @@ function text(value: string | undefined): string | undefined {
  * @throws `UNSUPPORTED_CRS` 输入坐标系未注册且 proj4 也不认识。
  */
 export function planPointImport(options: PointImportOptions): PointImportPlan {
-  const requested = (options as
-    | {
-        readonly text?: unknown;
-        readonly columns?: Partial<PointImportColumnMapping>;
-        readonly crs?: unknown;
-        readonly previewLimit?: unknown;
-        readonly maxErrorSamples?: unknown;
-        readonly parseOptions?: CsvParseOptions;
-      }
-    | undefined) ?? {};
+  const requested =
+    (options as
+      | {
+          readonly text?: unknown;
+          readonly columns?: Partial<PointImportColumnMapping>;
+          readonly crs?: unknown;
+          readonly previewLimit?: unknown;
+          readonly maxErrorSamples?: unknown;
+          readonly parseOptions?: CsvParseOptions;
+        }
+      | undefined) ?? {};
   const rawText = requested.text;
-  const table = parseCsv(
-    typeof rawText === 'string' ? rawText : '',
-    requested.parseOptions ?? {},
-  );
+  const table = parseCsv(typeof rawText === 'string' ? rawText : '', requested.parseOptions ?? {});
   const previewLimit = normalizePreviewLimit(requested.previewLimit);
   const rawMaxErrorSamples = requested.maxErrorSamples;
   const maxErrorSamples =
@@ -208,7 +206,13 @@ export function planPointImport(options: PointImportOptions): PointImportPlan {
       'planPointImport',
     );
   }
-  const heightColumn = resolveColumn(table.columns, columns.height, undefined, 'height', guessedAny);
+  const heightColumn = resolveColumn(
+    table.columns,
+    columns.height,
+    undefined,
+    'height',
+    guessedAny,
+  );
   const labelColumn = resolveColumn(table.columns, columns.label, undefined, 'label', guessedAny);
   const idColumn = resolveColumn(table.columns, columns.id, undefined, 'id', guessedAny);
 
@@ -248,7 +252,11 @@ export function planPointImport(options: PointImportOptions): PointImportPlan {
     const inputLimit = geographic ? 180 : PROJECTED_COORDINATE_LIMIT;
     const inputLatitudeLimit = geographic ? 90 : PROJECTED_COORDINATE_LIMIT;
     const longitude = parseCoordinateText(rawLongitude ?? '', -inputLimit, inputLimit);
-    const latitude = parseCoordinateText(rawLatitude ?? '', -inputLatitudeLimit, inputLatitudeLimit);
+    const latitude = parseCoordinateText(
+      rawLatitude ?? '',
+      -inputLatitudeLimit,
+      inputLatitudeLimit,
+    );
     if (longitude === undefined || latitude === undefined) {
       reject(
         line,
