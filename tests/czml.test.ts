@@ -230,9 +230,9 @@ describe('CZML model packet and attitude samples', () => {
     expect(() =>
       czmlFromPositions('p', positions, { model: { url: 'a.glb', minimumPixelSize: 0 } }),
     ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
-    expect(() =>
-      czmlFromPositions('p', positions, { model: { url: 'a.glb', scale: -1 } }),
-    ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
+    expect(() => czmlFromPositions('p', positions, { model: { url: 'a.glb', scale: -1 } })).toThrow(
+      expect.objectContaining({ code: 'INVALID_CZML' }),
+    );
   });
 
   it('reads model url and per-sample attitude from tracks', () => {
@@ -317,11 +317,9 @@ describe('CZML model packet and attitude samples', () => {
   });
 
   it('keeps positionsFromCzml output unchanged', () => {
-    const document = czmlFromPositions(
-      'a',
-      [{ longitude: 1, latitude: 2 }],
-      { model: { url: 'a.glb' } },
-    );
+    const document = czmlFromPositions('a', [{ longitude: 1, latitude: 2 }], {
+      model: { url: 'a.glb' },
+    });
 
     expect(positionsFromCzml(document)).toEqual([
       {

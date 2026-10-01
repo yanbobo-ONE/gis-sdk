@@ -62,9 +62,7 @@ export type AnalysisWorkerResponse = AnalysisWorkerSuccess | AnalysisWorkerFailu
 
 /** @internal */
 export type AnalysisWorkerMessage =
-  | AnalysisWorkerRequest
-  | AnalysisWorkerCancel
-  | AnalysisWorkerResponse;
+  AnalysisWorkerRequest | AnalysisWorkerCancel | AnalysisWorkerResponse;
 
 /** 主线程 / Worker 两侧共用的消息端口形状。 */
 export interface AnalysisWorkerPort {

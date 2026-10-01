@@ -235,7 +235,9 @@ describe('CesiumCameraController', () => {
 
     expect(controller.metersPerPixel).toBe(24.5);
     // 深度锚点取屏幕中心与椭球的交点。
-    expect((camera.pickEllipsoid as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0]).toEqual({
+    expect(
+      (camera.pickEllipsoid as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0],
+    ).toEqual({
       x: 800,
       y: 400,
     });

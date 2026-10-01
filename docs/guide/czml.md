@@ -25,13 +25,13 @@ tracks[0]?.samples; // [{ timeSeconds, position }, ...]
 
 ## 生成
 
-| 配置              | 默认值                 | 说明                                             |
-| ----------------- | ---------------------- | ------------------------------------------------ |
-| `epoch`           | `1970-01-01T00:00:00Z` | 时间基准；采样时间以相对它的秒数写入             |
-| `intervalSeconds` | `1`                    | 等间隔点位的时间步长（`czmlFromPositions` 专用） |
-| `startSeconds`    | `0`                    | 首个采样相对 epoch 的秒数                        |
-| `name`            | 无                     | 实体显示名                                       |
-| `availability`    | `true`                 | 是否写入覆盖采样起止的可用区间                   |
+| 配置              | 默认值                 | 说明                                                      |
+| ----------------- | ---------------------- | --------------------------------------------------------- |
+| `epoch`           | `1970-01-01T00:00:00Z` | 时间基准；采样时间以相对它的秒数写入                      |
+| `intervalSeconds` | `1`                    | 等间隔点位的时间步长（`czmlFromPositions` 专用）          |
+| `startSeconds`    | `0`                    | 首个采样相对 epoch 的秒数                                 |
+| `name`            | 无                     | 实体显示名                                                |
+| `availability`    | `true`                 | 是否写入覆盖采样起止的可用区间                            |
 | `model`           | 无                     | 写入 `model` 报文（`gltf` + `minimumPixelSize`，默认 24） |
 
 需要显式时间时用 `czmlFromSamples(id, samples)`，其中每条采样自带 `timeSeconds`；写入前会按时间排序。
@@ -53,16 +53,16 @@ const document = czmlFromPositions('platform-1', positions, {
 
 两个入口，按需要的字段选：
 
-| 函数                     | 覆盖字段                                                                |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `positionsFromCzml()`    | `position.cartographicDegrees`、`availability`                          |
-| `tracksFromCzml()`       | 上面两项 + `orientation.unitQuaternion`（姿态）+ `model.gltf`（模型地址） |
+| 函数                  | 覆盖字段                                                                  |
+| --------------------- | ------------------------------------------------------------------------- |
+| `positionsFromCzml()` | `position.cartographicDegrees`、`availability`                            |
+| `tracksFromCzml()`    | 上面两项 + `orientation.unitQuaternion`（姿态）+ `model.gltf`（模型地址） |
 
 ```ts
 import { positionsFromCzml, tracksFromCzml } from '@yanbobo/gis-sdk/core';
 
 positionsFromCzml(document); // CzmlPositionTrack[]：位置与可用区间
-tracksFromCzml(document);    // CzmlTrack[]：再加上 modelUrl 与每条的 attitude
+tracksFromCzml(document); // CzmlTrack[]：再加上 modelUrl 与每条的 attitude
 ```
 
 `tracksFromCzml()` 返回的 `CzmlTrack` 含 `id`、`name`、`epoch`、`modelUrl`、按时间升序的 `samples`（`timeSeconds` 相对 epoch，每条带 `attitude`）与 `availability` 区间。姿态的口径：
@@ -95,14 +95,14 @@ layer.setVisible(false);
 await layer.remove();
 ```
 
-| 能力         | 语义                                                                        |
-| ------------ | --------------------------------------------------------------------------- |
-| 加载         | 文档数组直接交给 Cesium；字符串按同源 / CORS 可访问的 URL 拉取 JSON          |
-| `setData()`  | 新文档加载成功后才替换旧实体；取消时旧文档继续生效，图层不进入错误态          |
-| 生命周期     | `setVisible()`、`remove()`、`map.destroy()` 统一释放 `DataSource`            |
-| 可观测       | `state`、`errorCount`、`layer.events.on('error')`、`entityCount` 与其它图层一致 |
-| 拾取         | 实体命中回落到本图层：`layerId` 是图层 id，`objectId` 是文档里的实体 id，见[拾取交互](./picking.md) |
-| 时钟         | **不自动联动**：文档里的 `clock` 不会改地图时钟；需要播放时用 `map.clock.bind(clock)` 显式接上，见[地图时钟](./map-controls.md#地图时钟) |
+| 能力        | 语义                                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 加载        | 文档数组直接交给 Cesium；字符串按同源 / CORS 可访问的 URL 拉取 JSON                                                                      |
+| `setData()` | 新文档加载成功后才替换旧实体；取消时旧文档继续生效，图层不进入错误态                                                                     |
+| 生命周期    | `setVisible()`、`remove()`、`map.destroy()` 统一释放 `DataSource`                                                                        |
+| 可观测      | `state`、`errorCount`、`layer.events.on('error')`、`entityCount` 与其它图层一致                                                          |
+| 拾取        | 实体命中回落到本图层：`layerId` 是图层 id，`objectId` 是文档里的实体 id，见[拾取交互](./picking.md)                                      |
+| 时钟        | **不自动联动**：文档里的 `clock` 不会改地图时钟；需要播放时用 `map.clock.bind(clock)` 显式接上，见[地图时钟](./map-controls.md#地图时钟) |
 
 ## 装进回放时间轴
 

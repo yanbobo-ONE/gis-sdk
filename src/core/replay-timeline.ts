@@ -104,7 +104,10 @@ export class ReplayTimeline<T extends ReplaySample = ReplaySample> {
     }
     const extrapolation = options.maxExtrapolationSeconds ?? 0;
     if (!Number.isFinite(extrapolation) || extrapolation < 0) {
-      throw invalidInput('maxExtrapolationSeconds must be a finite number of at least 0.', 'configure');
+      throw invalidInput(
+        'maxExtrapolationSeconds must be a finite number of at least 0.',
+        'configure',
+      );
     }
     const trackWindow = options.trackWindowSeconds ?? 900;
     if (!Number.isFinite(trackWindow) || trackWindow < 0) {

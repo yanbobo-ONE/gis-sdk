@@ -12,12 +12,17 @@ const socket = new RealtimeSocketClient({
     const frame = decodeBinaryFrame(raw);
     return { type: frame.channel, payload: frame.body };
   },
-  heartbeat: { intervalMs: 15_000, timeoutMs: 5_000, message: { type: 'ping' }, isPong: (m) => m.type === 'pong' },
+  heartbeat: {
+    intervalMs: 15_000,
+    timeoutMs: 5_000,
+    message: { type: 'ping' },
+    isPong: (m) => m.type === 'pong',
+  },
 });
 
 socket.subscribe('telemetry', (message) => waterline.push(message.payload));
 socket.subscribe('*', (message) => counters.count(message.type));
-socket.onState((state) => badge.dataset.state = state);
+socket.onState((state) => (badge.dataset.state = state));
 socket.onError((error) => console.warn(error.code, error.message));
 
 socket.connect();
@@ -26,13 +31,13 @@ socket.stats; // { state, messages, decodeFailures, retries, totalRetries, lastM
 
 ## 状态与重连
 
-| 状态           | 含义                                                         |
-| -------------- | ------------------------------------------------------------ |
-| `idle`         | 尚未连接                                                     |
-| `connecting`   | 正在建立连接                                                 |
-| `open`         | 连接可用，可以 `send()`                                      |
-| `reconnecting` | 链路断开，正在按退避等待下一次连接                           |
-| `closed`       | 主动关闭、重试耗尽或实例销毁；`connect()` 可以重新开始       |
+| 状态           | 含义                                                   |
+| -------------- | ------------------------------------------------------ |
+| `idle`         | 尚未连接                                               |
+| `connecting`   | 正在建立连接                                           |
+| `open`         | 连接可用，可以 `send()`                                |
+| `reconnecting` | 链路断开，正在按退避等待下一次连接                     |
+| `closed`       | 主动关闭、重试耗尽或实例销毁；`connect()` 可以重新开始 |
 
 重连退避是参考实现验证过的口径：延迟从 `retryDelayMs`（默认 1000 毫秒）开始按 `2^n` 增长，封顶 `maxRetryDelayMs`（默认 30000 毫秒），每次再乘 `0.8–1.2` 的抖动——同一时刻断开的多条连接不会挤在同一毫秒重连。重试次数上限默认 8（`maxRetries`），连接成功即清零，`stats.totalRetries` 保留累计值。
 
@@ -63,12 +68,12 @@ SSE、MQTT、自定义二进制协议都可以实现同一个形状后接入，S
 
 一条完整的实时链路按职责拆成四层，每层都可以单独使用：
 
-| 模块                            | 负责                                                     |
-| ------------------------------- | -------------------------------------------------------- |
-| `RealtimeSocketClient`          | 链路：连接、重连、心跳、按类型路由、链路统计             |
-| `DataPipeline`                  | 缓冲：有界队列、最新值合并、溢出策略、按帧消费           |
-| `RealtimeWaterline`             | 时间：乱序样本按时间释放、精确对象共同覆盖、双阈值追赶   |
-| `RealtimeSessionGate` / `Resync` | 会话：旧会话迟到包丢弃、序列断档后请求快照并等待恢复     |
+| 模块                             | 负责                                                   |
+| -------------------------------- | ------------------------------------------------------ |
+| `RealtimeSocketClient`           | 链路：连接、重连、心跳、按类型路由、链路统计           |
+| `DataPipeline`                   | 缓冲：有界队列、最新值合并、溢出策略、按帧消费         |
+| `RealtimeWaterline`              | 时间：乱序样本按时间释放、精确对象共同覆盖、双阈值追赶 |
+| `RealtimeSessionGate` / `Resync` | 会话：旧会话迟到包丢弃、序列断档后请求快照并等待恢复   |
 
 典型接法：`socket.subscribe(type, (m) => pipeline.push(m.payload))` 进入缓冲，按帧取出后喂给水位线，跨会话切换时用门禁挡掉旧会话的包。
 

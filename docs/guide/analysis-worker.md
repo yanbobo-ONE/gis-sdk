@@ -47,12 +47,12 @@ createAnalysisWorkerHost(
 
 ## 协议
 
-| 消息  | 形状                                                                     |
-| ----- | ------------------------------------------------------------------------ |
-| 请求  | `{ kind: 'gis-sdk-analysis:request', id, tool, input }`                  |
-| 取消  | `{ kind: 'gis-sdk-analysis:cancel', id }`                                |
-| 成功  | `{ kind: 'gis-sdk-analysis:response', id, ok: true, result }`            |
-| 失败  | `{ kind: 'gis-sdk-analysis:response', id, ok: false, code, message, retryable }` |
+| 消息 | 形状                                                                             |
+| ---- | -------------------------------------------------------------------------------- |
+| 请求 | `{ kind: 'gis-sdk-analysis:request', id, tool, input }`                          |
+| 取消 | `{ kind: 'gis-sdk-analysis:cancel', id }`                                        |
+| 成功 | `{ kind: 'gis-sdk-analysis:response', id, ok: true, result }`                    |
+| 失败 | `{ kind: 'gis-sdk-analysis:response', id, ok: false, code, message, retryable }` |
 
 `createAnalysisWorkerRequest()` / `createAnalysisWorkerCancel()` / `toAnalysisWorkerSuccess()` / `toAnalysisWorkerFailure()` / `fromAnalysisWorkerFailure()` 是构造与还原这四类消息的纯函数，`isAnalysisWorkerRequest()` 等守卫同样导出——业务要在自己的 Worker 里手写协议时可以直接用。
 
@@ -68,11 +68,11 @@ createAnalysisWorkerHost(
 
 ## 哪些工具适合放进 Worker
 
-| 工具                                                                                     | 说明                                                       |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `distance` / `area` / `bearing` / `bbox` / `center-of-mass` / `point-in-polygon` / `points-in-polygon` / `transform` | 纯计算，直接搬进 Worker 即可                               |
-| `convex-hull` / `simplify`                                                               | 批量点与长轨迹的重计算，正是搬进 Worker 的主要收益来源     |
-| `terrain-sample` / `line-of-sight` / `viewshed` / `slope-aspect` / `surface-distance`    | 需要地形采样端口；Worker 里没有 Cesium，要自带高程数据     |
+| 工具                                                                                                                 | 说明                                                   |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `distance` / `area` / `bearing` / `bbox` / `center-of-mass` / `point-in-polygon` / `points-in-polygon` / `transform` | 纯计算，直接搬进 Worker 即可                           |
+| `convex-hull` / `simplify`                                                                                           | 批量点与长轨迹的重计算，正是搬进 Worker 的主要收益来源 |
+| `terrain-sample` / `line-of-sight` / `viewshed` / `slope-aspect` / `surface-distance`                                | 需要地形采样端口；Worker 里没有 Cesium，要自带高程数据 |
 
 Worker 里**没有** `map.terrain.sample()`：需要地形高度的工具要么让 Worker 自带高程数据实现 `AnalysisTerrainPort`，要么就留在主线程跑。不带端口时这些工具会以可重试的 `ANALYSIS_TERRAIN_UNAVAILABLE` 失败——这是"Worker 里没有地形采样器"这一事实的诚实上报，而不是缺陷。
 
@@ -83,7 +83,11 @@ Worker 里**没有** `map.terrain.sample()`：需要地形高度的工具要么�
 ```ts
 import { analysisTools, createAnalysisWorkerPool } from '@yanbobo/gis-sdk/core';
 
-const pool = createAnalysisWorkerPool(ports, { maxPendingPerWorker: 1, maxQueued: 32, descriptors: analysisTools });
+const pool = createAnalysisWorkerPool(ports, {
+  maxPendingPerWorker: 1,
+  maxQueued: 32,
+  descriptors: analysisTools,
+});
 
 const [hull, simplified] = await Promise.all([
   pool.run('convex-hull', { points }),
@@ -94,12 +98,12 @@ pool.stats; // { workers, pending, queued, completed, failed }
 pool.dispose();
 ```
 
-| 配置                   | 默认值 | 说明                                                     |
-| ---------------------- | ------ | -------------------------------------------------------- |
-| `maxPendingPerWorker`  | `1`    | 每个 Worker 允许同时在途的请求数（1 表示串行）            |
-| `maxQueued`            | `32`   | 排队上限；队列满时以可重试的 `ANALYSIS_WORKER_QUEUE_FULL` 拒绝 |
-| `timeoutMs`            | `30000`| 单次请求超时，语义与单 Worker 客户端一致                  |
-| `descriptors`          | 无     | `list()` 返回的工具描述（池无法同步查询 Worker 的工具集）  |
+| 配置                  | 默认值  | 说明                                                           |
+| --------------------- | ------- | -------------------------------------------------------------- |
+| `maxPendingPerWorker` | `1`     | 每个 Worker 允许同时在途的请求数（1 表示串行）                 |
+| `maxQueued`           | `32`    | 排队上限；队列满时以可重试的 `ANALYSIS_WORKER_QUEUE_FULL` 拒绝 |
+| `timeoutMs`           | `30000` | 单次请求超时，语义与单 Worker 客户端一致                       |
+| `descriptors`         | 无      | `list()` 返回的工具描述（池无法同步查询 Worker 的工具集）      |
 
 调度策略是**最小在途优先**：每次派发挑当前在途最少的 Worker，慢任务不会把某个 Worker 堵死；全部饱和时请求 FIFO 排队。每个 Worker 内部复用 `createAnalysisWorkerClient`，因此取消、超时、错误码还原的语义与单 Worker 相同——池只负责选目标与排队。需要按工具或数据分片的业务可以自己起多个池。
 

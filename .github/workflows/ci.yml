@@ -40,6 +40,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # 入口面与 Vanilla 示例测试核对的是 dist 产物，干净检出下必须先构建。
+      - name: Build
+        run: pnpm build
+
       - name: Test
         run: pnpm test
 

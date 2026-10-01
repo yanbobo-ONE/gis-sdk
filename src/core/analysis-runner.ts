@@ -29,7 +29,14 @@ import type { TerrainSample, TerrainSampleOptions, TerrainSamplePoint } from './
 import { GisError } from './errors.js';
 import { convexHull } from '../spatial/hull.js';
 import { simplifyPath } from '../spatial/simplify.js';
-import { measureArea, measureBBox, measureBearing, measureCenterOfMass, measureDestination, measureDistance } from '../spatial/measure.js';
+import {
+  measureArea,
+  measureBBox,
+  measureBearing,
+  measureCenterOfMass,
+  measureDestination,
+  measureDistance,
+} from '../spatial/measure.js';
 import { filterPointsInPolygon, isPointInPolygon } from '../spatial/predicate.js';
 import { transformGeoPoint } from '../spatial/crs.js';
 import { SPATIAL_ALGORITHM_VERSION } from '../spatial/types.js';
@@ -266,7 +273,9 @@ export function createAnalysisController(
     }
   };
 
-  const runConvexHull = (input: AnalysisConvexHullInput): AnalysisConvexHullResult & { algorithmVersion: number } => {
+  const runConvexHull = (
+    input: AnalysisConvexHullInput,
+  ): AnalysisConvexHullResult & { algorithmVersion: number } => {
     const hull = convexHull(input.points);
     return {
       hull,
@@ -276,7 +285,9 @@ export function createAnalysisController(
     };
   };
 
-  const runSimplify = (input: AnalysisSimplifyInput): AnalysisSimplifyResult & { algorithmVersion: number } => {
+  const runSimplify = (
+    input: AnalysisSimplifyInput,
+  ): AnalysisSimplifyResult & { algorithmVersion: number } => {
     const result = simplifyPath(input.points, input.toleranceMeters);
     return {
       points: result.points,
@@ -287,7 +298,11 @@ export function createAnalysisController(
   };
 
   const runDistance = (input: AnalysisDistanceInput): AnalysisResultMap['distance'] => ({
-    ...measureDistance(input.from, input.to, input.units === undefined ? {} : { units: input.units }),
+    ...measureDistance(
+      input.from,
+      input.to,
+      input.units === undefined ? {} : { units: input.units },
+    ),
     algorithmVersion: SPATIAL_ALGORITHM_VERSION,
   });
 
@@ -398,7 +413,11 @@ export function createAnalysisController(
     const steps = viewshedSteps;
     const radius = input.radiusMeters;
     if (!Number.isFinite(radius) || radius <= 0) {
-      throw analysisError('viewshed.radiusMeters must be positive.', 'INVALID_ANALYSIS_INPUT', 'viewshed');
+      throw analysisError(
+        'viewshed.radiusMeters must be positive.',
+        'INVALID_ANALYSIS_INPUT',
+        'viewshed',
+      );
     }
     const rays: GeoPoint[][] = [];
     const samplePoints: TerrainSamplePoint[] = [];
@@ -448,7 +467,8 @@ export function createAnalysisController(
       usedAzimuths += 1;
       usedSamples += profile.length;
       const evaluation = evaluateHorizon({ observerHeightMeters: observerHeight, profile });
-      const distance = evaluation.visibleDistanceMeters > 0 ? evaluation.visibleDistanceMeters : radius;
+      const distance =
+        evaluation.visibleDistanceMeters > 0 ? evaluation.visibleDistanceMeters : radius;
       const edge = measureDestination(input.center, (360 * ray) / azimuths, distance);
       horizon.push({ longitude: edge.longitude, latitude: edge.latitude });
       if (evaluation.blockedDistanceMeters !== undefined) {
@@ -544,7 +564,10 @@ export function createAnalysisController(
     const options: TerrainSampleOptions =
       input.strategy === undefined
         ? {}
-        : { strategy: input.strategy, ...(input.level === undefined ? {} : { level: input.level }) };
+        : {
+            strategy: input.strategy,
+            ...(input.level === undefined ? {} : { level: input.level }),
+          };
     return sampleHeights(terrain, input.points, signal, options);
   };
 
@@ -553,14 +576,18 @@ export function createAnalysisController(
     algorithmVersion: SPATIAL_ALGORITHM_VERSION,
   });
 
-  const runPointInPolygon = (input: AnalysisPointInPolygonInput): AnalysisResultMap['point-in-polygon'] => ({
+  const runPointInPolygon = (
+    input: AnalysisPointInPolygonInput,
+  ): AnalysisResultMap['point-in-polygon'] => ({
     inside: isPointInPolygon(input.point, input.polygon, {
       ignoreBoundary: input.ignoreBoundary === true,
     }),
     algorithmVersion: SPATIAL_ALGORITHM_VERSION,
   });
 
-  const runPointsInPolygon = (input: AnalysisPointsInPolygonInput): AnalysisResultMap['points-in-polygon'] => ({
+  const runPointsInPolygon = (
+    input: AnalysisPointsInPolygonInput,
+  ): AnalysisResultMap['points-in-polygon'] => ({
     ...filterPointsInPolygon(input.points, input.polygon, {
       ignoreBoundary: input.ignoreBoundary === true,
     }),
@@ -582,7 +609,9 @@ export function createAnalysisController(
     algorithmVersion: SPATIAL_ALGORITHM_VERSION,
   });
 
-  const runCenterOfMass = (input: AnalysisCenterOfMassInput): AnalysisResultMap['center-of-mass'] => ({
+  const runCenterOfMass = (
+    input: AnalysisCenterOfMassInput,
+  ): AnalysisResultMap['center-of-mass'] => ({
     ...measureCenterOfMass(input.input),
     algorithmVersion: SPATIAL_ALGORITHM_VERSION,
   });
@@ -591,7 +620,11 @@ export function createAnalysisController(
     list() {
       return analysisTools;
     },
-    async run<T extends AnalysisToolId>(tool: T, input: AnalysisInputMap[T], runOptions: AnalysisRunOptions = {}) {
+    async run<T extends AnalysisToolId>(
+      tool: T,
+      input: AnalysisInputMap[T],
+      runOptions: AnalysisRunOptions = {},
+    ) {
       const signal = runOptions.signal;
       assertNotAborted(signal, tool);
       const result = await (async (): Promise<unknown> => {

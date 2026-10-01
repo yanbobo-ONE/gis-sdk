@@ -16,7 +16,11 @@ import { MAX_GEOMETRY_VERTICES, spatialError } from './types.js';
 export function convexHull(points: readonly GeoPoint[]): GeoRing {
   const operation = 'convexHull';
   if (!Array.isArray(points)) {
-    throw spatialError('convexHull requires an array of points.', 'INVALID_SPATIAL_INPUT', operation);
+    throw spatialError(
+      'convexHull requires an array of points.',
+      'INVALID_SPATIAL_INPUT',
+      operation,
+    );
   }
   if (points.length > MAX_GEOMETRY_VERTICES) {
     throw spatialError(
@@ -60,7 +64,10 @@ export function convexHull(points: readonly GeoPoint[]): GeoRing {
 
   const lower: GeoPoint[] = [];
   for (const point of unique) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) {
+    while (
+      lower.length >= 2 &&
+      cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0
+    ) {
       lower.pop();
     }
     lower.push(point);
@@ -71,7 +78,10 @@ export function convexHull(points: readonly GeoPoint[]): GeoRing {
     if (!point) {
       continue;
     }
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) {
+    while (
+      upper.length >= 2 &&
+      cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0
+    ) {
       upper.pop();
     }
     upper.push(point);
@@ -89,7 +99,11 @@ export function convexHull(points: readonly GeoPoint[]): GeoRing {
 }
 
 /** 二维叉积：大于 0 表示逆时针转弯（含共线为 0）。 */
-function cross(origin: GeoPoint | undefined, a: GeoPoint | undefined, b: GeoPoint | undefined): number {
+function cross(
+  origin: GeoPoint | undefined,
+  a: GeoPoint | undefined,
+  b: GeoPoint | undefined,
+): number {
   if (!origin || !a || !b) {
     return 0;
   }

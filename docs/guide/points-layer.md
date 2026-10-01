@@ -52,15 +52,15 @@ const layer = await map.layers.add({
 layer.labelCount; // 实际渲染的标签数（可能因 maxLabels 截断）
 ```
 
-| 标签字段         | 类型             | 默认值            | 说明                                             |
-| ---------------- | ---------------- | ----------------- | ------------------------------------------------ |
-| `enabled`        | `boolean`        | `false`           | 是否显示标签                                     |
-| `font`           | `string`         | `13px sans-serif` | CSS font 简写                                    |
-| `color`          | `string`         | `#ffffff`         | 文字颜色                                         |
-| `outlineColor`   | `string`         | `#0b1310`         | 描边颜色（浅色底图上的可读性保障）               |
-| `outlineWidth`   | `number`         | `2`               | 描边宽度，0–8                                    |
-| `offsetPixels`   | `[number, number]` | `[0, -18]`      | 相对点的像素偏移，默认把文字放在点上方           |
-| `maxLabels`      | `number`         | `2000`            | 单层标签上限，0–50000；超出部分只画点、不画字     |
+| 标签字段       | 类型               | 默认值            | 说明                                          |
+| -------------- | ------------------ | ----------------- | --------------------------------------------- |
+| `enabled`      | `boolean`          | `false`           | 是否显示标签                                  |
+| `font`         | `string`           | `13px sans-serif` | CSS font 简写                                 |
+| `color`        | `string`           | `#ffffff`         | 文字颜色                                      |
+| `outlineColor` | `string`           | `#0b1310`         | 描边颜色（浅色底图上的可读性保障）            |
+| `outlineWidth` | `number`           | `2`               | 描边宽度，0–8                                 |
+| `offsetPixels` | `[number, number]` | `[0, -18]`        | 相对点的像素偏移，默认把文字放在点上方        |
+| `maxLabels`    | `number`           | `2000`            | 单层标签上限，0–50000；超出部分只画点、不画字 |
 
 行为约定：
 

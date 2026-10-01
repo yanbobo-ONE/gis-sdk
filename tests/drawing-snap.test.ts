@@ -126,12 +126,7 @@ describe('findSnapTarget', () => {
   });
 
   it('honours a custom distance measure', () => {
-    const strict = findSnapTarget(
-      vertices,
-      [],
-      { x: 103, y: 101 },
-      { distance: () => 999 },
-    );
+    const strict = findSnapTarget(vertices, [], { x: 103, y: 101 }, { distance: () => 999 });
     expect(strict).toBeUndefined();
   });
 

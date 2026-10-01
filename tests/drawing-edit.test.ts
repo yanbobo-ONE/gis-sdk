@@ -105,7 +105,9 @@ describe('DrawingEditMachine', () => {
     expect(machine.move({ longitude: Number.NaN, latitude: 0 })).toBeUndefined();
     expect(machine.move({ longitude: 0, latitude: 91 })).toBeUndefined();
     expect(machine.move({ longitude: 181, latitude: 0 })).toBeUndefined();
-    expect(machine.move({ longitude: 1, latitude: 2, height: Number.POSITIVE_INFINITY })).toBeUndefined();
+    expect(
+      machine.move({ longitude: 1, latitude: 2, height: Number.POSITIVE_INFINITY }),
+    ).toBeUndefined();
     expect(onChange).not.toHaveBeenCalled();
     expect(port.read()).toEqual(polyline());
     expect(machine.snapshot?.vertexIndex).toBe(0);
@@ -288,7 +290,12 @@ describe('nearestSegmentIndex', () => {
 
     expect(nearestSegmentIndex(geometry, { longitude: 0.0005, latitude: 0.0001 })).toBe(0);
     expect(nearestSegmentIndex(geometry, { longitude: 0.9, latitude: 0 })).toBe(1);
-    expect(nearestSegmentIndex({ mode: 'point', positions: [{ longitude: 0, latitude: 0 }] }, { longitude: 0, latitude: 0 })).toBeUndefined();
+    expect(
+      nearestSegmentIndex(
+        { mode: 'point', positions: [{ longitude: 0, latitude: 0 }] },
+        { longitude: 0, latitude: 0 },
+      ),
+    ).toBeUndefined();
   });
 });
 
@@ -318,9 +325,25 @@ describe('insertVertexAt and removeVertexAt', () => {
   });
 
   it('enforces the mode minimum and index bounds', () => {
-    expect(removeVertexAt({ mode: 'polyline', positions: [{ longitude: 0, latitude: 0 }, { longitude: 1, latitude: 0 }] }, 0)).toBeUndefined();
+    expect(
+      removeVertexAt(
+        {
+          mode: 'polyline',
+          positions: [
+            { longitude: 0, latitude: 0 },
+            { longitude: 1, latitude: 0 },
+          ],
+        },
+        0,
+      ),
+    ).toBeUndefined();
     expect(removeVertexAt(polyline(), 9)).toBeUndefined();
-    expect(insertVertexAt({ mode: 'point', positions: [{ longitude: 0, latitude: 0 }] }, { longitude: 1, latitude: 1 })).toBeUndefined();
+    expect(
+      insertVertexAt(
+        { mode: 'point', positions: [{ longitude: 0, latitude: 0 }] },
+        { longitude: 1, latitude: 1 },
+      ),
+    ).toBeUndefined();
     expect(insertVertexAt(polyline(), { longitude: 1, latitude: 1 }, 9)).toBeUndefined();
     expect(insertVertexAt(polyline(), { longitude: 200, latitude: 1 })).toBeUndefined();
   });

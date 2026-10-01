@@ -140,21 +140,18 @@ export type {
 } from '../core/drawing-snap.js';
 export { simplifyPath, simplifyRing } from '../spatial/simplify.js';
 export { validatePolygon } from '../spatial/polygon-validation.js';
-export type { PolygonIssue, PolygonIssueCode, ValidatePolygonOptions } from '../spatial/polygon-validation.js';
-export type { SimplifyResult } from '../spatial/simplify.js';
 export type {
-  DrawEditSnapshot,
-  DrawEditTarget,
-  DrawingEditPort,
-} from '../core/drawing-edit.js';
+  PolygonIssue,
+  PolygonIssueCode,
+  ValidatePolygonOptions,
+} from '../spatial/polygon-validation.js';
+export type { SimplifyResult } from '../spatial/simplify.js';
+export type { DrawEditSnapshot, DrawEditTarget, DrawingEditPort } from '../core/drawing-edit.js';
 export { DrawingStateMachine } from '../core/drawing.js';
 export type { DrawGeometry, DrawMode, DrawRendererPort, DrawRenderValue } from '../core/drawing.js';
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
 export { FrameStatistics } from '../core/frame-statistics.js';
-export type {
-  FrameStatisticsOptions,
-  FrameStatisticsSnapshot,
-} from '../core/frame-statistics.js';
+export type { FrameStatisticsOptions, FrameStatisticsSnapshot } from '../core/frame-statistics.js';
 export { RealtimeTimestampGuard } from '../core/realtime-timestamp-guard.js';
 export type { RealtimeTimestampGuardOptions } from '../core/realtime-timestamp-guard.js';
 export { normalizePositions } from '../core/position-batch.js';
@@ -186,7 +183,10 @@ export type {
 } from '../core/analysis-batch.js';
 export { createAnalysisController } from '../core/analysis-runner.js';
 export { analysisTools } from '../core/analysis-runner.js';
-export { createAnalysisWorkerClient, createAnalysisWorkerHost } from '../core/analysis-worker-client.js';
+export {
+  createAnalysisWorkerClient,
+  createAnalysisWorkerHost,
+} from '../core/analysis-worker-client.js';
 export { createTrackTimeline, sampleTrackPose } from '../core/czml-track.js';
 export type { TrackPose, TrackTimelineOptions, TrackTimelineSample } from '../core/czml-track.js';
 export { createAnalysisWorkerPool } from '../core/analysis-worker-pool.js';
@@ -350,11 +350,7 @@ export type {
   ApproachTrack,
   ApproachWarning,
 } from '../spatial/closest-approach.js';
-export type {
-  AngularVelocity,
-  HeadingPitchRollDegrees,
-  Quaternion,
-} from '../spatial/attitude.js';
+export type { AngularVelocity, HeadingPitchRollDegrees, Quaternion } from '../spatial/attitude.js';
 export {
   EARTH_RADIUS,
   orbitalElementsFromAnchor,

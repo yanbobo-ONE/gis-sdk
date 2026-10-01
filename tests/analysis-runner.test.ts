@@ -14,7 +14,9 @@ interface TerrainOptions {
   readonly heightAt?: (point: TerrainSamplePoint) => number | undefined;
 }
 
-function createPort(options: TerrainOptions = {}): AnalysisTerrainPort & { readonly calls: number } {
+function createPort(
+  options: TerrainOptions = {},
+): AnalysisTerrainPort & { readonly calls: number } {
   const heightAt = options.heightAt ?? (() => 0);
   const port: AnalysisTerrainPort & { calls: number } = {
     calls: 0,
@@ -24,7 +26,12 @@ function createPort(options: TerrainOptions = {}): AnalysisTerrainPort & { reado
         points.map((point): TerrainSample => {
           const height = heightAt(point);
           return height === undefined
-            ? { longitude: point.longitude, latitude: point.latitude, height: undefined, status: 'no-data' }
+            ? {
+                longitude: point.longitude,
+                latitude: point.latitude,
+                height: undefined,
+                status: 'no-data',
+              }
             : { longitude: point.longitude, latitude: point.latitude, height, status: 'ok' };
         }),
       );
@@ -65,7 +72,10 @@ describe('createAnalysisController', () => {
     expect(distance.algorithmVersion).toBe(SPATIAL_ALGORITHM_VERSION);
 
     await expect(
-      controller.run('bearing', { from: { longitude: 0, latitude: 0 }, to: { longitude: 0, latitude: 1 } }),
+      controller.run('bearing', {
+        from: { longitude: 0, latitude: 0 },
+        to: { longitude: 0, latitude: 1 },
+      }),
     ).resolves.toMatchObject({ degrees: 0 });
 
     await expect(
@@ -143,13 +153,13 @@ describe('createAnalysisController', () => {
       level: 3,
     });
 
-    expect(samples).toEqual([
-      { longitude: 1, latitude: 2, height: 42, status: 'ok' },
-    ]);
-    expect((port.sample as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[1]).toEqual({
-      strategy: 'level',
-      level: 3,
-    });
+    expect(samples).toEqual([{ longitude: 1, latitude: 2, height: 42, status: 'ok' }]);
+    expect((port.sample as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[1]).toEqual(
+      {
+        strategy: 'level',
+        level: 3,
+      },
+    );
   });
 
   it('measures surface distance over sampled terrain', async () => {
@@ -187,7 +197,9 @@ describe('createAnalysisController', () => {
     });
 
     expect(result.visible).toBe(true);
-    expect((port.sample as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0]).toHaveLength(3);
+    expect(
+      (port.sample as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0],
+    ).toHaveLength(3);
   });
 
   it('blocks a line of sight behind a ridge and reports where', async () => {
@@ -306,14 +318,18 @@ describe('createAnalysisController', () => {
     await expect(
       controller.run('slope-aspect', { center: { longitude: 0, latitude: 0 }, radiusMeters: -1 }),
     ).rejects.toMatchObject({ code: 'INVALID_ANALYSIS_INPUT' });
-    await expect(
-      controller.run('freeze' as never, {} as never),
-    ).rejects.toMatchObject({ code: 'UNKNOWN_ANALYSIS_TOOL' });
+    await expect(controller.run('freeze' as never, {} as never)).rejects.toMatchObject({
+      code: 'UNKNOWN_ANALYSIS_TOOL',
+    });
 
     const abort = new AbortController();
     abort.abort();
     await expect(
-      controller.run('terrain-sample', { points: [{ longitude: 0, latitude: 0 }] }, { signal: abort.signal }),
+      controller.run(
+        'terrain-sample',
+        { points: [{ longitude: 0, latitude: 0 }] },
+        { signal: abort.signal },
+      ),
     ).rejects.toMatchObject({ code: 'ANALYSIS_ABORTED', retryable: true });
   });
 
@@ -322,11 +338,16 @@ describe('createAnalysisController', () => {
     const controller = createAnalysisController(port);
     const abort = new AbortController();
 
-    await controller.run('terrain-sample', { points: [{ longitude: 0, latitude: 0 }] }, {
-      signal: abort.signal,
-    });
+    await controller.run(
+      'terrain-sample',
+      { points: [{ longitude: 0, latitude: 0 }] },
+      {
+        signal: abort.signal,
+      },
+    );
 
-    const forwarded = (port.sample as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[1] as {
+    const forwarded = (port.sample as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]?.[1] as {
       signal?: AbortSignal;
     };
     expect(forwarded.signal).toBe(abort.signal);

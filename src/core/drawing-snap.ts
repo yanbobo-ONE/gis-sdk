@@ -89,7 +89,11 @@ function assertFinite(value: number, name: string, operation: string): void {
  */
 export function resolveSnapOptions(options: SnapOptions = {}): ResolvedSnapOptions {
   const pixelTolerance = options.pixelTolerance ?? DEFAULT_SNAP_PIXEL_TOLERANCE;
-  if (!Number.isFinite(pixelTolerance) || pixelTolerance < 1 || pixelTolerance > MAX_SNAP_PIXEL_TOLERANCE) {
+  if (
+    !Number.isFinite(pixelTolerance) ||
+    pixelTolerance < 1 ||
+    pixelTolerance > MAX_SNAP_PIXEL_TOLERANCE
+  ) {
     throw invalidSnap(
       `Snap pixelTolerance must be a finite number between 1 and ${String(MAX_SNAP_PIXEL_TOLERANCE)}.`,
     );

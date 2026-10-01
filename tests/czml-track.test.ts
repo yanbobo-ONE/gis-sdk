@@ -35,7 +35,9 @@ describe('createTrackTimeline', () => {
     expect(middle?.position.latitude).toBeCloseTo(25, 9);
     expect(middle?.position.height).toBeCloseTo(35, 9);
     // 姿态是两端之间的插值：航向应该落在 0 与 90 之间。
-    const heading = middle ? headingPitchRollDegreesFromQuaternion(middle.attitude ?? { x: 0, y: 0, z: 0, w: 1 }).heading : 0;
+    const heading = middle
+      ? headingPitchRollDegreesFromQuaternion(middle.attitude ?? { x: 0, y: 0, z: 0, w: 1 }).heading
+      : 0;
     expect(heading).toBeGreaterThan(1);
     expect(heading).toBeLessThan(89);
 
@@ -100,7 +102,14 @@ describe('createTrackTimeline', () => {
 
   it('rejects an empty track', () => {
     expect(() =>
-      createTrackTimeline({ id: 'a', name: undefined, epoch, modelUrl: undefined, samples: [], availability: [] }),
+      createTrackTimeline({
+        id: 'a',
+        name: undefined,
+        epoch,
+        modelUrl: undefined,
+        samples: [],
+        availability: [],
+      }),
     ).toThrow(expect.objectContaining({ code: 'INVALID_CZML' }));
   });
 });

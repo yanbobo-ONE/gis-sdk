@@ -148,7 +148,11 @@ describe('CesiumEnvironmentController', () => {
   it('drives rain and snow through one shared stage', () => {
     const harness = createHarness();
 
-    const rain = harness.controller.set('rain', { intensity: 'heavy', windDirection: 90, windStrength: 0.5 });
+    const rain = harness.controller.set('rain', {
+      intensity: 'heavy',
+      windDirection: 90,
+      windStrength: 0.5,
+    });
     expect(rain.kind).toBe('rain');
     const stage = harness.stages[0];
     expect(stage?.options.name).toBe('GisSdkPrecipitation');
@@ -200,7 +204,12 @@ describe('CesiumEnvironmentController', () => {
 
     harness.controller.set('haze', { density: 0.001, brightnessFloor: 0.1 });
 
-    expect(fog).toMatchObject({ enabled: true, density: 0.001, minimumBrightness: 0.1, maxHeight: 800_000 });
+    expect(fog).toMatchObject({
+      enabled: true,
+      density: 0.001,
+      minimumBrightness: 0.1,
+      maxHeight: 800_000,
+    });
     expect(harness.scene.requestRender).toHaveBeenCalled();
 
     harness.controller.setEnabled('haze', false);

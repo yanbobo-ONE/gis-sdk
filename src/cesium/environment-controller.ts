@@ -142,7 +142,9 @@ export class CesiumEnvironmentController implements EnvironmentController {
           resolveDepthFogOptions(input as DepthFogOptions),
         ) as EnvironmentEffectStateMap[K];
       case 'haze':
-        return this.applyHaze(resolveHazeOptions(input as HazeOptions)) as EnvironmentEffectStateMap[K];
+        return this.applyHaze(
+          resolveHazeOptions(input as HazeOptions),
+        ) as EnvironmentEffectStateMap[K];
       case 'rain':
       case 'snow':
         return this.applyPrecipitation(

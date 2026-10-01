@@ -27,7 +27,11 @@ export interface SimplifyResult {
 export function simplifyPath(points: GeoRing, toleranceMeters: number): SimplifyResult {
   const operation = 'simplifyPath';
   if (!Array.isArray(points)) {
-    throw spatialError('simplifyPath requires an array of points.', 'INVALID_SPATIAL_INPUT', operation);
+    throw spatialError(
+      'simplifyPath requires an array of points.',
+      'INVALID_SPATIAL_INPUT',
+      operation,
+    );
   }
   if (points.length > MAX_GEOMETRY_VERTICES) {
     throw spatialError(
@@ -124,6 +128,10 @@ export function simplifyRing(ring: GeoRing, toleranceMeters: number): SimplifyRe
   const first = ring[0];
   const last = ring[ring.length - 1];
   const closed = first?.longitude === last?.longitude && first?.latitude === last?.latitude;
-  const source = closed ? [...ring] : first ? [...ring, { longitude: first.longitude, latitude: first.latitude }] : [];
+  const source = closed
+    ? [...ring]
+    : first
+      ? [...ring, { longitude: first.longitude, latitude: first.latitude }]
+      : [];
   return simplifyPath(source, toleranceMeters);
 }

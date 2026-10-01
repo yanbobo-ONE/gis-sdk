@@ -140,7 +140,11 @@ function defaultDecode(data: unknown): RealtimeSocketMessage {
 
 function socketError(
   message: string,
-  code: 'INVALID_REALTIME_SOCKET_CONFIG' | 'REALTIME_SOCKET_NOT_OPEN' | 'REALTIME_SOCKET_DISPOSED' | 'REALTIME_SOCKET_UNSUPPORTED',
+  code:
+    | 'INVALID_REALTIME_SOCKET_CONFIG'
+    | 'REALTIME_SOCKET_NOT_OPEN'
+    | 'REALTIME_SOCKET_DISPOSED'
+    | 'REALTIME_SOCKET_UNSUPPORTED',
   operation: string,
   retryable = false,
 ): GisError {
@@ -171,10 +175,16 @@ export class RealtimeSocketClient {
   private manualClose = false;
   private disposed = false;
 
-  private readonly messageHandlers = new Map<string, Set<(message: RealtimeSocketMessage) => void>>();
+  private readonly messageHandlers = new Map<
+    string,
+    Set<(message: RealtimeSocketMessage) => void>
+  >();
   private readonly stateHandlers = new Set<(state: RealtimeSocketState) => void>();
   private readonly errorHandlers = new Set<(error: GisError) => void>();
-  private readonly socketFactory: (url: string, protocols?: readonly string[]) => RealtimeSocketLike;
+  private readonly socketFactory: (
+    url: string,
+    protocols?: readonly string[],
+  ) => RealtimeSocketLike;
   private readonly random: () => number;
   private readonly maxRetries: number;
   private readonly retryDelayMs: number;
@@ -292,7 +302,8 @@ export class RealtimeSocketClient {
    * @returns 取消订阅函数。
    */
   subscribe(type: string, handler: (message: RealtimeSocketMessage) => void): Unsubscribe {
-    const handlers = this.messageHandlers.get(type) ?? new Set<(message: RealtimeSocketMessage) => void>();
+    const handlers =
+      this.messageHandlers.get(type) ?? new Set<(message: RealtimeSocketMessage) => void>();
     handlers.add(handler);
     this.messageHandlers.set(type, handlers);
     return () => {
@@ -481,10 +492,13 @@ export class RealtimeSocketClient {
     this.changeState('reconnecting');
     this.clearRetryTimer();
     // 抖动 0.8 到 1.2 倍：同一时刻断开的多条连接不会挤在同一毫秒重连。
-    this.retryTimer = setTimeout(() => {
-      this.retryTimer = undefined;
-      this.open();
-    }, delay * (0.8 + this.random() * 0.4));
+    this.retryTimer = setTimeout(
+      () => {
+        this.retryTimer = undefined;
+        this.open();
+      },
+      delay * (0.8 + this.random() * 0.4),
+    );
   }
 
   private detach(): void {
@@ -566,7 +580,10 @@ export class RealtimeSocketClient {
 }
 
 /** 默认连接工厂：使用宿主提供的全局 `WebSocket`。 */
-function defaultSocketFactory(): (url: string, protocols?: readonly string[]) => RealtimeSocketLike {
+function defaultSocketFactory(): (
+  url: string,
+  protocols?: readonly string[],
+) => RealtimeSocketLike {
   return (url, protocols) => {
     const WebSocketConstructor = (
       globalThis as {

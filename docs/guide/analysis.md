@@ -25,23 +25,23 @@ map.analysis.list(); // 15 个内置工具的 id / 名称 / 说明
 
 ## 工具清单
 
-| 工具 ID               | 输入要点                          | 结果要点                                              |
-| --------------------- | --------------------------------- | ----------------------------------------------------- |
-| `distance`            | `from`、`to`、可选 `units`        | 大圆距离（米 + 换算值 + 单位）                        |
-| `surface-distance`    | 同上 + 可选分段数                 | 沿线采样地形后的三维折线长度与采样点数                |
-| `area`                | `polygon`（环或带洞多边形）       | 球面面积（平方米 + 平方公里）                         |
-| `bearing`             | `from`、`to`                      | 方位角（正北 0、顺时针为正）                          |
-| `terrain-sample`      | `points`、可选 `strategy`/`level` | 与 `map.terrain.sample()` 同构，无数据的点标记 no-data |
-| `line-of-sight`       | `from`、`to`、可选分段数          | 可见性、最小余隙、首个遮挡点序号                      |
-| `viewshed`            | `center`、`radiusMeters`、方位数  | 可见范围边界环、最近遮挡距离                          |
-| `slope-aspect`        | `center`、`radiusMeters`、邻域数  | 坡度、坡向、中心高度、参与拟合的采样点数              |
-| `transform`           | `point`、`from`、`to`             | 目标 CRS 下的坐标                                     |
-| `point-in-polygon`    | `point`、`polygon`                | 是否落在面内                                          |
-| `points-in-polygon`   | `points`、`polygon`               | 命中下标、命中点、数量                                |
-| `bbox`                | 点 / 环 / 多边形                  | 经纬包围盒                                            |
-| `center-of-mass`      | 环 / 多边形                       | 质心                                                  |
-| `convex-hull`         | `points`                          | 平面凸包（闭合环）与参与计算的点数                    |
-| `simplify`            | `points`、`toleranceMeters`       | 抽稀后的顶点、原始点数与移除数量                      |
+| 工具 ID             | 输入要点                          | 结果要点                                               |
+| ------------------- | --------------------------------- | ------------------------------------------------------ |
+| `distance`          | `from`、`to`、可选 `units`        | 大圆距离（米 + 换算值 + 单位）                         |
+| `surface-distance`  | 同上 + 可选分段数                 | 沿线采样地形后的三维折线长度与采样点数                 |
+| `area`              | `polygon`（环或带洞多边形）       | 球面面积（平方米 + 平方公里）                          |
+| `bearing`           | `from`、`to`                      | 方位角（正北 0、顺时针为正）                           |
+| `terrain-sample`    | `points`、可选 `strategy`/`level` | 与 `map.terrain.sample()` 同构，无数据的点标记 no-data |
+| `line-of-sight`     | `from`、`to`、可选分段数          | 可见性、最小余隙、首个遮挡点序号                       |
+| `viewshed`          | `center`、`radiusMeters`、方位数  | 可见范围边界环、最近遮挡距离                           |
+| `slope-aspect`      | `center`、`radiusMeters`、邻域数  | 坡度、坡向、中心高度、参与拟合的采样点数               |
+| `transform`         | `point`、`from`、`to`             | 目标 CRS 下的坐标                                      |
+| `point-in-polygon`  | `point`、`polygon`                | 是否落在面内                                           |
+| `points-in-polygon` | `points`、`polygon`               | 命中下标、命中点、数量                                 |
+| `bbox`              | 点 / 环 / 多边形                  | 经纬包围盒                                             |
+| `center-of-mass`    | 环 / 多边形                       | 质心                                                   |
+| `convex-hull`       | `points`                          | 平面凸包（闭合环）与参与计算的点数                     |
+| `simplify`          | `points`、`toleranceMeters`       | 抽稀后的顶点、原始点数与移除数量                       |
 
 除 `terrain-sample` 外，结果都带 `algorithmVersion`（当前 `1`）：算法口径变化时会递增，业务据此判断是否需要重算历史结果。
 
@@ -62,12 +62,12 @@ map.analysis.list(); // 15 个内置工具的 id / 名称 / 说明
 
 ## 默认采样与代价
 
-| 工具                | 默认采样                          | 说明                                     |
-| ------------------- | --------------------------------- | ---------------------------------------- |
-| `surface-distance`  | 32 段（33 个点）                  | 覆盖线与两端高度，不额外采样端点         |
-| `line-of-sight`     | 32 段（31 个中间点）              | 端点只在其高度缺失时参与采样             |
-| `viewshed`          | 72 个方位 × 32 步 = 2304 个采样点 | 一次批量请求，命中地形缓存时代价很低     |
-| `slope-aspect`      | 圆环 8 点 + 中心                  | 半径 100–500 米是常用范围                |
+| 工具               | 默认采样                          | 说明                                 |
+| ------------------ | --------------------------------- | ------------------------------------ |
+| `surface-distance` | 32 段（33 个点）                  | 覆盖线与两端高度，不额外采样端点     |
+| `line-of-sight`    | 32 段（31 个中间点）              | 端点只在其高度缺失时参与采样         |
+| `viewshed`         | 72 个方位 × 32 步 = 2304 个采样点 | 一次批量请求，命中地形缓存时代价很低 |
+| `slope-aspect`     | 圆环 8 点 + 中心                  | 半径 100–500 米是常用范围            |
 
 这些默认值可以在 `createAnalysisController()` 上覆盖；`map.analysis` 用 SDK 默认值。地形采样的分批、并发与缓存由 `map.terrain.sample()` 统一负责。
 
@@ -87,7 +87,11 @@ import { runAnalysisBatch } from '@yanbobo/gis-sdk/core';
 
 const outcome = await runAnalysisBatch(
   map.analysis,
-  rows.map((row) => ({ id: row.id, tool: 'slope-aspect' as const, input: { center: row, radiusMeters: 200 } })),
+  rows.map((row) => ({
+    id: row.id,
+    tool: 'slope-aspect' as const,
+    input: { center: row, radiusMeters: 200 },
+  })),
   {
     concurrency: 4,
     signal: controller.signal,
@@ -105,11 +109,11 @@ outcome.entries.forEach((entry) => {
 });
 ```
 
-| 语义           | 规则                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------- |
-| 并发有界       | 同时在跑的任务不超过 `concurrency`（默认 4，1 到 32），不会一次压垮地形采样或 Worker        |
-| 失败隔离       | 某一条抛错只记在它自己的条目里，其余继续执行——一条坏数据不该毁掉整批                       |
-| 顺序稳定       | 返回的 `entries` 与输入**同序**（按下标排列），可以直接与业务行对齐；进度回调则按完成顺序触发 |
+| 语义             | 规则                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| 并发有界         | 同时在跑的任务不超过 `concurrency`（默认 4，1 到 32），不会一次压垮地形采样或 Worker            |
+| 失败隔离         | 某一条抛错只记在它自己的条目里，其余继续执行——一条坏数据不该毁掉整批                            |
+| 顺序稳定         | 返回的 `entries` 与输入**同序**（按下标排列），可以直接与业务行对齐；进度回调则按完成顺序触发   |
 | 取消返回部分结果 | `signal` 中止后不再派发新任务、在途任务拿到同一个信号，函数正常返回并把 `cancelled` 置为 `true` |
 
 与 [`createAnalysisWorkerPool()`](./analysis-worker.md) 的分工：池解决"任务跑在哪个 Worker 上"，批量执行解决"一批任务怎么编排"；把池当 `controller` 传进来即可叠加使用（并发会由池再管一层）。

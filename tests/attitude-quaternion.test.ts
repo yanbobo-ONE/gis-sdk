@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  HeadingPitchRoll,
-  Math as CesiumMath,
-  Quaternion as CesiumQuaternion,
-} from 'cesium';
+import { HeadingPitchRoll, Math as CesiumMath, Quaternion as CesiumQuaternion } from 'cesium';
 
 import {
   headingPitchRollDegreesFromQuaternion,
@@ -150,10 +146,9 @@ describe('heading / pitch / roll conversion', () => {
       );
       const actual = quaternionFromHeadingPitchRollDegrees(value);
       // 正负号差异只在四元数整体取反时出现，那表示同一个姿态。
-      expect(Math.abs(dot(actual, { x: expected.x, y: expected.y, z: expected.z, w: expected.w }))).toBeCloseTo(
-        1,
-        9,
-      );
+      expect(
+        Math.abs(dot(actual, { x: expected.x, y: expected.y, z: expected.z, w: expected.w })),
+      ).toBeCloseTo(1, 9);
     }
   });
 });

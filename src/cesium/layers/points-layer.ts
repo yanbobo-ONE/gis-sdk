@@ -167,7 +167,9 @@ function normalizeLabelStyle(
   }
   // 运行期可能收到任意值：先收窄成 unknown[] 再逐项校验，避免直接信任类型标注。
   const rawOffset: unknown = labels.offsetPixels ?? DEFAULT_LABEL_OFFSET;
-  const offsetValues: readonly unknown[] | undefined = isUnknownArray(rawOffset) ? rawOffset : undefined;
+  const offsetValues: readonly unknown[] | undefined = isUnknownArray(rawOffset)
+    ? rawOffset
+    : undefined;
   const offsetX = offsetValues?.[0];
   const offsetY = offsetValues?.[1];
   if (offsetValues?.length !== 2 || !finite(offsetX) || !finite(offsetY)) {

@@ -25,18 +25,21 @@ describe('convexHull', () => {
     expect(hull[0]).toEqual(hull[4]);
     const ring = hull.slice(0, 4);
     // 凸包顶点顺序无关，比较集合即可。
-    expect(new Set(ring.map((point) => `${String(point.longitude)},${String(point.latitude)}`))).toEqual(
-      new Set(['0,0', '0,1', '1,1', '1,0']),
-    );
+    expect(
+      new Set(ring.map((point) => `${String(point.longitude)},${String(point.latitude)}`)),
+    ).toEqual(new Set(['0,0', '0,1', '1,1', '1,0']));
     // 面积应等于正方形本身的面积（球面模型下略小于 1 平方度）。
     const area = measureArea(hull);
     expect(area.squareKilometers).toBeGreaterThan(12_000);
   });
 
   it('handles duplicates, collinear points, and degenerate input', () => {
-    expect(convexHull([{ longitude: 1, latitude: 1 }, { longitude: 1, latitude: 1 }])).toEqual([
-      { longitude: 1, latitude: 1 },
-    ]);
+    expect(
+      convexHull([
+        { longitude: 1, latitude: 1 },
+        { longitude: 1, latitude: 1 },
+      ]),
+    ).toEqual([{ longitude: 1, latitude: 1 }]);
     expect(
       convexHull([
         { longitude: 0, latitude: 0 },
@@ -292,8 +295,8 @@ describe('validatePolygon', () => {
     expect(() => validatePolygon({ outer: 'nope' as never })).toThrow(
       expect.objectContaining({ code: 'INVALID_SPATIAL_INPUT' }),
     );
-    expect(() =>
-      validatePolygon({ outer: [{ longitude: 200, latitude: 0 }] as never }),
-    ).toThrow(expect.objectContaining({ code: 'INVALID_SPATIAL_INPUT' }));
+    expect(() => validatePolygon({ outer: [{ longitude: 200, latitude: 0 }] as never })).toThrow(
+      expect.objectContaining({ code: 'INVALID_SPATIAL_INPUT' }),
+    );
   });
 });

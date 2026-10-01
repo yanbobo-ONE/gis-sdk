@@ -62,11 +62,17 @@ export function validatePolygon(
   // JS 调用方可能传入非对象：这里读一遍再做形状判断，避免直接访问属性抛原生错误。
   const candidate: unknown = polygon;
   if (typeof candidate !== 'object' || candidate === null) {
-    throw spatialError('validatePolygon requires a polygon object.', 'INVALID_SPATIAL_INPUT', operation);
+    throw spatialError(
+      'validatePolygon requires a polygon object.',
+      'INVALID_SPATIAL_INPUT',
+      operation,
+    );
   }
   const issues: PolygonIssue[] = [];
   const outer = readRing(polygon.outer, 'outer', operation, issues);
-  const holes = (polygon.holes ?? []).map((hole, index) => readRing(hole, index, operation, issues));
+  const holes = (polygon.holes ?? []).map((hole, index) =>
+    readRing(hole, index, operation, issues),
+  );
   const requireClosed = options.requireClosed === true;
   const checkSelfIntersection = options.checkSelfIntersection !== false;
 
@@ -93,7 +99,11 @@ function readRing(
   issues: PolygonIssue[],
 ): ParsedRing {
   if (!Array.isArray(ring)) {
-    throw spatialError('Polygon rings must be arrays of points.', 'INVALID_SPATIAL_INPUT', operation);
+    throw spatialError(
+      'Polygon rings must be arrays of points.',
+      'INVALID_SPATIAL_INPUT',
+      operation,
+    );
   }
   if (ring.length > MAX_GEOMETRY_VERTICES) {
     throw spatialError(
@@ -357,10 +367,7 @@ function segmentsIntersect(a: GeoPoint, b: GeoPoint, c: GeoPoint, d: GeoPoint): 
   const d2 = orientation(c, d, b);
   const d3 = orientation(a, b, c);
   const d4 = orientation(a, b, d);
-  if (
-    ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-    ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
-  ) {
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
     return true;
   }
   if (d1 === 0 && onSegment(c, d, a)) {

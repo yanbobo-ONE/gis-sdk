@@ -230,7 +230,12 @@ export class DrawingEditMachine {
     const multiVertex = geometry.positions.length > 1;
     if (multiVertex) {
       const index = target.vertexIndex;
-      if (index === undefined || !Number.isInteger(index) || index < 0 || index >= geometry.positions.length) {
+      if (
+        index === undefined ||
+        !Number.isInteger(index) ||
+        index < 0 ||
+        index >= geometry.positions.length
+      ) {
         return false;
       }
     } else if (target.vertexIndex !== undefined) {
@@ -258,7 +263,9 @@ export class DrawingEditMachine {
     const positions =
       vertexIndex === undefined
         ? [{ ...position }]
-        : current.positions.map((vertex, index) => (index === vertexIndex ? { ...position } : { ...vertex }));
+        : current.positions.map((vertex, index) =>
+            index === vertexIndex ? { ...position } : { ...vertex },
+          );
     const geometry: DrawGeometry = { mode: current.mode, positions };
     this.port.update(geometry);
     this.onChange?.(cloneGeometry(geometry));

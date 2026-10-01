@@ -175,7 +175,6 @@ export function isGisErrorCode(value: unknown): value is GisErrorCode {
   return typeof value === 'string' && GIS_ERROR_CODE_SET.has(value);
 }
 
-
 /** 创建 {@link GisError} 所需的结构化上下文。 */
 export interface GisErrorOptions {
   /** 稳定错误代码。 */

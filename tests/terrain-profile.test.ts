@@ -94,7 +94,12 @@ describe('evaluateLineOfSight', () => {
 
   it('falls back to endpoint comparison for an empty or zero-length profile', () => {
     expect(
-      evaluateLineOfSight({ fromHeightMeters: 10, toHeightMeters: 20, distanceMeters: 100, profile: [] }),
+      evaluateLineOfSight({
+        fromHeightMeters: 10,
+        toHeightMeters: 20,
+        distanceMeters: 100,
+        profile: [],
+      }),
     ).toEqual({
       visible: true,
       minClearanceMeters: 10,
@@ -102,7 +107,12 @@ describe('evaluateLineOfSight', () => {
       sampleCount: 0,
     });
     expect(
-      evaluateLineOfSight({ fromHeightMeters: 20, toHeightMeters: 10, distanceMeters: 0, profile: [] }),
+      evaluateLineOfSight({
+        fromHeightMeters: 20,
+        toHeightMeters: 10,
+        distanceMeters: 0,
+        profile: [],
+      }),
     ).toMatchObject({ visible: false, sampleCount: 0, blockedAtIndex: 0 });
   });
 
@@ -152,7 +162,13 @@ describe('evaluateHorizon', () => {
 
   it('validates that distances increase and are positive', () => {
     expect(() =>
-      evaluateHorizon({ observerHeightMeters: 0, profile: profile([[100, 0], [100, 5]]) }),
+      evaluateHorizon({
+        observerHeightMeters: 0,
+        profile: profile([
+          [100, 0],
+          [100, 5],
+        ]),
+      }),
     ).toThrow(expect.objectContaining({ code: 'INVALID_SPATIAL_INPUT' }));
   });
 });

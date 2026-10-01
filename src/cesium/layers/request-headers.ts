@@ -74,7 +74,10 @@ export function normalizeRequestHeaders(
  * @param headers - {@link normalizeRequestHeaders} 的结果。
  * @returns 可直接交给 Cesium 的地址或资源。
  */
-export function withRequestHeaders(url: string, headers: RequestHeaders | undefined): string | Resource {
+export function withRequestHeaders(
+  url: string,
+  headers: RequestHeaders | undefined,
+): string | Resource {
   if (!headers) {
     return url;
   }

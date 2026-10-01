@@ -1,8 +1,4 @@
-import type {
-  AnalysisController,
-  AnalysisInputMap,
-  AnalysisToolId,
-} from './analysis.js';
+import type { AnalysisController, AnalysisInputMap, AnalysisToolId } from './analysis.js';
 import { GisError } from './errors.js';
 
 /** 批量分析里的一项。 */
@@ -165,7 +161,13 @@ export async function runAnalysisBatch(
               'ANALYSIS_BATCH_FAILED',
               item.tool,
             );
-      return { ...base, ok: false, value: undefined, errorCode: error.code, errorMessage: error.message };
+      return {
+        ...base,
+        ok: false,
+        value: undefined,
+        errorCode: error.code,
+        errorMessage: error.message,
+      };
     }
   };
 

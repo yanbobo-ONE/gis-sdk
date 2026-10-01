@@ -148,9 +148,7 @@ export function slerp(from: Quaternion, to: Quaternion, ratio: number): Quaterni
  * @returns 单位四元数。
  * @throws `INVALID_SPATIAL_INPUT` 任一分量非有限数。
  */
-export function quaternionFromHeadingPitchRollDegrees(
-  value: HeadingPitchRollDegrees,
-): Quaternion {
+export function quaternionFromHeadingPitchRollDegrees(value: HeadingPitchRollDegrees): Quaternion {
   const candidate: unknown = value;
   const { heading, pitch, roll } = (candidate ?? {}) as Partial<HeadingPitchRollDegrees>;
   if (!finiteNumber(heading) || !finiteNumber(pitch) || !finiteNumber(roll)) {
@@ -182,7 +180,10 @@ export function quaternionFromHeadingPitchRollDegrees(
     z: 0,
     w: Math.cos(halfRoll),
   };
-  return normalize(multiply(multiply(headingQuaternion, pitchQuaternion), rollQuaternion), 'quaternionFromHeadingPitchRollDegrees');
+  return normalize(
+    multiply(multiply(headingQuaternion, pitchQuaternion), rollQuaternion),
+    'quaternionFromHeadingPitchRollDegrees',
+  );
 }
 
 /**

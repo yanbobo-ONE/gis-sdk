@@ -92,7 +92,11 @@ const beijing = { longitude: 116.39, latitude: 39.9 };
 const shanghai = { longitude: 121.47, latitude: 31.23 };
 
 record(
-  measure('measureDistance（跨城两点）', () => null, () => measureDistance(beijing, shanghai)),
+  measure(
+    'measureDistance（跨城两点）',
+    () => null,
+    () => measureDistance(beijing, shanghai),
+  ),
 );
 
 const square = [
@@ -101,7 +105,13 @@ const square = [
   { longitude: 116.5, latitude: 40.0 },
   { longitude: 116.3, latitude: 40.0 },
 ];
-record(measure('measureArea（四边形）', () => null, () => measureArea(square)));
+record(
+  measure(
+    'measureArea（四边形）',
+    () => null,
+    () => measureArea(square),
+  ),
+);
 
 const polygon = { outer: square };
 const cityPoints = Array.from({ length: 10_000 }, (_, index) => ({
@@ -123,14 +133,28 @@ const cloud = Array.from({ length: 2_000 }, (_, index) => ({
   longitude: ((index * 37) % 360) - 180,
   latitude: ((index * 53) % 170) - 85,
 }));
-record(measure('convexHull（2 千点）', () => cloud, (points) => convexHull(points), 2_000, '点'));
+record(
+  measure(
+    'convexHull（2 千点）',
+    () => cloud,
+    (points) => convexHull(points),
+    2_000,
+    '点',
+  ),
+);
 
 const track = Array.from({ length: 5_000 }, (_, index) => ({
   longitude: 116 + index * 0.0001,
   latitude: 39.9 + Math.sin(index / 50) * 0.001,
 }));
 record(
-  measure('simplifyPath（5 千顶点，10 米容差）', () => track, (points) => simplifyPath(points, 10), 5_000, '顶点'),
+  measure(
+    'simplifyPath（5 千顶点，10 米容差）',
+    () => track,
+    (points) => simplifyPath(points, 10),
+    5_000,
+    '顶点',
+  ),
 );
 
 const clusteredPoints = Array.from({ length: 50_000 }, (_, index) => ({
@@ -153,18 +177,23 @@ const profile = Array.from({ length: 64 }, (_, index) => ({
   heightMeters: Math.sin(index / 8) * 40,
 }));
 record(
-  measure('evaluateLineOfSight（64 个剖面点）', () => profile, (points) =>
-    evaluateLineOfSight({
-      fromHeightMeters: 100,
-      toHeightMeters: 120,
-      distanceMeters: 6_500,
-      profile: points,
-    }),
+  measure(
+    'evaluateLineOfSight（64 个剖面点）',
+    () => profile,
+    (points) =>
+      evaluateLineOfSight({
+        fromHeightMeters: 100,
+        toHeightMeters: 120,
+        distanceMeters: 6_500,
+        profile: points,
+      }),
   ),
 );
 record(
-  measure('evaluateHorizon（32 个剖面点）', () => profile.slice(0, 32), (points) =>
-    evaluateHorizon({ observerHeightMeters: 100, profile: points }),
+  measure(
+    'evaluateHorizon（32 个剖面点）',
+    () => profile.slice(0, 32),
+    (points) => evaluateHorizon({ observerHeightMeters: 100, profile: points }),
   ),
 );
 
@@ -172,38 +201,58 @@ record(
 const attitude = quaternionFromHeadingPitchRollDegrees({ heading: 45, pitch: -20, roll: 10 });
 const otherAttitude = quaternionFromHeadingPitchRollDegrees({ heading: 200, pitch: 30, roll: -15 });
 record(
-  measure('slerp（两姿态之间）', () => 0, (index) => {
-    slerp(attitude, otherAttitude, ((index % 100) + 0.5) / 100);
-  }),
-);
-record(
-  measure('headingPitchRollDegreesFromQuaternion', () => attitude, (value) =>
-    headingPitchRollDegreesFromQuaternion(value),
+  measure(
+    'slerp（两姿态之间）',
+    () => 0,
+    (index) => {
+      slerp(attitude, otherAttitude, ((index % 100) + 0.5) / 100);
+    },
   ),
 );
 record(
-  measure('AttitudeDynamics.advance（10 ms 步长）', () => new AttitudeDynamics(), (dynamics) => {
-    dynamics.setAngularVelocity({ x: 0, y: 0, z: Math.PI });
-    dynamics.advance(0.01);
-  }),
+  measure(
+    'headingPitchRollDegreesFromQuaternion',
+    () => attitude,
+    (value) => headingPitchRollDegreesFromQuaternion(value),
+  ),
+);
+record(
+  measure(
+    'AttitudeDynamics.advance（10 ms 步长）',
+    () => new AttitudeDynamics(),
+    (dynamics) => {
+      dynamics.setAngularVelocity({ x: 0, y: 0, z: Math.PI });
+      dynamics.advance(0.01);
+    },
+  ),
 );
 
 // ── 回放与时钟 ────────────────────────────────────────────────────────────────
 const timelineSamples = Array.from({ length: 600 }, (_, index) => ({ time: index, x: index }));
 record(
-  measure('ReplayTimeline.sampleAt（600 样本，二分）', () => {
-    const timeline = new ReplayTimeline({ interpolate: (a, b, ratio) => ({ time: a.time + ratio, x: a.x + ratio }) });
-    timeline.addSamples('track', timelineSamples);
-    return { timeline, index: 0 };
-  }, (state) => {
-    state.timeline.sampleAt('track', (state.index % 600) + 0.5);
-    state.index += 1;
-  }),
+  measure(
+    'ReplayTimeline.sampleAt（600 样本，二分）',
+    () => {
+      const timeline = new ReplayTimeline({
+        interpolate: (a, b, ratio) => ({ time: a.time + ratio, x: a.x + ratio }),
+      });
+      timeline.addSamples('track', timelineSamples);
+      return { timeline, index: 0 };
+    },
+    (state) => {
+      state.timeline.sampleAt('track', (state.index % 600) + 0.5);
+      state.index += 1;
+    },
+  ),
 );
 record(
-  measure('SimulationClock.advance', () => new SimulationClock({ startTime: 0, endTime: 1e9 }), (clock) => {
-    clock.advance(16);
-  }),
+  measure(
+    'SimulationClock.advance',
+    () => new SimulationClock({ startTime: 0, endTime: 1e9 }),
+    (clock) => {
+      clock.advance(16);
+    },
+  ),
 );
 
 // ── 数据准备 ─────────────────────────────────────────────────────────────────
@@ -228,7 +277,10 @@ const orbitPositions = Array.from({ length: 600 }, (_, index) => ({
   latitude: 39.9,
   height: 500_000,
 }));
-const document = czmlFromPositions('sat-1', orbitPositions, { intervalSeconds: 5, model: { url: 'a.glb' } });
+const document = czmlFromPositions('sat-1', orbitPositions, {
+  intervalSeconds: 5,
+  model: { url: 'a.glb' },
+});
 record(
   measure(
     'czmlFromPositions（600 个采样点）',
@@ -239,15 +291,33 @@ record(
   ),
 );
 record(
-  measure('positionsFromCzml（600 个采样点）', () => document, (input) => positionsFromCzml(input), 600, '采样点'),
+  measure(
+    'positionsFromCzml（600 个采样点）',
+    () => document,
+    (input) => positionsFromCzml(input),
+    600,
+    '采样点',
+  ),
 );
 record(
-  measure('tracksFromCzml（含 model 与姿态）', () => document, (input) => tracksFromCzml(input), 600, '采样点'),
+  measure(
+    'tracksFromCzml（含 model 与姿态）',
+    () => document,
+    (input) => tracksFromCzml(input),
+    600,
+    '采样点',
+  ),
 );
 
 const tracks = tracksFromCzml(document);
 record(
-  measure('createTrackTimeline（600 个采样点）', () => tracks[0], (entry) => createTrackTimeline(entry), 600, '采样点'),
+  measure(
+    'createTrackTimeline（600 个采样点）',
+    () => tracks[0],
+    (entry) => createTrackTimeline(entry),
+    600,
+    '采样点',
+  ),
 );
 
 // ── 汇总 ─────────────────────────────────────────────────────────────────────

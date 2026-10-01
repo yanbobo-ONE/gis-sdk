@@ -99,12 +99,12 @@ headingPitchRollDegreesFromQuaternion(attitude); // { heading: 40, pitch: -25, r
 slerp(previous, next, 0.35);
 ```
 
-| 函数                                       | 说明                                                                    |
-| ------------------------------------------ | ----------------------------------------------------------------------- |
-| `quaternionFromHeadingPitchRollDegrees()`  | 航向 / 俯仰 / 翻滚（度）→ 单位四元数，与 Cesium 的 `HeadingPitchRoll` 逐位一致 |
-| `headingPitchRollDegreesFromQuaternion()`  | 反解：航向 ∈ [0,360)、俯仰 ∈ [-90,90]、翻滚 ∈ (-180,180]                |
-| `slerp(from, to, ratio)`                   | 四元数球面线性插值，夹角极小时退化为归一化线性插值；比例自动夹到 [0,1]   |
-| `normalizeQuaternion(value)`               | 归一化；全零或非有限值抛 `INVALID_SPATIAL_INPUT`                        |
+| 函数                                      | 说明                                                                           |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| `quaternionFromHeadingPitchRollDegrees()` | 航向 / 俯仰 / 翻滚（度）→ 单位四元数，与 Cesium 的 `HeadingPitchRoll` 逐位一致 |
+| `headingPitchRollDegreesFromQuaternion()` | 反解：航向 ∈ [0,360)、俯仰 ∈ [-90,90]、翻滚 ∈ (-180,180]                       |
+| `slerp(from, to, ratio)`                  | 四元数球面线性插值，夹角极小时退化为归一化线性插值；比例自动夹到 [0,1]         |
+| `normalizeQuaternion(value)`              | 归一化；全零或非有限值抛 `INVALID_SPATIAL_INPUT`                               |
 
 **口径与 Cesium 对齐**（航向绕 -Z、俯仰绕 -Y、翻滚绕 +X，组合顺序 `heading · pitch · roll`）：同一组角度传给 SDK 的模型图层与直接交给 Cesium 得到的是同一个姿态。这两组换算在 `tests/attitude-quaternion.test.ts` 里用真实 Cesium 的 `Quaternion.fromHeadingPitchRoll` 与 `Quaternion.slerp` 作为第二实现逐位比对。
 

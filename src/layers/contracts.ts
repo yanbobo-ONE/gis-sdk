@@ -645,19 +645,19 @@ export type LayerHandleFor<TSpec extends LayerSpec> = TSpec extends GeoJsonLayer
   ? GeoJsonLayerHandle
   : TSpec extends CzmlLayerSpec
     ? CzmlLayerHandle
-  : TSpec extends WmsLayerSpec
-    ? WmsLayerHandle
-    : TSpec extends TmsLayerSpec | WmtsLayerSpec | SingleImageLayerSpec
-      ? ImageryLayerHandle
-      : TSpec extends ModelLayerSpec
-        ? ModelLayerHandle
-        : TSpec extends PointsLayerSpec
-          ? PointsLayerHandle
-          : TSpec extends PolylineLayerSpec
-            ? PolylineLayerHandle
-            : TSpec extends Tiles3dLayerSpec
-              ? LayerHandle
-              : LayerHandle;
+    : TSpec extends WmsLayerSpec
+      ? WmsLayerHandle
+      : TSpec extends TmsLayerSpec | WmtsLayerSpec | SingleImageLayerSpec
+        ? ImageryLayerHandle
+        : TSpec extends ModelLayerSpec
+          ? ModelLayerHandle
+          : TSpec extends PointsLayerSpec
+            ? PointsLayerHandle
+            : TSpec extends PolylineLayerSpec
+              ? PolylineLayerHandle
+              : TSpec extends Tiles3dLayerSpec
+                ? LayerHandle
+                : LayerHandle;
 
 /** 地图实例拥有的图层管理接口。 */
 export interface LayerManager {

@@ -553,7 +553,6 @@ export class CesiumDrawingController implements MapDrawingController {
     return projectSnapCandidates(geometries, this.coordinates, skipIndex);
   }
 
-
   /**
    * 进入编辑会话。
    *

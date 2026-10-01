@@ -166,9 +166,7 @@ export interface EnvironmentEffectStateMap {
 
 /** 任一环境效果状态。 */
 export type EnvironmentEffectState =
-  | DepthFogEffectState
-  | HazeEffectState
-  | PrecipitationEffectState;
+  DepthFogEffectState | HazeEffectState | PrecipitationEffectState;
 
 /**
  * 类型化环境效果控制器。
@@ -317,7 +315,13 @@ function optionalInRange(value: number | undefined, name: string, min: number, m
  * @throws `INVALID_ENVIRONMENT_CONFIG` 参数非法。
  */
 export function resolveDepthFogOptions(options: DepthFogOptions = {}): ResolvedDepthFogOptions {
-  const density = finiteInRange(options.density, 'depthFog.density', 0, 1, DEPTH_FOG_DEFAULTS.density);
+  const density = finiteInRange(
+    options.density,
+    'depthFog.density',
+    0,
+    1,
+    DEPTH_FOG_DEFAULTS.density,
+  );
   const startDistanceMeters = finiteInRange(
     options.startDistanceMeters,
     'depthFog.startDistanceMeters',
@@ -340,7 +344,10 @@ export function resolveDepthFogOptions(options: DepthFogOptions = {}): ResolvedD
   }
   const color = options.color ?? DEPTH_FOG_DEFAULTS.color;
   if (typeof color !== 'string' || color.trim().length === 0) {
-    throw invalidEnvironment('Environment option depthFog.color must be a CSS color string.', 'depthFog');
+    throw invalidEnvironment(
+      'Environment option depthFog.color must be a CSS color string.',
+      'depthFog',
+    );
   }
   return {
     density,
@@ -361,7 +368,13 @@ export function resolveDepthFogOptions(options: DepthFogOptions = {}): ResolvedD
       1e7,
       DEPTH_FOG_DEFAULTS.topHeightMeters,
     ),
-    brightness: finiteInRange(options.brightness, 'depthFog.brightness', 0.3, 1.4, DEPTH_FOG_DEFAULTS.brightness),
+    brightness: finiteInRange(
+      options.brightness,
+      'depthFog.brightness',
+      0.3,
+      1.4,
+      DEPTH_FOG_DEFAULTS.brightness,
+    ),
   };
 }
 
@@ -403,8 +416,20 @@ export function resolvePrecipitationOptions(
   const intensity: PrecipitationIntensity = declared;
   return {
     intensity,
-    density: finiteInRange(options.density, 'precipitation.density', 0.3, 2.5, PRECIPITATION_DEFAULTS.density),
-    speed: finiteInRange(options.speed, 'precipitation.speed', 0.5, 8, PRECIPITATION_DEFAULTS.speed),
+    density: finiteInRange(
+      options.density,
+      'precipitation.density',
+      0.3,
+      2.5,
+      PRECIPITATION_DEFAULTS.density,
+    ),
+    speed: finiteInRange(
+      options.speed,
+      'precipitation.speed',
+      0.5,
+      8,
+      PRECIPITATION_DEFAULTS.speed,
+    ),
     windDirection: finiteInRange(
       options.windDirection,
       'precipitation.windDirection',

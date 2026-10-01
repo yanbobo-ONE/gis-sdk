@@ -180,7 +180,10 @@ export class CesiumCameraController implements CameraController {
     }
     let focus: WorldPoint | undefined;
     try {
-      focus = this.camera.pickEllipsoid(new Cartesian2(width / 2, height / 2), scene.globe?.ellipsoid);
+      focus = this.camera.pickEllipsoid(
+        new Cartesian2(width / 2, height / 2),
+        scene.globe?.ellipsoid,
+      );
     } catch {
       // 二维模式或相机指向天空时可能抛错，统一按"算不出"处理。
       focus = undefined;

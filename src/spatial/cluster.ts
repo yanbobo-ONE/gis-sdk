@@ -50,7 +50,7 @@ function unwrapLongitude(reference: number, longitude: number): number {
 
 /** 把经度归一化到 (-180, 180]。 */
 function wrapLongitude(longitude: number): number {
-  const wrapped = ((longitude % 360) + 540) % 360 - 180;
+  const wrapped = (((longitude % 360) + 540) % 360) - 180;
   return wrapped === -180 ? 180 : wrapped;
 }
 
@@ -69,7 +69,10 @@ function wrapLongitude(longitude: number): number {
  * @returns 聚合结果，按网格行列排序（从南到北、从西到东），同一批数据输出顺序稳定。
  * @throws `INVALID_SPATIAL_INPUT` 边长非法、坐标非法或点数超过上限。
  */
-export function clusterPoints<T>(items: readonly T[], options: ClusterOptions<T>): readonly PointCluster<T>[] {
+export function clusterPoints<T>(
+  items: readonly T[],
+  options: ClusterOptions<T>,
+): readonly PointCluster<T>[] {
   const operation = 'clusterPoints';
   const rawItems: unknown = items;
   if (!isUnknownArray(rawItems)) {
@@ -83,7 +86,11 @@ export function clusterPoints<T>(items: readonly T[], options: ClusterOptions<T>
   }
   const candidate: unknown = options;
   const cellSizeMeters = (candidate as Partial<ClusterOptions<T>> | undefined)?.cellSizeMeters;
-  if (typeof cellSizeMeters !== 'number' || !Number.isFinite(cellSizeMeters) || cellSizeMeters <= 0) {
+  if (
+    typeof cellSizeMeters !== 'number' ||
+    !Number.isFinite(cellSizeMeters) ||
+    cellSizeMeters <= 0
+  ) {
     throw invalidInput('clusterPoints cellSizeMeters must be a positive finite number.', operation);
   }
   const minCount = (candidate as Partial<ClusterOptions<T>>).minCount ?? 1;

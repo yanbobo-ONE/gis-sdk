@@ -19,7 +19,9 @@ const cesium = vi.hoisted(() => {
 
 vi.mock('cesium', () => ({
   Resource: class Resource {
-    constructor(readonly options: { readonly url: string; readonly headers?: Record<string, string> }) {}
+    constructor(
+      readonly options: { readonly url: string; readonly headers?: Record<string, string> },
+    ) {}
   },
   WebMapServiceImageryProvider: cesium.WebMapServiceImageryProvider,
 }));
@@ -246,7 +248,8 @@ describe('createWmsLayer', () => {
       context,
     );
 
-    const url = view.items[0]?.provider.options.url as { options?: { headers?: unknown } } | undefined;
+    const url = view.items[0]?.provider.options.url as
+      { options?: { headers?: unknown } } | undefined;
     expect(url).toBeInstanceOf((await import('cesium')).Resource);
     expect(url?.options?.headers).toEqual({ Authorization: 'Bearer token' });
   });

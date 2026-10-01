@@ -416,7 +416,12 @@ describe('points layer', () => {
 
     expect(layer.count).toBe(10);
     expect(layer.labelCount).toBe(4);
-    expect(labelsOf(view.items)?.labels.map((label) => label.text)).toEqual(['P0', 'P1', 'P2', 'P3']);
+    expect(labelsOf(view.items)?.labels.map((label) => label.text)).toEqual([
+      'P0',
+      'P1',
+      'P2',
+      'P3',
+    ]);
 
     // maxLabels 为 0 时不建标签集合。
     const noLabels = await createPointsLayer(
@@ -467,7 +472,11 @@ describe('points layer', () => {
   it('validates label configuration and text', () => {
     const view = createViewer();
     const context = createContext().context;
-    const base = { id: 'targets', type: 'points' as const, points: [{ longitude: 1, latitude: 2 }] };
+    const base = {
+      id: 'targets',
+      type: 'points' as const,
+      points: [{ longitude: 1, latitude: 2 }],
+    };
 
     // 与点位校验一致：建点是同步过程，工厂直接抛出。
     const cases: readonly [Parameters<typeof createPointsLayer>[1]][] = [
@@ -496,7 +505,11 @@ describe('points layer', () => {
     expect(() =>
       createPointsLayer(
         view.viewer as never,
-        { ...base, points: [{ longitude: 1, latitude: 2, label: '   ' }], labels: { enabled: true } },
+        {
+          ...base,
+          points: [{ longitude: 1, latitude: 2, label: '   ' }],
+          labels: { enabled: true },
+        },
         context,
       ),
     ).not.toThrow();

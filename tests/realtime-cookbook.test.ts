@@ -241,7 +241,9 @@ describe('realtime cookbook assembly', () => {
     expect(harness.waterline.snapshot.queuedSamples).toBe(1);
 
     // 新会话开始：门禁切换会话，积压被清空。
-    harness.sockets[0]?.deliver(frame({ sessionId: 'session-2', kind: 'session-begin', sequence: 0 }));
+    harness.sockets[0]?.deliver(
+      frame({ sessionId: 'session-2', kind: 'session-begin', sequence: 0 }),
+    );
     expect(harness.gate.sessionId).toBe('session-2');
     expect(harness.waterline.snapshot.queuedSamples).toBe(0);
 

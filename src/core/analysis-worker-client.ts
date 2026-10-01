@@ -16,10 +16,7 @@ import {
   toAnalysisWorkerFailure,
   toAnalysisWorkerSuccess,
 } from './analysis-worker-protocol.js';
-import type {
-  AnalysisWorkerPort,
-  AnalysisWorkerRequest,
-} from './analysis-worker-protocol.js';
+import type { AnalysisWorkerPort, AnalysisWorkerRequest } from './analysis-worker-protocol.js';
 import { GisError } from './errors.js';
 
 /** Worker 客户端配置。 */

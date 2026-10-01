@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 const cesium = vi.hoisted(() => {
   class FakeResource {
-    constructor(readonly options: { readonly url: string; readonly headers?: Record<string, string> }) {}
+    constructor(
+      readonly options: { readonly url: string; readonly headers?: Record<string, string> },
+    ) {}
     get url(): string {
       return this.options.url;
     }
@@ -15,7 +17,10 @@ const cesium = vi.hoisted(() => {
 
 vi.mock('cesium', () => ({ Resource: cesium.FakeResource }));
 
-import { normalizeRequestHeaders, withRequestHeaders } from '../src/cesium/layers/request-headers.js';
+import {
+  normalizeRequestHeaders,
+  withRequestHeaders,
+} from '../src/cesium/layers/request-headers.js';
 
 describe('normalizeRequestHeaders', () => {
   it('keeps valid headers and freezes the result', () => {
@@ -65,8 +70,9 @@ describe('withRequestHeaders', () => {
 
     expect(resource).toBeInstanceOf(cesium.FakeResource);
     // 运行期是 mock 的 Resource，类型来自真实 Cesium 声明，因此经 unknown 收窄。
-    const options = (resource as unknown as { options: { url: string; headers?: Record<string, string> } })
-      .options;
+    const options = (
+      resource as unknown as { options: { url: string; headers?: Record<string, string> } }
+    ).options;
     expect(options.url).toBe('https://example.com/wms');
     expect(options.headers).toEqual({ Authorization: 'Bearer t' });
   });

@@ -62,7 +62,10 @@ const noTerrain = {
     ),
 };
 
-function createPool(workerCount: number, options: Parameters<typeof createAnalysisWorkerPool>[1] = {}) {
+function createPool(
+  workerCount: number,
+  options: Parameters<typeof createAnalysisWorkerPool>[1] = {},
+) {
   const ports: AnalysisWorkerPort[] = [];
   const hosts: { dispose(): void }[] = [];
   for (let index = 0; index < workerCount; index += 1) {
@@ -183,9 +186,9 @@ describe('createAnalysisWorkerPool', () => {
     harness.pool.dispose();
 
     await expect(queued).rejects.toMatchObject({ code: 'ANALYSIS_WORKER_DISPOSED' });
-    expect(() =>
-      harness.pool.run('bbox', { input: { longitude: 0, latitude: 0 } }),
-    ).toThrow(expect.objectContaining({ code: 'ANALYSIS_WORKER_DISPOSED' }));
+    expect(() => harness.pool.run('bbox', { input: { longitude: 0, latitude: 0 } })).toThrow(
+      expect.objectContaining({ code: 'ANALYSIS_WORKER_DISPOSED' }),
+    );
     await inFlight;
     harness.dispose();
   });

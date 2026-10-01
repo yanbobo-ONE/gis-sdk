@@ -29,7 +29,12 @@ interface Frame {
 // 1) 链路：连接、重连、心跳、按类型分发
 const socket = new RealtimeSocketClient({
   url: 'wss://example.com/realtime',
-  heartbeat: { intervalMs: 15_000, timeoutMs: 5_000, message: { type: 'ping' }, isPong: (m) => m.type === 'pong' },
+  heartbeat: {
+    intervalMs: 15_000,
+    timeoutMs: 5_000,
+    message: { type: 'ping' },
+    isPong: (m) => m.type === 'pong',
+  },
 });
 
 // 2) 会话门禁：旧会话的迟到包直接丢
@@ -101,14 +106,14 @@ socket.connect();
 
 ## 每一层在挡什么
 
-| 层                     | 挡掉的问题                                             | 读什么诊断                                    |
-| ---------------------- | ------------------------------------------------------ | --------------------------------------------- |
-| `RealtimeSocketClient` | 断线、心跳超时、解码失败；按类型路由                   | `socket.stats`：消息数 / 解码失败 / 重连次数  |
-| `RealtimeSessionGate`  | 旧会话的迟到包、控制消息误入业务管线                   | `gate.sessionId`                              |
-| `RealtimeResyncController` | 序列断档（丢包）导致的错位，请求快照补齐            | `resync.snapshot`：state / expected / 抑制数  |
-| `RealtimeWaterline`    | 乱序样本、超前样本、长时间不更新的对象                 | `waterline.snapshot`：水位线 / 队列 / 丢弃数  |
-| `DataPipeline`         | 突发流量、同一对象的重复帧                             | `pipeline.stats`：合并数 / 丢弃数 / 队列长度  |
-| `DataPipelineFrameScheduler` | 一帧内处理太多数据导致掉帧                       | `scheduler.stats`：请求 / 合并 / 每帧消费数   |
+| 层                           | 挡掉的问题                               | 读什么诊断                                   |
+| ---------------------------- | ---------------------------------------- | -------------------------------------------- |
+| `RealtimeSocketClient`       | 断线、心跳超时、解码失败；按类型路由     | `socket.stats`：消息数 / 解码失败 / 重连次数 |
+| `RealtimeSessionGate`        | 旧会话的迟到包、控制消息误入业务管线     | `gate.sessionId`                             |
+| `RealtimeResyncController`   | 序列断档（丢包）导致的错位，请求快照补齐 | `resync.snapshot`：state / expected / 抑制数 |
+| `RealtimeWaterline`          | 乱序样本、超前样本、长时间不更新的对象   | `waterline.snapshot`：水位线 / 队列 / 丢弃数 |
+| `DataPipeline`               | 突发流量、同一对象的重复帧               | `pipeline.stats`：合并数 / 丢弃数 / 队列长度 |
+| `DataPipelineFrameScheduler` | 一帧内处理太多数据导致掉帧               | `scheduler.stats`：请求 / 合并 / 每帧消费数  |
 
 ## 容易踩的四处
 
@@ -127,11 +132,11 @@ socket.connect();
 按**数据流反向**释放，避免销毁后仍有回调往里推数据：
 
 ```ts
-scheduler.dispose();     // 先停帧消费
-pipeline.close();        // 再关缓冲
+scheduler.dispose(); // 先停帧消费
+pipeline.close(); // 再关缓冲
 waterline.reset();
 resync.reset();
-socket.dispose();        // 最后断链路
+socket.dispose(); // 最后断链路
 ```
 
 `map.destroy()` 会释放地图侧的资源；链路与管线属于业务侧，需要自己按上面的顺序收尾。

@@ -33,9 +33,9 @@ describe('resolveDepthFogOptions', () => {
     expect(() => resolveDepthFogOptions({ color: '   ' })).toThrow(
       expect.objectContaining({ code: 'INVALID_ENVIRONMENT_CONFIG' }),
     );
-    expect(() => resolveDepthFogOptions({ startDistanceMeters: 5_000, endDistanceMeters: 5_000 })).toThrow(
-      expect.objectContaining({ code: 'INVALID_ENVIRONMENT_CONFIG' }),
-    );
+    expect(() =>
+      resolveDepthFogOptions({ startDistanceMeters: 5_000, endDistanceMeters: 5_000 }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ENVIRONMENT_CONFIG' }));
     expect(() => resolveDepthFogOptions({ brightness: Number.NaN })).toThrow(
       expect.objectContaining({ code: 'INVALID_ENVIRONMENT_CONFIG' }),
     );

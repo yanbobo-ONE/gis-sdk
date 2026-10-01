@@ -7,19 +7,19 @@
 
 ## 1. 结论摘要
 
-| 模块                                        | 行数     | 裁决                                                                                        |
-| ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `simulation/` 轨道与姿态数学                | 630      | **已落地**：六根数、二体传播、锚点轨道、采样、最近接近、姿态积分（见本仓库 `src/spatial`）  |
-| `simulation/CzmlAdapter.ts`                 | 530      | **已落地（P1）**：`czmlFromPositions()` / `czmlFromSamples()` / `positionsFromCzml()`；数据源加载仍走原生出口 |
+| 模块                                        | 行数     | 裁决                                                                                                                     |
+| ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `simulation/` 轨道与姿态数学                | 630      | **已落地**：六根数、二体传播、锚点轨道、采样、最近接近、姿态积分（见本仓库 `src/spatial`）                               |
+| `simulation/CzmlAdapter.ts`                 | 530      | **已落地（P1）**：`czmlFromPositions()` / `czmlFromSamples()` / `positionsFromCzml()`；数据源加载仍走原生出口            |
 | `interaction/` 绘制编辑与捕捉               | 约 800   | **已落地（P1）**：`map.drawing.edit()` / `commitEdit()` / `cancelEdit()` 与 `DrawingEditMachine`；**吸附与顶点增删未做** |
-| `playback/` 时间轴与播放时钟                | 约 700   | **已落地（P1）**：`SimulationClock` + `ReplayTimeline`；帧解析、数据源与事件快照留在业务      |
-| `view/CameraSynchronizer`                   | 约 200   | **降级落地（P2）**：`map.camera.view` / `viewRectangle` 只读快照；多视图同步留给业务           |
-| `environment/` 轻量效果（雾、霾、降水）     | 约 900   | **已落地（P2）**：`map.environment.set()` 深度雾 / 基础雾 / 雨 / 雪，着色器内联不依赖资产     |
-| `environment/` 重效果（云体积、热力、风场） | 约 6,000 | **只定契约**：依赖 shader、纹理资产与数据集，先给端口与边界，不动实现                       |
-| `plot/` 标绘                                | 2,484    | **只定契约**：几何含业务语义且参照实现仍在演进，SDK 提供图层与端口，几何留给业务            |
-| `view/MapFragmentTransition`                | 559      | **留在业务**：双 Viewer + 截图过渡是页面级编排；SDK 已提供 `capture()` 与 `setMode()` 原语  |
-| `materials/` 自定义 GLSL                    | 约 400   | **留在业务**：注册自定义材质要走 Cesium 私有材质缓存，版本敏感；SDK 只用公开材质类型        |
-| `core/cesiumCompatibility`                  | 122      | **不移植**：SDK 锁定单一 Cesium 版本，兼容垫片没有意义                                      |
+| `playback/` 时间轴与播放时钟                | 约 700   | **已落地（P1）**：`SimulationClock` + `ReplayTimeline`；帧解析、数据源与事件快照留在业务                                 |
+| `view/CameraSynchronizer`                   | 约 200   | **降级落地（P2）**：`map.camera.view` / `viewRectangle` 只读快照；多视图同步留给业务                                     |
+| `environment/` 轻量效果（雾、霾、降水）     | 约 900   | **已落地（P2）**：`map.environment.set()` 深度雾 / 基础雾 / 雨 / 雪，着色器内联不依赖资产                                |
+| `environment/` 重效果（云体积、热力、风场） | 约 6,000 | **只定契约**：依赖 shader、纹理资产与数据集，先给端口与边界，不动实现                                                    |
+| `plot/` 标绘                                | 2,484    | **只定契约**：几何含业务语义且参照实现仍在演进，SDK 提供图层与端口，几何留给业务                                         |
+| `view/MapFragmentTransition`                | 559      | **留在业务**：双 Viewer + 截图过渡是页面级编排；SDK 已提供 `capture()` 与 `setMode()` 原语                               |
+| `materials/` 自定义 GLSL                    | 约 400   | **留在业务**：注册自定义材质要走 Cesium 私有材质缓存，版本敏感；SDK 只用公开材质类型                                     |
+| `core/cesiumCompatibility`                  | 122      | **不移植**：SDK 锁定单一 Cesium 版本，兼容垫片没有意义                                                                   |
 
 ## 2. 判断标准
 
@@ -101,14 +101,14 @@
 
 ## 5. 建议路径
 
-| 阶段 | 内容                                                     | 预估       |
-| ---- | -------------------------------------------------------- | ---------- |
-| P1-a | CZML 生成与解析（`src/core/czml.ts`）                    | 300–400 行 |
+| 阶段 | 内容                                                     | 预估                   |
+| ---- | -------------------------------------------------------- | ---------------------- |
+| P1-a | CZML 生成与解析（`src/core/czml.ts`）                    | 300–400 行             |
 | P1-b | 回放时间轴与播放时钟（`src/core/replay-timeline.ts` 等） | 已完成（事件快照未做） |
-| P1-c | 绘制编辑与吸附（`map.drawing.edit`）                     | 已完成（吸附未做） |
-| P2-a | 轻量环境效果（雾、霾、降水）                             | 已完成     |
-| P2-b | `map.camera.view` 只读快照与文档补强                     | 100 行     |
-| 待定 | `map.environment` 端口与标绘 `PlotGeometryPort` 契约     | 契约先行   |
+| P1-c | 绘制编辑与吸附（`map.drawing.edit`）                     | 已完成（吸附未做）     |
+| P2-a | 轻量环境效果（雾、霾、降水）                             | 已完成                 |
+| P2-b | `map.camera.view` 只读快照与文档补强                     | 100 行                 |
+| 待定 | `map.environment` 端口与标绘 `PlotGeometryPort` 契约     | 契约先行               |
 
 每一阶段的验收与既有流程一致：单测与交叉验证、`pnpm lint` / `typecheck` / `test` / `build` / `pack:check` / `docs:build` 全绿、能力状态表与 README 同步、新增 changeset。
 

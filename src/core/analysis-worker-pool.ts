@@ -88,10 +88,18 @@ export function createAnalysisWorkerPool(
   options: AnalysisWorkerPoolOptions = {},
 ): AnalysisWorkerPool {
   if (!Array.isArray(ports) || ports.length === 0) {
-    throw poolError('Analysis worker pool requires at least one port.', 'INVALID_ANALYSIS_INPUT', 'create');
+    throw poolError(
+      'Analysis worker pool requires at least one port.',
+      'INVALID_ANALYSIS_INPUT',
+      'create',
+    );
   }
   const maxPendingPerWorker = options.maxPendingPerWorker ?? 1;
-  if (!Number.isInteger(maxPendingPerWorker) || maxPendingPerWorker < 1 || maxPendingPerWorker > 64) {
+  if (
+    !Number.isInteger(maxPendingPerWorker) ||
+    maxPendingPerWorker < 1 ||
+    maxPendingPerWorker > 64
+  ) {
     throw poolError(
       'Analysis worker pool maxPendingPerWorker must be an integer between 1 and 64.',
       'INVALID_ANALYSIS_INPUT',
@@ -199,7 +207,11 @@ export function createAnalysisWorkerPool(
       runOptions: AnalysisRunOptions = {},
     ): Promise<AnalysisResultMap[T]> {
       if (disposed) {
-        throw poolError('Analysis worker pool has been disposed.', 'ANALYSIS_WORKER_DISPOSED', 'run');
+        throw poolError(
+          'Analysis worker pool has been disposed.',
+          'ANALYSIS_WORKER_DISPOSED',
+          'run',
+        );
       }
       return new Promise<AnalysisResultMap[T]>((resolve, reject) => {
         const request: QueuedRequest = {

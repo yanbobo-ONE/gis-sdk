@@ -36,14 +36,16 @@ class FakeSocket implements RealtimeSocketLike {
   }
 }
 
-function createHarness(options: {
-  maxRetries?: number;
-  retryDelayMs?: number;
-  maxRetryDelayMs?: number;
-  heartbeat?: { intervalMs: number; timeoutMs: number; message: unknown };
-  decode?: (data: unknown) => RealtimeSocketMessage;
-  url?: string | (() => string);
-} = {}) {
+function createHarness(
+  options: {
+    maxRetries?: number;
+    retryDelayMs?: number;
+    maxRetryDelayMs?: number;
+    heartbeat?: { intervalMs: number; timeoutMs: number; message: unknown };
+    decode?: (data: unknown) => RealtimeSocketMessage;
+    url?: string | (() => string);
+  } = {},
+) {
   const sockets: FakeSocket[] = [];
   const client = new RealtimeSocketClient({
     url: options.url ?? 'wss://example.com/realtime',

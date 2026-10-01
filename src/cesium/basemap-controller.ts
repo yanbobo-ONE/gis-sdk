@@ -6,7 +6,8 @@ import { GisError } from '../core/errors.js';
 import { normalizeRequestHeaders, withRequestHeaders } from './layers/request-headers.js';
 
 /** 归一化后的底图配置：透明度与显隐一定存在，请求头可选。 */
-type NormalizedBasemap = Required<Omit<XyzBasemapSpec, 'headers'>> & Pick<XyzBasemapSpec, 'headers'>;
+type NormalizedBasemap = Required<Omit<XyzBasemapSpec, 'headers'>> &
+  Pick<XyzBasemapSpec, 'headers'>;
 
 function invalidConfig(message: string): GisError {
   return new GisError(message, {

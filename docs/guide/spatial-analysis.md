@@ -60,7 +60,7 @@ const clusters = clusterPoints(stations, {
 需要"按屏幕像素聚合"（缩放时簇自动合并/展开）时，用 `map.camera.metersPerPixel` 把像素换算成米再调用：
 
 ```ts
-const perPixel = map.camera.metersPerPixel;            // 屏幕中心处每像素米数，二维 / 三维都适用
+const perPixel = map.camera.metersPerPixel; // 屏幕中心处每像素米数，二维 / 三维都适用
 const clusters = clusterPoints(points, { cellSizeMeters: (perPixel ?? 0) * 48 }); // 48 像素一簇
 ```
 
@@ -71,9 +71,9 @@ const clusters = clusterPoints(points, { cellSizeMeters: (perPixel ?? 0) * 48 })
 ```ts
 import { convexHull, simplifyPath, simplifyRing, validatePolygon } from '@yanbobo/gis-sdk/core';
 
-convexHull(points);                       // 闭合凸包环，跨半球点集应先投影
-simplifyPath(ring, 50);                   // RDP 抽稀，容差单位为米：{ points, removedCount }
-simplifyRing(ring, 50);                   // 同理，但保证结果闭合
+convexHull(points); // 闭合凸包环，跨半球点集应先投影
+simplifyPath(ring, 50); // RDP 抽稀，容差单位为米：{ points, removedCount }
+simplifyRing(ring, 50); // 同理，但保证结果闭合
 validatePolygon(polygon, { requireClosed: true }); // 问题列表，空数组表示通过
 ```
 
@@ -143,16 +143,16 @@ transformGeoPath(csvPoints, 'EPSG:4547', 'EPSG:4490'); // 批量转换，顺序�
 | `MAX_BATCH_POINTS`      | `200000` | 单次批量判断的点数上限   |
 | `MAX_GEOMETRY_VERTICES` | `200000` | 单个环或折线的顶点数上限 |
 
-| 错误码                   | 场景                                                    |
-| ------------------------ | ------------------------------------------------------- |
-| `INVALID_COORDINATES`    | 坐标非有限数，或地理坐标超出 `±180 / ±90`               |
-| `INVALID_ANALYSIS_INPUT` | 分析工具半径非正等参数问题                              |
-| `ANALYSIS_TERRAIN_UNAVAILABLE` | 分析所需的地形高度不可用（可重试）                |
-| `ANALYSIS_ABORTED`       | 分析调用被 `signal` 中止                                |
-| `UNKNOWN_ANALYSIS_TOOL`  | 请求了未注册的分析工具 ID                               |
-| `INVALID_SPATIAL_INPUT`  | 顶点不足、形状不是数组、单位/绕向取值不受支持、超过限额 |
-| `INVALID_CRS_DEFINITION` | 标识或定义为空、重复注册、带号越界、宽度不是 3 或 6     |
-| `UNSUPPORTED_CRS`        | 转换用到的 CRS 既未注册、也不是 proj4 内置定义          |
+| 错误码                         | 场景                                                    |
+| ------------------------------ | ------------------------------------------------------- |
+| `INVALID_COORDINATES`          | 坐标非有限数，或地理坐标超出 `±180 / ±90`               |
+| `INVALID_ANALYSIS_INPUT`       | 分析工具半径非正等参数问题                              |
+| `ANALYSIS_TERRAIN_UNAVAILABLE` | 分析所需的地形高度不可用（可重试）                      |
+| `ANALYSIS_ABORTED`             | 分析调用被 `signal` 中止                                |
+| `UNKNOWN_ANALYSIS_TOOL`        | 请求了未注册的分析工具 ID                               |
+| `INVALID_SPATIAL_INPUT`        | 顶点不足、形状不是数组、单位/绕向取值不受支持、超过限额 |
+| `INVALID_CRS_DEFINITION`       | 标识或定义为空、重复注册、带号越界、宽度不是 3 或 6     |
+| `UNSUPPORTED_CRS`              | 转换用到的 CRS 既未注册、也不是 proj4 内置定义          |
 
 所有失败都抛 `GisError`，`module` 为 `spatial`，`code` 稳定可用于分支判断。没有结果的情况（例如屏幕拾取未命中）不在这里——那属于 `map.coordinates`。
 

@@ -264,21 +264,15 @@ export function slopeAspectFromPlane(points: readonly PlanePoint[]): SlopeAspect
   const count = points.length;
   // 3×3 正规方程：[[see, sen, se], [sen, snn, sn], [se, sn, count]] · [a, b, c]ᵀ = [seh, snh, sh]ᵀ
   const determinant =
-    see * (snn * count - sn * sn) -
-    sen * (sen * count - sn * se) +
-    se * (sen * sn - snn * se);
+    see * (snn * count - sn * sn) - sen * (sen * count - sn * se) + se * (sen * sn - snn * se);
   if (Math.abs(determinant) < 1e-9) {
     throw profileError('Plane fit points are collinear or coincident.', operation);
   }
   const a =
-    (seh * (snn * count - sn * sn) -
-      sen * (snh * count - sn * sh) +
-      se * (snh * sn - snn * sh)) /
+    (seh * (snn * count - sn * sn) - sen * (snh * count - sn * sh) + se * (snh * sn - snn * sh)) /
     determinant;
   const b =
-    (see * (snh * count - sn * sh) -
-      seh * (sen * count - sn * se) +
-      se * (sen * sh - snh * se)) /
+    (see * (snh * count - sn * sh) - seh * (sen * count - sn * se) + se * (sen * sh - snh * se)) /
     determinant;
   const gradient = Math.hypot(a, b);
   // 平面拟合的截断误差会给出 1e-16 量级的"坡度"，这在物理上没有意义，按平地返回。
