@@ -156,14 +156,20 @@ const survey = await map.layers.add({
 ```ts
 terrain.setVisible(false);
 satellite.setOpacity(0.65);
+satellite.raiseToTop(); // 盖到其它影像图层之上（底图仍在最下）
 await satellite.dispose();
 ```
 
-| 方法/属性                       | 效果                                            |
-| ------------------------------- | ----------------------------------------------- |
-| `visible` / `setVisible(value)` | 读取或修改 `ImageryLayer.show`，不重建 Provider |
-| `opacity` / `setOpacity(value)` | 读取或修改 `ImageryLayer.alpha`，范围 `0..1`    |
-| `dispose()`                     | 幂等调用 `imageryLayers.remove(layer, true)`    |
+| 方法/属性                          | 效果                                            |
+| ---------------------------------- | ----------------------------------------------- |
+| `visible` / `setVisible(value)`    | 读取或修改 `ImageryLayer.show`，不重建 Provider |
+| `opacity` / `setOpacity(value)`    | 读取或修改 `ImageryLayer.alpha`，范围 `0..1`    |
+| `stackIndex`                       | 在业务影像图层里的序号，从 0 起（0 最靠下）     |
+| `raise()` / `lower()`              | 上移 / 下移一层，到边界返回 `false`             |
+| `raiseToTop()` / `lowerToBottom()` | 移到最上 / 最下（底图之上）                     |
+| `dispose()`                        | 幂等调用 `imageryLayers.remove(layer, true)`    |
+
+顺序控制的规则（底图恒在最底层、为什么不给非影像图层排序）见[图层管理 / 堆叠顺序](./layer-management.md#堆叠顺序)。
 
 非法配置为 `INVALID_LAYER_CONFIG`，透明度非法为 `INVALID_LAYER_OPACITY`，Provider 创建失败为可重试的 `LAYER_LOAD_FAILED`。
 

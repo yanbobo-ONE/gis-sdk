@@ -6,6 +6,7 @@ import type { EventHub } from '../../core/event-hub.js';
 import type {
   ImageryLayerHandle,
   LayerEventMap,
+  LayerStacking,
   LayerState,
   SingleImageLayerSpec,
   SingleImageRectangle,
@@ -14,6 +15,7 @@ import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
 import { watchImageryErrors } from './imagery-error-watch.js';
 import type { ImageryErrorWatch } from './imagery-error-watch.js';
+import { createImageryStacking } from './imagery-stacking.js';
 
 function operationAborted(id: string, cause?: unknown): GisError {
   return new GisError(`Layer "${id}" operation was aborted.`, {
@@ -99,6 +101,7 @@ function createRectangle(
 class CesiumSingleImageLayerHandle implements ImageryLayerHandle {
   private readonly lifecycle: LayerHandleRuntime;
   private readonly errorWatch: ImageryErrorWatch;
+  private readonly stacking: LayerStacking;
   private currentOpacity: number;
 
   constructor(
@@ -126,6 +129,7 @@ class CesiumSingleImageLayerHandle implements ImageryLayerHandle {
     this.errorWatch = watchImageryErrors(currentLayer, (cause: unknown) => {
       this.lifecycle.recordError(cause);
     });
+    this.stacking = createImageryStacking(viewer, () => this.currentLayer);
   }
 
   readonly type = 'single-image' as const;
@@ -148,6 +152,30 @@ class CesiumSingleImageLayerHandle implements ImageryLayerHandle {
 
   get errorCount(): number {
     return this.lifecycle.errorCount;
+  }
+
+  get stackIndex(): number | undefined {
+    return this.stacking.stackIndex;
+  }
+
+  raise(): boolean {
+    this.lifecycle.assertUsable('raise');
+    return this.stacking.raise();
+  }
+
+  lower(): boolean {
+    this.lifecycle.assertUsable('lower');
+    return this.stacking.lower();
+  }
+
+  raiseToTop(): boolean {
+    this.lifecycle.assertUsable('raiseToTop');
+    return this.stacking.raiseToTop();
+  }
+
+  lowerToBottom(): boolean {
+    this.lifecycle.assertUsable('lowerToBottom');
+    return this.stacking.lowerToBottom();
   }
 
   setVisible(visible: boolean): void {

@@ -36,6 +36,7 @@ import { LoadLimiter } from './load-limiter.js';
 import { CesiumPickingController } from './picking-controller.js';
 import { CesiumQualityController } from './quality-controller.js';
 import { CesiumClockController } from './clock-controller.js';
+import { registerImageryFloor } from './layers/imagery-stacking.js';
 import { CesiumTerrainController } from './terrain-controller.js';
 import { CesiumTerrainSampler } from './terrain-sampling.js';
 import type { CesiumRawContext } from './types.js';
@@ -227,6 +228,8 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       });
       // 外观策略缓存按地图隔离，同一地图内的多个模型共享同一策略实例。
       const layerServices = { modelLoad, modelAppearance: new ModelAppearanceShaders() };
+      // 业务影像图层的排序下限由底图决定，注册一次即可（按 Viewer 索引，随地图释放）。
+      registerImageryFloor(viewerInstance, () => basemapRuntime?.imageryFloorIndex() ?? 0);
       const layerRuntime = new LayerRuntime((spec, context) => {
         return createCesiumLayer(viewerInstance, spec, context, layerServices);
       });

@@ -63,6 +63,21 @@ export class CesiumBasemapController implements BasemapController {
 
   constructor(private readonly viewer: Pick<Viewer, 'imageryLayers'>) {}
 
+  /**
+   * 业务影像图层不得排到这个下标之下：底图存在时是它上面一层，否则是 0。
+   *
+   * 图层顺序是在影像集合上做的，需要知道底部被底图占了几层；底图随时可替换或清空，
+   * 因此每次调用现算，而不是在图层创建时取一次快照。
+   */
+  imageryFloorIndex(): number {
+    const layer = this.currentLayer;
+    if (!layer) {
+      return 0;
+    }
+    const index = this.viewer.imageryLayers.indexOf(layer);
+    return index < 0 ? 0 : index + 1;
+  }
+
   get type(): BasemapType {
     return this.currentType;
   }

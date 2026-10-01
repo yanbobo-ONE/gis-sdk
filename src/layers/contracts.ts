@@ -549,8 +549,32 @@ export interface WmsLayerHandle extends ImageryLayerHandle {
   reload(): Promise<void>;
 }
 
-/** 影像图层共享的透明度句柄能力。 */
-export interface ImageryLayerHandle extends LayerHandle {
+/**
+ * 影像图层的堆叠顺序控制。
+ *
+ * 顺序只在**影像通道内部**有定义：影像图层按集合顺序依次叠加，顺序决定谁盖住谁。
+ * 序号从 0 起，0 是最靠下的业务影像图层；**底图恒在最底层**，任何操作都不会把业务图层
+ * 排到底图之下（底图存在时下限就是它上面一层）。底图清空后下限随之变为 0。
+ *
+ * 非影像图层（点位 / 折线 / 模型 / 3D Tiles / CZML / GeoJSON）没有这套方法：图元与实体的
+ * 可见性由几何与深度决定，集合顺序不决定谁盖住谁，给出一个"能调但看不出效果"的接口更糟。
+ * 取舍与用法见文档「图层管理 / 堆叠顺序」。
+ */
+export interface LayerStacking {
+  /** 当前在业务影像图层里的序号，从 0 起（0 最靠下）；不在集合里时为 `undefined`。 */
+  readonly stackIndex: number | undefined;
+  /** 上移一层；已在最上层时返回 `false`。 */
+  raise(): boolean;
+  /** 下移一层；已在底图之上时返回 `false`。 */
+  lower(): boolean;
+  /** 移到业务影像图层最上层；已在那儿时返回 `false`。 */
+  raiseToTop(): boolean;
+  /** 移到业务影像图层最下层（底图之上）；已在那儿时返回 `false`。 */
+  lowerToBottom(): boolean;
+}
+
+/** 影像图层共享的透明度与堆叠顺序能力。 */
+export interface ImageryLayerHandle extends LayerHandle, LayerStacking {
   /** 当前透明度。 */
   readonly opacity: number;
   /** 设置 0 到 1 之间的透明度。 */

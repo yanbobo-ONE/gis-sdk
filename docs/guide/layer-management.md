@@ -74,6 +74,37 @@ await map.layers.clear();
 
 图层释放后调用修改方法会抛出 `LAYER_DISPOSED`。直接调用 `handle.dispose()` 与 `map.layers.remove(id)` 的资源结果一致。
 
+## 堆叠顺序
+
+影像图层（WMS / TMS / WMTS / 单图影像）四个句柄都有顺序控制：
+
+```ts
+const roads = await map.layers.add({ id: 'roads', type: 'wms', url, layers: 'city:roads' });
+const labels = await map.layers.add({ id: 'labels', type: 'wms', url, layers: 'city:labels' });
+
+labels.stackIndex; // 1（0 是最靠下的业务影像图层）
+roads.raiseToTop(); // 提到最上层，盖住 labels
+roads.stackIndex; // 1，与 labels 换了位置
+roads.raise(); // 上移一层
+roads.lower(); // 下移一层
+roads.lowerToBottom(); // 移到最下层（底图之上）
+```
+
+| 成员              | 运行效果                                                      |
+| ----------------- | ------------------------------------------------------------- |
+| `stackIndex`      | 当前序号，从 0 起（0 最靠下）；不在影像集合里时为 `undefined` |
+| `raise()`         | 上移一层；已在最上层返回 `false`                              |
+| `lower()`         | 下移一层；已在底图之上返回 `false`                            |
+| `raiseToTop()`    | 移到业务影像图层最上层；已在那儿返回 `false`                  |
+| `lowerToBottom()` | 移到业务影像图层最下层（底图之上）；已在那儿返回 `false`      |
+
+规则与边界：
+
+- **底图恒在最底层**。这四个操作不会把业务图层排到底图之下，`stackIndex` 也按业务影像图层计数，底图不占号；底图清空后下限自动变为 0。底图与业务图层的关系见[地图控制](./map-controls.md#初始化的-xyz-底图)。
+- **顺序只在影像通道内有定义**：影像图层按集合顺序叠加，所以顺序决定谁盖住谁。业务通过 `map.raw.viewer.imageryLayers` 手动调整顺序后，`stackIndex` 读数同样会跟着变。
+- **非影像图层没有这套方法**：点位 / 折线 / 模型 / 3D Tiles 属于图元通道，CZML / GeoJSON 属于数据源通道。图元与实体的可见性由几何与深度决定，集合顺序不决定谁盖住谁；给一个"能调但看不出效果"的接口比没有更糟，因此 SDK 不提供，也不接受"跨通道排序"（比如把影像图层排到点位图层之上）。
+- `reload()` / `setStyle()` / `setFilter()` 会重建 Provider，但句柄会停在原来的层号上，顺序不受影响。
+
 ## 远端请求失败的可观测性
 
 影像图层（WMS、TMS、WMTS、单图影像）加入场景后，瓦片请求失败不会打断调用方，也不会重复抛异常：SDK 累计失败次数，并且只在首个失败时向图层事件发出一次 `error`，避免瓦片级错误刷屏。

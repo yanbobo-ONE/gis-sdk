@@ -20,6 +20,7 @@ export type {
   LayerInfo,
   LayerManager,
   LayerSpec,
+  LayerStacking,
   LayerState,
   LayerType,
   ModelAppearanceMode,

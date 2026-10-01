@@ -7,6 +7,7 @@ import type { EventHub } from '../../core/event-hub.js';
 import type {
   ImageryLayerHandle,
   LayerEventMap,
+  LayerStacking,
   LayerState,
   TmsLayerSpec,
   WmtsLayerSpec,
@@ -15,6 +16,7 @@ import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
 import { watchImageryErrors } from './imagery-error-watch.js';
 import type { ImageryErrorWatch } from './imagery-error-watch.js';
+import { createImageryStacking } from './imagery-stacking.js';
 
 type TmsProviderOptions = NonNullable<Parameters<typeof TileMapServiceImageryProvider.fromUrl>[1]>;
 type WmtsProviderOptions = ConstructorParameters<typeof WebMapTileServiceImageryProvider>[0];
@@ -188,6 +190,7 @@ function normalizeWmts(spec: WmtsLayerSpec): {
 class CesiumTiledImageryLayerHandle implements ImageryLayerHandle {
   private readonly lifecycle: LayerHandleRuntime;
   private readonly errorWatch: ImageryErrorWatch;
+  private readonly stacking: LayerStacking;
   private currentOpacity: number;
 
   constructor(
@@ -216,6 +219,7 @@ class CesiumTiledImageryLayerHandle implements ImageryLayerHandle {
     this.errorWatch = watchImageryErrors(currentLayer, (cause: unknown) => {
       this.lifecycle.recordError(cause);
     });
+    this.stacking = createImageryStacking(viewer, () => this.currentLayer);
   }
 
   get state(): LayerState {
@@ -236,6 +240,30 @@ class CesiumTiledImageryLayerHandle implements ImageryLayerHandle {
 
   get errorCount(): number {
     return this.lifecycle.errorCount;
+  }
+
+  get stackIndex(): number | undefined {
+    return this.stacking.stackIndex;
+  }
+
+  raise(): boolean {
+    this.lifecycle.assertUsable('raise');
+    return this.stacking.raise();
+  }
+
+  lower(): boolean {
+    this.lifecycle.assertUsable('lower');
+    return this.stacking.lower();
+  }
+
+  raiseToTop(): boolean {
+    this.lifecycle.assertUsable('raiseToTop');
+    return this.stacking.raiseToTop();
+  }
+
+  lowerToBottom(): boolean {
+    this.lifecycle.assertUsable('lowerToBottom');
+    return this.stacking.lowerToBottom();
   }
 
   setVisible(visible: boolean): void {

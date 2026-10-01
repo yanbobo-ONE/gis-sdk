@@ -15,6 +15,7 @@
 - 修复地图时钟读数丢 1 毫秒：`JulianDate.toDate()` 的小数毫秒截断会让 `map.clock.time` 与源时钟时间戳差 1 毫秒，现按整秒基准加四舍五入的小数毫秒读取。
 - 验收台增加浏览器端性能矩阵探针：固定机位、关自动降档、等瓦片收敛后读 `map.quality` 的帧采样，输出 12 个场景的帧率 / 分位 / 最长帧 / 长帧 / 长任务与两条对照行，一次实测记录与读数口径见[性能基准](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/performance.md)。
 - 增加帧耗时统计：`/core` 新增零依赖的 `FrameStatistics`，`map.quality.snapshot` 新增 `frameTimeP50Ms` / `frameTimeP95Ms` / `frameTimeMaxMs` / `longFrames` / `longFrameRatio` 读数（分位用最近秩口径）；长帧阈值默认 50 毫秒，可用 `createMap({ quality: { longFrameMs } })` 调整，只影响读数、不参与升降档。
+- 增加影像图层的堆叠顺序控制：WMS / TMS / WMTS / 单图影像句柄新增 `stackIndex` 与 `raise` / `lower` / `raiseToTop` / `lowerToBottom`，底图恒在最底层且序号只按业务影像图层计；图元与数据源通道不提供排序（可见性由几何与深度决定）。
 
 ## 0.1.0-alpha.10
 

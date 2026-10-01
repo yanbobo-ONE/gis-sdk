@@ -22,6 +22,7 @@ const operationMessage = element('operation-message');
 const geoJsonVisible = element('geojson-visible') as HTMLInputElement;
 const wmsFilterToggle = element('wms-filter') as HTMLInputElement;
 const wmsOpacity = element('wms-opacity') as HTMLInputElement;
+const layerOrderValue = element('layer-order-value');
 const environmentValue = element('environment-value');
 const cameraValue = element('camera-value');
 const lineOfSightValue = element('line-of-sight-value');
@@ -66,6 +67,7 @@ controller.subscribe((snapshot) => {
   // 验收脚本与文档从这里取原始矩阵，不用去解析面板文案。
   perfValue.dataset.matrix = snapshot.performanceMatrix ?? '';
   terrainValue.textContent = snapshot.terrain ?? '未验证';
+  layerOrderValue.textContent = snapshot.layerOrder ?? '未验证';
   if (snapshot.error) {
     operationMessage.textContent = snapshot.error;
     operationMessage.dataset.kind = 'error';
@@ -109,6 +111,10 @@ wmsFilterToggle.addEventListener('change', () => {
 
 element('reload-wms').addEventListener('click', () => {
   void runOperation('WMS Provider 刷新', () => controller.reloadWms());
+});
+
+element('probe-layer-order').addEventListener('click', () => {
+  void runOperation('堆叠顺序探针', () => controller.probeLayerOrdering());
 });
 
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-environment]')) {

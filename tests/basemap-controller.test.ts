@@ -28,6 +28,7 @@ function createViewer() {
           if (index >= 0) layers.splice(index, 1);
           return index >= 0;
         }),
+        indexOf: vi.fn((layer: (typeof layers)[number]) => layers.indexOf(layer)),
       },
     },
   };
@@ -81,5 +82,23 @@ describe('CesiumBasemapController', () => {
 
     expect(fixture.layers).toEqual([businessLayer]);
     expect(fixture.viewer.imageryLayers.remove).toHaveBeenCalledWith(expect.anything(), true);
+  });
+
+  it('reports the imagery floor business layers may not go below', () => {
+    const fixture = createViewer();
+    const businessLayer = { alpha: 1, show: true, provider: { kind: 'business' } };
+    fixture.layers.push(businessLayer);
+    const controller = new CesiumBasemapController(fixture.viewer as never);
+
+    // 没有底图时下限是 0：业务图层可以占最底层。
+    expect(controller.imageryFloorIndex()).toBe(0);
+
+    // 底图插到 index 0 之后，下限是它上面一层。
+    controller.set({ type: 'xyz', url: '/tiles/{z}/{x}/{y}.png' });
+    expect(controller.imageryFloorIndex()).toBe(1);
+
+    // 清空底图后下限回到 0（业务图层随之落到最底层）。
+    controller.clear();
+    expect(controller.imageryFloorIndex()).toBe(0);
   });
 });

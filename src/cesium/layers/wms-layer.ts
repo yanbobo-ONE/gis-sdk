@@ -7,6 +7,7 @@ import type { RequestHeaders } from './request-headers.js';
 import type { EventHub } from '../../core/event-hub.js';
 import type {
   LayerEventMap,
+  LayerStacking,
   LayerState,
   WmsFilter,
   WmsLayerHandle,
@@ -17,6 +18,7 @@ import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
 import { watchImageryErrors } from './imagery-error-watch.js';
 import type { ImageryErrorWatch } from './imagery-error-watch.js';
+import { createImageryStacking } from './imagery-stacking.js';
 import { serializeWmsFilter } from './wms-filter.js';
 
 const reservedParameterNames = new Set(['cql_filter', 'layers', 'styles']);
@@ -96,6 +98,7 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
   readonly type = 'wms' as const;
 
   private readonly lifecycle: LayerHandleRuntime;
+  private readonly stacking: LayerStacking;
   private errorWatch: ImageryErrorWatch;
   private currentLayer: ImageryLayer;
   private currentOpacity: number;
@@ -136,6 +139,8 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
     this.errorWatch = watchImageryErrors(initialLayer, (cause: unknown) => {
       this.lifecycle.recordError(cause);
     });
+    // reload 会换掉图层对象，因此按当前图层取值而不是捕获引用。
+    this.stacking = createImageryStacking(viewer, () => this.currentLayer);
   }
 
   get state(): LayerState {
@@ -156,6 +161,30 @@ class CesiumWmsLayerHandle implements WmsLayerHandle {
 
   get errorCount(): number {
     return this.lifecycle.errorCount;
+  }
+
+  get stackIndex(): number | undefined {
+    return this.stacking.stackIndex;
+  }
+
+  raise(): boolean {
+    this.lifecycle.assertUsable('raise');
+    return this.stacking.raise();
+  }
+
+  lower(): boolean {
+    this.lifecycle.assertUsable('lower');
+    return this.stacking.lower();
+  }
+
+  raiseToTop(): boolean {
+    this.lifecycle.assertUsable('raiseToTop');
+    return this.stacking.raiseToTop();
+  }
+
+  lowerToBottom(): boolean {
+    this.lifecycle.assertUsable('lowerToBottom');
+    return this.stacking.lowerToBottom();
   }
 
   setVisible(visible: boolean): void {

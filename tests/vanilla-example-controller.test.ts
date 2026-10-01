@@ -17,6 +17,7 @@ import type {
   GeoJsonLayerSpec,
   LayerManager,
   PointsLayerHandle,
+  WmsLayerHandle,
   WmsLayerSpec,
 } from '../src/entries/layers.js';
 
@@ -64,6 +65,42 @@ function createHarness() {
   };
   // 图层桩按 id 跟踪增删：性能矩阵的清理断言要能真的看见"加上去又收回来"。
   const trackedLayers: { id: string; type: string; state: string; visible: boolean }[] = [];
+  // 堆叠顺序探针用的假影像集合：数组顺序即叠加顺序。
+  const imageryOrder: string[] = [];
+  let imageryFrozen = false;
+  const createStackableImagery = (id: string) => ({
+    id,
+    type: 'wms' as const,
+    state: 'ready' as const,
+    visible: true,
+    opacity: 1,
+    setVisible: vi.fn(),
+    setOpacity: vi.fn(),
+    setFilter: vi.fn(() => Promise.resolve()),
+    reload: vi.fn(() => Promise.resolve()),
+    get stackIndex(): number | undefined {
+      const index = imageryOrder.indexOf(id);
+      return index < 0 ? undefined : index;
+    },
+    raiseToTop: vi.fn(() => {
+      const index = imageryOrder.indexOf(id);
+      if (imageryFrozen || index < 0 || index === imageryOrder.length - 1) {
+        return false;
+      }
+      imageryOrder.splice(index, 1);
+      imageryOrder.push(id);
+      return true;
+    }),
+    lowerToBottom: vi.fn(() => {
+      const index = imageryOrder.indexOf(id);
+      if (imageryFrozen || index <= 0) {
+        return false;
+      }
+      imageryOrder.splice(index, 1);
+      imageryOrder.unshift(id);
+      return true;
+    }),
+  });
   const add = vi.fn(
     (
       spec:
@@ -79,6 +116,10 @@ function createHarness() {
           state: 'ready',
           visible: true,
         });
+      }
+      if (spec.id?.startsWith('order-')) {
+        imageryOrder.push(spec.id);
+        return Promise.resolve(createStackableImagery(spec.id) as unknown as WmsLayerHandle);
       }
       if (spec.type === 'points') {
         return Promise.resolve(points as unknown as PointsLayerHandle);
@@ -317,7 +358,11 @@ function createHarness() {
     environmentClearAll,
     environmentSet,
     filter,
+    freezeImageryOrder: () => {
+      imageryFrozen = true;
+    },
     geoJson,
+    layerOrder: () => [...imageryOrder],
     lineOfSight,
     map,
     points,
@@ -594,6 +639,42 @@ describe('Vanilla example controller', () => {
     expect(harness.map.layers.list().some((layer) => layer.id.startsWith('perf-'))).toBe(false);
     // 环境效果同样恢复晴。
     expect(harness.environmentClearAll).toHaveBeenCalled();
+  });
+
+  it('reorders imagery layers and cleans the probe layers up', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+    });
+    await controller.start('map');
+
+    await controller.probeLayerOrdering();
+
+    // 后加的在上（0/1），换序后两者互换。
+    expect(controller.snapshot().layerOrder).toBe('下 0/上 1 → 换序后 下 1/上 0');
+    expect(harness.layerOrder()).toEqual(['order-upper', 'order-lower']);
+    expect(harness.map.layers.list().some((layer) => layer.id.startsWith('order-'))).toBe(false);
+  });
+
+  it('fails the ordering probe loudly when nothing actually moves', async () => {
+    const harness = createHarness();
+    harness.freezeImageryOrder();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+    });
+    await controller.start('map');
+
+    await expect(controller.probeLayerOrdering()).rejects.toThrow('没有发生移动');
+    // 探针失败也要把临时图层收干净。
+    expect(harness.map.layers.list().some((layer) => layer.id.startsWith('order-'))).toBe(false);
   });
 
   it('declares terrain at map creation, awaits ready, then falls back to ellipsoid', async () => {

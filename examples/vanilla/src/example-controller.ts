@@ -52,6 +52,13 @@ interface WmsHandleLike {
   reload(): Promise<void>;
 }
 
+/** 影像图层的堆叠顺序能力：排序探针用它读序号并换序。 */
+interface ImageryStackingLike {
+  readonly stackIndex: number | undefined;
+  raiseToTop(): boolean;
+  lowerToBottom(): boolean;
+}
+
 interface LayerHandleLike extends LayerInfoLike {
   setVisible(visible: boolean): void;
 }
@@ -175,10 +182,12 @@ export interface VanillaExampleSnapshot {
    * 未布防或已命中时为 `undefined`。
    */
   readonly entityPickScreen: string | undefined;
-  /** 性能矩阵摘要：`场景数 / 最低帧率 / 最高帧率`；没测过时为 `undefined`。 */
+  /** 性能矩阵摘要：`场景数 / 最低帧率 / 最高帧率 / 最长帧`；没测过时为 `undefined`。 */
   readonly performance: string | undefined;
   /** 性能矩阵原始读数（JSON 数组），供验收脚本与文档取数。 */
   readonly performanceMatrix: string | undefined;
+  /** 堆叠顺序读数：`换序前 → 换序后`；没验过时为 `undefined`。 */
+  readonly layerOrder: string | undefined;
   /** 批量分析读数：`完成 / 失败 / 总数`；没跑过时为 `undefined`。 */
   readonly batch: string | undefined;
   /** 创建期地形读数：`已安装类型 / pending / ready 结果`；没验过时为 `undefined`。 */
@@ -216,6 +225,12 @@ export interface VanillaExampleController {
    * 否则浏览器会暂停渲染、窗口被重置。
    */
   measurePerformanceMatrix(): Promise<void>;
+  /**
+   * 堆叠顺序探针：加两个影像图层，换序后读回 SDK 给的业务序号。
+   *
+   * 断言"换序真的作用到 Viewer 的影像集合上"，任何一条不成立都直接抛错。
+   */
+  probeLayerOrdering(): Promise<void>;
   runBatchAnalysis(): Promise<void>;
   /** 用 `createMap({ terrain })` 重建地图，等 `ready` 兑现后记录读数并切回椭球地形。 */
   createWithTerrain(): Promise<void>;
@@ -502,6 +517,7 @@ export function createVanillaExampleController(
   const waitFrames = dependencies.waitFrames ?? requestFrames;
   let performance: string | undefined;
   let performanceMatrix: string | undefined;
+  let layerOrder: string | undefined;
   let batch: string | undefined;
   let terrain: string | undefined;
   let pointsHandle: PointsHandleLike | undefined;
@@ -528,6 +544,7 @@ export function createVanillaExampleController(
       entityPickScreen,
       performance,
       performanceMatrix,
+      layerOrder,
       batch,
       terrain,
     };
@@ -747,6 +764,7 @@ export function createVanillaExampleController(
       entityPickScreen = undefined;
       performance = undefined;
       performanceMatrix = undefined;
+      layerOrder = undefined;
       pickSubscription?.();
       pickSubscription = undefined;
       batch = undefined;
@@ -1146,6 +1164,70 @@ export function createVanillaExampleController(
         performanceMatrix = JSON.stringify(rows);
       }
       notify();
+    },
+    /**
+     * 堆叠顺序探针：两个影像图层换序，验证顺序真的落到 Viewer 的影像集合上。
+     *
+     * 断言用相对关系（相邻、互换），这样示例里已有的那个 WMS 图层占了几个位置都不影响判断。
+     */
+    async probeLayerOrdering() {
+      const handles = requireReady();
+      const spec = {
+        type: 'wms' as const,
+        url: dependencies.wmsUrl,
+        layers: 'demo:coverage',
+        parameters: { format: 'image/png', transparent: true },
+      };
+      const added: string[] = [];
+      try {
+        const lower = (await handles.map.layers.add({
+          ...spec,
+          id: 'order-lower',
+          opacity: 0.4,
+        })) as unknown as ImageryStackingLike;
+        added.push('order-lower');
+        const upper = (await handles.map.layers.add({
+          ...spec,
+          id: 'order-upper',
+          opacity: 0.8,
+        })) as unknown as ImageryStackingLike;
+        added.push('order-upper');
+
+        const beforeLower = lower.stackIndex;
+        const beforeUpper = upper.stackIndex;
+        if (beforeLower === undefined || beforeUpper === undefined) {
+          throw new Error('新增的影像图层不在影像集合里，顺序读数为空。');
+        }
+        // 后加的在上：两者相邻，且 upper 比 lower 高一层。
+        if (beforeUpper !== beforeLower + 1) {
+          throw new Error(
+            `影像图层顺序不符合预期：${String(beforeLower)} / ${String(beforeUpper)}`,
+          );
+        }
+
+        if (!lower.raiseToTop()) {
+          throw new Error('把下层影像图层提到最上时没有发生移动。');
+        }
+
+        const afterLower = lower.stackIndex;
+        const afterUpper = upper.stackIndex;
+        if (afterLower !== beforeUpper || afterUpper !== beforeLower) {
+          throw new Error(
+            `换序后顺序不对：期望 ${String(beforeUpper)} / ${String(beforeLower)}，实际 ${String(afterLower)} / ${String(afterUpper)}`,
+          );
+        }
+        // 已经在最上层：再提一次返回 false（幂等无副作用）。
+        if (lower.raiseToTop()) {
+          throw new Error('把已在最上的影像图层再提一次仍然报告移动。');
+        }
+
+        layerOrder = `下 ${String(beforeLower)}/上 ${String(beforeUpper)} → 换序后 下 ${String(afterLower)}/上 ${String(afterUpper)}`;
+        notify();
+      } finally {
+        for (const id of added) {
+          await handles.map.layers.remove(id);
+        }
+      }
     },
     /** 批量分析：20 个点各算一次坡度坡向，带进度读数。 */
     async runBatchAnalysis() {
