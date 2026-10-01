@@ -1,4 +1,6 @@
 import { GisError } from './errors.js';
+import { FrameStatistics } from './frame-statistics.js';
+import type { FrameStatisticsSnapshot } from './frame-statistics.js';
 
 /** 内置渲染质量档标识。 */
 export type QualityProfileId = 'default' | 'quality' | 'balanced' | 'low';
@@ -21,6 +23,21 @@ export interface QualitySnapshot extends RenderQuality {
   readonly frameTimeMs: number;
   /** 当前窗口内的有效采样数。 */
   readonly sampleCount: number;
+  /**
+   * 中位帧耗时（P50），单位为毫秒。
+   *
+   * 平均值会被卡顿摊平：60 帧里两帧卡到 200 毫秒，平均也才 14 毫秒上下。P50 与
+   * {@link QualitySnapshot.frameTimeP95Ms} 一起看才能区分"一直平稳"与"偶发顿挫"。
+   */
+  readonly frameTimeP50Ms: number;
+  /** 95 分位帧耗时（P95），单位为毫秒。 */
+  readonly frameTimeP95Ms: number;
+  /** 窗口内最长的一帧，单位为毫秒。 */
+  readonly frameTimeMaxMs: number;
+  /** 达到长帧阈值（默认 50 毫秒，与浏览器 Long Tasks 阈值一致）的帧数。 */
+  readonly longFrames: number;
+  /** 长帧占比，0 到 1。 */
+  readonly longFrameRatio: number;
   /** 是否已有一项参数低于初始值。 */
   readonly degraded: boolean;
   /** 自动画质是否开启。 */
@@ -114,6 +131,13 @@ export interface RenderQualityMonitorOptions {
   readonly bounds?: RenderQualityBounds;
   /** 单帧耗时超过该毫秒数视为卡顿，重置滑动窗口，默认 250。 */
   readonly stallFrameMs?: number;
+  /**
+   * 单帧耗时达到该毫秒数即计入长帧读数，默认 50；只影响读数，不影响升降档判断。
+   *
+   * 与 `stallFrameMs` 是两件事：卡顿（默认 250 毫秒）会重置窗口并跳过这一次判断，
+   * 长帧只是记账——1 帧 60 毫秒够不上卡顿，但它确实是一次可感知的顿挫。
+   */
+  readonly longFrameMs?: number;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -124,6 +148,19 @@ function roundTo(value: number, digits: number): number {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
 }
+
+/** 快照里来自帧窗口的那部分字段。 */
+type FrameReadings = Pick<
+  QualitySnapshot,
+  | 'fps'
+  | 'frameTimeMs'
+  | 'sampleCount'
+  | 'frameTimeP50Ms'
+  | 'frameTimeP95Ms'
+  | 'frameTimeMaxMs'
+  | 'longFrames'
+  | 'longFrameRatio'
+>;
 
 /** 地图实例的类型化渲染质量控制。 */
 export interface QualityController {
@@ -166,7 +203,7 @@ export class RenderQualityMonitor {
 
   private quality: RenderQuality;
   private snapshot: QualitySnapshot;
-  private samples: number[] = [];
+  private readonly frames: FrameStatistics;
   private lastTimestamp: number | undefined;
   private lastChange = Number.NEGATIVE_INFINITY;
   private lowFrames = 0;
@@ -189,11 +226,14 @@ export class RenderQualityMonitor {
     this.stallFrameMs = options.stallFrameMs ?? 250;
     this.adaptive = options.adaptive ?? true;
     this.quality = { ...initial };
+    this.frames = new FrameStatistics(
+      options.longFrameMs === undefined
+        ? { windowSize: this.windowSize }
+        : { windowSize: this.windowSize, longFrameMs: options.longFrameMs },
+    );
     this.snapshot = {
       ...this.quality,
-      fps: 0,
-      frameTimeMs: 0,
-      sampleCount: 0,
+      ...this.frameReadings(),
       degraded: false,
       adaptive: this.adaptive,
     };
@@ -232,23 +272,21 @@ export class RenderQualityMonitor {
     if (!continuousRendering || frameTime > this.stallFrameMs) {
       this.resetWindow(timestamp);
       this.snapshot = {
-        ...this.snapshot,
         ...this.quality,
+        // 窗口刚被清空：分位数与长帧计数归零，只给出这一帧的瞬时帧率供诊断。
+        ...this.frameReadings(),
         fps: 1000 / frameTime,
         frameTimeMs: frameTime,
         sampleCount: 0,
         adaptive: this.adaptive,
+        degraded: this.isDegraded(),
       };
       return this.getSnapshot();
     }
 
-    this.samples.push(frameTime);
-    if (this.samples.length > this.windowSize) {
-      this.samples.shift();
-    }
-    const average = this.samples.reduce((sum, value) => sum + value, 0) / this.samples.length;
-    const fps = 1000 / average;
-    this.classify(fps);
+    this.frames.push(frameTime);
+    const readings = this.frameReadings();
+    this.classify(readings.fps, readings.sampleCount);
     if (this.adaptive && timestamp - this.lastChange >= this.changeIntervalMs) {
       if (this.lowFrames >= this.degradeFrames) {
         this.lowerQuality();
@@ -262,9 +300,7 @@ export class RenderQualityMonitor {
     }
     this.snapshot = {
       ...this.quality,
-      fps,
-      frameTimeMs: average,
-      sampleCount: this.samples.length,
+      ...readings,
       adaptive: this.adaptive,
       degraded: this.isDegraded(),
     };
@@ -290,8 +326,8 @@ export class RenderQualityMonitor {
     return this.getSnapshot();
   }
 
-  private classify(fps: number): void {
-    if (this.samples.length < this.minSamples) {
+  private classify(fps: number, samples: number): void {
+    if (samples < this.minSamples) {
       this.lowFrames = 0;
       this.goodFrames = 0;
       return;
@@ -346,9 +382,24 @@ export class RenderQualityMonitor {
 
   /** 重置滑动窗口；卡顿后保留时间戳，使下一帧仍能测到真实间隔。 */
   private resetWindow(lastTimestamp?: number): void {
-    this.samples = [];
+    this.frames.reset();
     this.lowFrames = 0;
     this.goodFrames = 0;
     this.lastTimestamp = lastTimestamp;
+  }
+
+  /** 把帧窗口统计拍扁成快照字段；升降档判断仍只看平均帧率，口径与改动前一致。 */
+  private frameReadings(): FrameReadings {
+    const stats: FrameStatisticsSnapshot = this.frames.snapshot;
+    return {
+      fps: stats.fps,
+      frameTimeMs: stats.averageMs,
+      sampleCount: stats.samples,
+      frameTimeP50Ms: stats.p50Ms,
+      frameTimeP95Ms: stats.p95Ms,
+      frameTimeMaxMs: stats.maxMs,
+      longFrames: stats.longFrames,
+      longFrameRatio: stats.longFrameRatio,
+    };
   }
 }

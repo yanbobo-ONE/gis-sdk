@@ -221,6 +221,9 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         limiter: modelLoad,
         initial: options.quality,
         adaptive: options.qualityAdaptive,
+        ...(options.qualityLongFrameMs === undefined
+          ? {}
+          : { longFrameMs: options.qualityLongFrameMs }),
       });
       // 外观策略缓存按地图隔离，同一地图内的多个模型共享同一策略实例。
       const layerServices = { modelLoad, modelAppearance: new ModelAppearanceShaders() };

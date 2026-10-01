@@ -37,6 +37,8 @@ export interface CesiumQualityControllerOptions {
   readonly adaptive: boolean;
   readonly targetFps?: number;
   readonly bounds?: RenderQualityBounds;
+  /** 长帧读数阈值；省略时由质量监测取默认值 50。 */
+  readonly longFrameMs?: number;
   /** 帧时间来源，默认 `performance.now()`。 */
   readonly now?: () => number;
 }
@@ -75,6 +77,7 @@ export class CesiumQualityController implements QualityController {
       adaptive: options.adaptive,
       ...(options.targetFps === undefined ? {} : { targetFps: options.targetFps }),
       ...(options.bounds === undefined ? {} : { bounds: options.bounds }),
+      ...(options.longFrameMs === undefined ? {} : { longFrameMs: options.longFrameMs }),
     });
     this.applied = options.initial;
     this.apply(options.initial);

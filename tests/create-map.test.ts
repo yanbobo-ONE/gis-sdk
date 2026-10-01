@@ -110,6 +110,11 @@ function createFactory() {
       fps: 0,
       frameTimeMs: 0,
       sampleCount: 0,
+      frameTimeP50Ms: 0,
+      frameTimeP95Ms: 0,
+      frameTimeMaxMs: 0,
+      longFrames: 0,
+      longFrameRatio: 0,
       degraded: false,
       adaptive: true,
     },
@@ -363,12 +368,24 @@ describe('createMapWithFactory', () => {
     });
     expect(custom.options?.qualityAdaptive).toBe(false);
 
+    // 长帧阈值只影响读数（不参与升降档），省略时保持缺省，由质量监测取 50。
+    expect(defaults.options?.qualityLongFrameMs).toBeUndefined();
+    const frames = createFactory();
+    const framesMap = createMapWithFactory(
+      { container: 'map', id: 'map-3', quality: { longFrameMs: 16.7 } },
+      frames.factory,
+    );
+    void framesMap.destroy();
+    expect(frames.options?.qualityLongFrameMs).toBe(16.7);
+
     for (const quality of [
       { profile: 'unknown' as never },
       { resolutionScale: 0.1 },
       { terrainSse: 0 },
       { modelLoadConcurrency: 1.5 },
       { adaptive: 'yes' as never },
+      { longFrameMs: 0 },
+      { longFrameMs: Number.POSITIVE_INFINITY },
     ]) {
       expect(() =>
         createMapWithFactory({ container: 'map', quality }, createFactory().factory),

@@ -55,6 +55,13 @@ export interface QualityOptions {
   readonly terrainSse?: number;
   /** 覆盖质量档中的模型并发上限，范围 1 到 32 的整数。 */
   readonly modelLoadConcurrency?: number;
+  /**
+   * 单帧耗时达到该毫秒数即计入 `map.quality.snapshot` 的长帧读数，默认 50。
+   *
+   * 只影响读数，不参与自动升降档判断。要按 60 Hz 的节奏看齐不齐就降到 16.7；
+   * 取默认的 50 与浏览器 Long Tasks 阈值一致，便于和主线程长任务对照。
+   */
+  readonly longFrameMs?: number;
 }
 
 /** 创建 Cesium 地图实例的配置。 */
@@ -110,4 +117,6 @@ export interface NormalizedQualityOptions {
   readonly quality: RenderQuality;
   /** 是否开启按帧率自动升降档。 */
   readonly qualityAdaptive: boolean;
+  /** 长帧读数阈值；省略时由质量监测取默认值 50。 */
+  readonly qualityLongFrameMs?: number;
 }

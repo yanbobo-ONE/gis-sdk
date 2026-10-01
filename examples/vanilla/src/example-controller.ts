@@ -294,6 +294,21 @@ export interface VanillaPerformanceRow {
   readonly fps: number;
   /** 滑动窗口内的平均帧耗时，单位为毫秒。 */
   readonly frameTimeMs: number;
+  /** 中位帧耗时（P50），单位为毫秒。 */
+  readonly p50Ms: number;
+  /** 95 分位帧耗时（P95），单位为毫秒。 */
+  readonly p95Ms: number;
+  /** 窗口内最长的一帧，单位为毫秒。 */
+  readonly maxMs: number;
+  /** 达到长帧阈值（50 毫秒）的帧数。 */
+  readonly longFrames: number;
+  /**
+   * 测量窗口内的浏览器长任务数（Long Tasks API，Chromium 才有）。
+   *
+   * 与长帧对照着看能区分卡在哪里：长帧多而长任务少，说明卡在 GPU 或合成；
+   * 两者都多，说明主线程被 JS 占住了。取不到该 API 时为 `undefined`。
+   */
+  readonly longTasks: number | undefined;
   /** 窗口内的采样帧数；稳定读数应为满窗 60 帧。 */
   readonly samples: number;
   /** JS 堆占用（MB）；只有 Chromium 暴露该读数，取不到时为 `undefined`。 */
@@ -377,6 +392,45 @@ function readHeapMB(): number | undefined {
 
 /** 等瓦片加载收敛的上限：服务端不响应时不能让测量卡死。 */
 const PERF_TILE_TIMEOUT_MS = 5_000;
+
+/** 长任务计数器：统计主线程被占住超过 50 毫秒的任务数。 */
+interface LongTaskCounter {
+  /** 从零开始计数（每个场景只测自己的窗口）。 */
+  reset(): void;
+  /** 当前计数；环境不支持 Long Tasks API 时为 `undefined`。 */
+  count(): number | undefined;
+  /** 停止观察。 */
+  disconnect(): void;
+}
+
+/**
+ * 建立浏览器长任务计数器。
+ *
+ * 用的是浏览器的 Long Tasks API（目前只有 Chromium 实现），取不到时安静降级为 `undefined`，
+ * 矩阵其余列照常给出——长任务是补充读数，不该因为它缺就让整张表不可用。
+ */
+function createLongTaskCounter(): LongTaskCounter {
+  const supportedTypes = (
+    PerformanceObserver as unknown as { supportedEntryTypes?: readonly string[] }
+  ).supportedEntryTypes;
+  if (typeof PerformanceObserver !== 'function' || !supportedTypes?.includes('longtask')) {
+    return { reset: () => undefined, count: () => undefined, disconnect: () => undefined };
+  }
+  let total = 0;
+  const observer = new PerformanceObserver((list) => {
+    total += list.getEntries().length;
+  });
+  observer.observe({ entryTypes: ['longtask'] });
+  return {
+    reset: () => {
+      total = 0;
+    },
+    count: () => total,
+    disconnect: () => {
+      observer.disconnect();
+    },
+  };
+}
 
 /**
  * 等场景画完再采样。
@@ -1026,6 +1080,7 @@ export function createVanillaExampleController(
       const previousAdaptive = quality.adaptive;
       const previousQuality = quality.current;
       const rows: VanillaPerformanceRow[] = [];
+      const longTasks = createLongTaskCounter();
       quality.setAdaptive(false);
       handles.map.camera.setView(PERF_CAMERA);
       notify();
@@ -1039,6 +1094,8 @@ export function createVanillaExampleController(
           if (scenario.resolutionScale !== undefined) {
             quality.set({ resolutionScale: scenario.resolutionScale });
           }
+          // 长任务只统计测量窗口：建场景（例如铺 10 万点）的开销不算进稳态读数。
+          longTasks.reset();
           // 先等场景画完（瓦片收敛），再等满采样窗口；两步都做完读数才是稳态。
           await waitForTiles(handles.map.raw.viewer, PERF_TILE_TIMEOUT_MS);
           await waitFrames(PERF_SETTLE_FRAMES);
@@ -1047,6 +1104,11 @@ export function createVanillaExampleController(
             scenario: scenario.name,
             fps: Math.round(sample.fps * 10) / 10,
             frameTimeMs: Math.round(sample.frameTimeMs * 100) / 100,
+            p50Ms: Math.round(sample.frameTimeP50Ms * 100) / 100,
+            p95Ms: Math.round(sample.frameTimeP95Ms * 100) / 100,
+            maxMs: Math.round(sample.frameTimeMaxMs * 100) / 100,
+            longFrames: sample.longFrames,
+            longTasks: longTasks.count(),
             samples: sample.sampleCount,
             heapMB: readHeapMB(),
           });
@@ -1058,6 +1120,7 @@ export function createVanillaExampleController(
         await clearPerformanceLayers(handles);
         applyEnvironment(handles.map, 'clear');
         environment = 'clear';
+        longTasks.disconnect();
         quality.set(previousQuality);
         quality.setAdaptive(previousAdaptive);
         notify();
@@ -1065,6 +1128,7 @@ export function createVanillaExampleController(
 
       let slowest: VanillaPerformanceRow | undefined;
       let fastest: VanillaPerformanceRow | undefined;
+      let worstFrame: VanillaPerformanceRow | undefined;
       for (const row of rows) {
         if (!slowest || row.fps < slowest.fps) {
           slowest = row;
@@ -1072,9 +1136,13 @@ export function createVanillaExampleController(
         if (!fastest || row.fps > fastest.fps) {
           fastest = row;
         }
+        if (!worstFrame || row.maxMs > worstFrame.maxMs) {
+          worstFrame = row;
+        }
       }
-      if (slowest && fastest) {
-        performance = `${String(rows.length)} 场景 · 最低 ${String(slowest.fps)} fps（${slowest.scenario}）· 最高 ${String(fastest.fps)} fps（${fastest.scenario}）`;
+      if (slowest && fastest && worstFrame) {
+        // 摘要里带上最长帧：均值与 P95 都可能看不出单次顿挫，最长帧是最直观的那一个数。
+        performance = `${String(rows.length)} 场景 · 最低 ${String(slowest.fps)} fps（${slowest.scenario}）· 最高 ${String(fastest.fps)} fps（${fastest.scenario}）· 最长帧 ${String(worstFrame.maxMs)} ms（${worstFrame.scenario}）`;
         performanceMatrix = JSON.stringify(rows);
       }
       notify();

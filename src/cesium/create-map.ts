@@ -26,6 +26,8 @@ export interface NormalizedCreateMapOptions {
   readonly widgets: NormalizedWidgetOptions;
   readonly quality: Readonly<RenderQuality>;
   readonly qualityAdaptive: boolean;
+  /** 长帧读数阈值；省略时由质量监测取默认值 50。 */
+  readonly qualityLongFrameMs?: number;
   readonly basemap?: Readonly<XyzBasemapSpec>;
   readonly terrain?: Readonly<TerrainSpec>;
 }
@@ -181,7 +183,19 @@ function normalizeQuality(options: QualityOptions | undefined): NormalizedQualit
       operation: 'createMap',
     });
   }
-  return { quality, qualityAdaptive: adaptive };
+  const longFrameMs = options?.longFrameMs;
+  if (longFrameMs !== undefined && (!Number.isFinite(longFrameMs) || longFrameMs <= 0)) {
+    throw new GisError('Quality longFrameMs must be a positive finite number.', {
+      code: 'INVALID_QUALITY_CONFIG',
+      module: 'quality',
+      operation: 'createMap',
+    });
+  }
+  return {
+    quality,
+    qualityAdaptive: adaptive,
+    ...(longFrameMs === undefined ? {} : { qualityLongFrameMs: longFrameMs }),
+  };
 }
 
 function normalizeOptions(options: CreateMapOptions): NormalizedCreateMapOptions {

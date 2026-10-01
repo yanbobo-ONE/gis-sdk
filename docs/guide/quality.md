@@ -39,10 +39,33 @@ map.quality.set({ resolutionScale: 0.8 }); // 只改一项，同样退出自动�
 map.quality.setAdaptive(true); // 重新开启按帧率自动升降档
 
 map.quality.current; // 当前生效的参数
-map.quality.snapshot; // { ...current, fps, frameTimeMs, sampleCount, degraded, adaptive }
+map.quality.snapshot; // 见下表
 ```
 
-`snapshot.degraded` 表示至少有一项参数低于本次会话的初始值，可直接用于诊断面板显示"已降档"。
+| 读数字段         | 含义                                                                 |
+| ---------------- | -------------------------------------------------------------------- |
+| `fps`            | 滑动窗口内的平均帧率                                                 |
+| `frameTimeMs`    | 滑动窗口内的平均帧耗时（毫秒）                                       |
+| `sampleCount`    | 窗口内的有效帧数；未满 60 说明读数还没稳定                           |
+| `frameTimeP50Ms` | 中位帧耗时（毫秒）                                                   |
+| `frameTimeP95Ms` | 95 分位帧耗时（毫秒）                                                |
+| `frameTimeMaxMs` | 窗口内最长的一帧（毫秒）                                             |
+| `longFrames`     | 达到长帧阈值的帧数                                                   |
+| `longFrameRatio` | 长帧占比，0 到 1                                                     |
+| `degraded`       | 是否已有一项参数低于本次会话的初始值，可直接用于诊断面板显示"已降档" |
+| `adaptive`       | 自动画质是否开启                                                     |
+
+平均值会把卡顿摊平：60 帧里两帧卡到 200 毫秒，平均帧耗时也只涨到 25 毫秒（仍有 40 fps）。所以除平均值外还给出分位数、最长帧与长帧计数：
+
+- **分位数用最近秩（nearest-rank）口径**：升序取第 `ceil(p × n)` 个样本，报出的值一定是真出现过的某一帧，而不是插值出来的数。
+- **单次顿挫只出现在最长帧上**：窗口 5% 以内的异常帧抬不动 P95（20 帧里的 1 帧就落在 5% 之外）。判断"有没有偶发卡顿"先看 `frameTimeMaxMs` 与 `longFrames`。
+- **长帧阈值默认 50 毫秒**，与浏览器 Long Tasks 的阈值取同一个数，便于把"长帧"和主线程长任务对照着看：长帧多而长任务少，瓶颈在 GPU 或合成；两者都多，主线程被 JS 占住了。要按 60 Hz 的节奏看齐不齐，把阈值降到 16.7 毫秒更合适：
+
+```ts
+const map = createMap({ container: 'map', quality: { longFrameMs: 16.7 } });
+```
+
+长帧阈值只影响读数，不参与升降档判断——升降档仍然只看平均帧率。
 
 ## 自动降档的判定方式
 

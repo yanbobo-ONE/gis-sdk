@@ -150,6 +150,11 @@ export type {
 export { DrawingStateMachine } from '../core/drawing.js';
 export type { DrawGeometry, DrawMode, DrawRendererPort, DrawRenderValue } from '../core/drawing.js';
 export { qualityProfiles, RenderQualityMonitor } from '../core/quality.js';
+export { FrameStatistics } from '../core/frame-statistics.js';
+export type {
+  FrameStatisticsOptions,
+  FrameStatisticsSnapshot,
+} from '../core/frame-statistics.js';
 export { RealtimeTimestampGuard } from '../core/realtime-timestamp-guard.js';
 export type { RealtimeTimestampGuardOptions } from '../core/realtime-timestamp-guard.js';
 export { normalizePositions } from '../core/position-batch.js';

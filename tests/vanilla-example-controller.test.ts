@@ -178,7 +178,8 @@ function createHarness() {
   const setView = vi.fn();
 
   // 质量桩：矩阵读的是 SDK 自己的帧采样，桩按测试给的读数逐场景推进窗口。
-  let qualitySample = { fps: 0, frameTimeMs: 0, sampleCount: 0 };
+  // 分位与最长帧默认与平均帧耗时一致，需要时由用例单独给出（模拟单次顿挫）。
+  let qualitySample = { fps: 0, frameTimeMs: 0, sampleCount: 0, maxMs: 0, longFrames: 0 };
   let adaptive = true;
   const quality = {
     current: { resolutionScale: 1, terrainSse: 2, modelLoadConcurrency: 4 },
@@ -188,6 +189,11 @@ function createHarness() {
         fps: qualitySample.fps,
         frameTimeMs: qualitySample.frameTimeMs,
         sampleCount: qualitySample.sampleCount,
+        frameTimeP50Ms: qualitySample.frameTimeMs,
+        frameTimeP95Ms: qualitySample.frameTimeMs,
+        frameTimeMaxMs: qualitySample.maxMs,
+        longFrames: qualitySample.longFrames,
+        longFrameRatio: qualitySample.longFrames / (qualitySample.sampleCount || 1),
         degraded: false,
         adaptive,
       };
@@ -201,8 +207,20 @@ function createHarness() {
       adaptive = enabled;
     }),
   };
-  const setQualitySample = (sample: { fps: number; frameTimeMs: number; sampleCount: number }) => {
-    qualitySample = sample;
+  const setQualitySample = (sample: {
+    fps: number;
+    frameTimeMs: number;
+    sampleCount: number;
+    maxMs?: number;
+    longFrames?: number;
+  }) => {
+    qualitySample = {
+      fps: sample.fps,
+      frameTimeMs: sample.frameTimeMs,
+      sampleCount: sample.sampleCount,
+      maxMs: sample.maxMs ?? sample.frameTimeMs,
+      longFrames: sample.longFrames ?? 0,
+    };
   };
   const qualityAdaptive = () => adaptive;
 
@@ -494,7 +512,8 @@ describe('Vanilla example controller', () => {
 
   it('measures a performance matrix over the scripted scenes and restores the map state', async () => {
     const harness = createHarness();
-    // 每个场景一次等待 = 一个采样窗口；读数刻意让最重场景最慢。
+    // 每个场景一次等待 = 一个采样窗口；读数刻意让最重场景最慢，
+    // 并在「点位 20 000」那次给一个 180 毫秒的长帧，用来验证摘要会点出最长帧。
     const fpsPerScenario = [60, 58, 44, 21, 52, 48, 60, 39, 21, 22, 20, 23];
     let scenarioIndex = 0;
     const controller = createVanillaExampleController({
@@ -505,8 +524,15 @@ describe('Vanilla example controller', () => {
       terrainUrl: '/__test/terrain/',
       waitFrames: () => {
         const fps = fpsPerScenario[scenarioIndex] ?? 0;
+        // 第 3 个场景（点位 20 000）出现一次 180 毫秒的长帧。
+        const hitch = scenarioIndex === 2;
         scenarioIndex += 1;
-        harness.setQualitySample({ fps, frameTimeMs: 1000 / (fps || 1), sampleCount: 60 });
+        harness.setQualitySample({
+          fps,
+          frameTimeMs: 1000 / (fps || 1),
+          sampleCount: 60,
+          ...(hitch ? { maxMs: 180, longFrames: 1 } : {}),
+        });
         return Promise.resolve();
       },
     });
@@ -518,6 +544,10 @@ describe('Vanilla example controller', () => {
       scenario: string;
       fps: number;
       samples: number;
+      p50Ms: number;
+      p95Ms: number;
+      maxMs: number;
+      longFrames: number;
     }[];
     expect(rows).toHaveLength(fpsPerScenario.length);
     expect(rows.map((row) => row.scenario)).toEqual([
@@ -535,8 +565,13 @@ describe('Vanilla example controller', () => {
       '同上（默认档·复测）',
     ]);
     expect(rows.every((row) => row.samples === 60)).toBe(true);
+    // 分位与最长帧逐场景落进矩阵：第 3 个场景那一次顿挫只在 maxMs / longFrames 上体现，
+    // 平均值与 P95 都看不出（桩里 P50/P95 跟平均帧耗时一致）。
+    const hitched = rows[2];
+    expect(hitched).toMatchObject({ p50Ms: 22.73, p95Ms: 22.73, maxMs: 180, longFrames: 1 });
+    expect(rows[0]).toMatchObject({ maxMs: 16.67, longFrames: 0 });
     expect(controller.snapshot().performance).toBe(
-      '12 场景 · 最低 20 fps（同上（仅分辨率 0.75））· 最高 60 fps（空场景（椭球地形））',
+      '12 场景 · 最低 20 fps（同上（仅分辨率 0.75））· 最高 60 fps（空场景（椭球地形））· 最长帧 180 ms（点位 20 000）',
     );
 
     // 隔离行只改分辨率缩放：档位与覆盖分开下发，才能判断是哪一项参数造成的差异。

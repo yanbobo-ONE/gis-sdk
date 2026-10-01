@@ -13,7 +13,8 @@
 - 增加实体级拾取：CZML 与 GeoJSON 图层在加载后登记实体归属，实体命中以 `kind: 'layer'` 回落所属图层（`objectId` 为文档里的实体 id），`setData()` 替换文档后归属自动跟随新实体。
 - 修复拾取在真实地图上收不到事件：`map.picking` 的输入动作会被随后构造的绘制控制器覆盖（Cesium `setInputAction` 是覆盖语义），现改为按动作类型串成一条链，拾取与绘制同时生效。
 - 修复地图时钟读数丢 1 毫秒：`JulianDate.toDate()` 的小数毫秒截断会让 `map.clock.time` 与源时钟时间戳差 1 毫秒，现按整秒基准加四舍五入的小数毫秒读取。
-- 验收台增加浏览器端性能矩阵探针：固定机位、关自动降档、等瓦片收敛后读 `map.quality` 的帧采样，输出 12 个场景的帧率 / 帧耗时 / JS 堆与两条对照行，一次实测记录与读数口径见[性能基准](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/performance.md)。
+- 验收台增加浏览器端性能矩阵探针：固定机位、关自动降档、等瓦片收敛后读 `map.quality` 的帧采样，输出 12 个场景的帧率 / 分位 / 最长帧 / 长帧 / 长任务与两条对照行，一次实测记录与读数口径见[性能基准](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/performance.md)。
+- 增加帧耗时统计：`/core` 新增零依赖的 `FrameStatistics`，`map.quality.snapshot` 新增 `frameTimeP50Ms` / `frameTimeP95Ms` / `frameTimeMaxMs` / `longFrames` / `longFrameRatio` 读数（分位用最近秩口径）；长帧阈值默认 50 毫秒，可用 `createMap({ quality: { longFrameMs } })` 调整，只影响读数、不参与升降档。
 
 ## 0.1.0-alpha.10
 
