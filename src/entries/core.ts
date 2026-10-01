@@ -162,6 +162,15 @@ export type {
   PositionSample,
 } from '../core/position-batch.js';
 export { RealtimeResyncController } from '../core/realtime-resync.js';
+export {
+  createLocalFrame,
+  ecefToGeodetic,
+  geodeticToEcef,
+  WGS84_FLATTENING,
+  WGS84_SEMI_MAJOR_AXIS,
+  WGS84_SEMI_MINOR_AXIS,
+} from '../spatial/geodesy.js';
+export type { LocalFrame } from '../spatial/geodesy.js';
 export { planPointImport } from '../core/point-import.js';
 export type {
   ImportedPoint,
