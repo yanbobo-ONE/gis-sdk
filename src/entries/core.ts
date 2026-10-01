@@ -162,6 +162,14 @@ export type {
   PositionSample,
 } from '../core/position-batch.js';
 export { RealtimeResyncController } from '../core/realtime-resync.js';
+export { planPointImport } from '../core/point-import.js';
+export type {
+  ImportedPoint,
+  PointImportColumnMapping,
+  PointImportOptions,
+  PointImportPlan,
+  PointImportPreview,
+} from '../core/point-import.js';
 export { ReplayTimeline } from '../core/replay-timeline.js';
 export { REALTIME_SOCKET_WILDCARD, RealtimeSocketClient } from '../core/realtime-socket.js';
 export type {
