@@ -319,6 +319,11 @@ export {
   positionsFromCzml,
   tracksFromCzml,
 } from '../core/czml.js';
+export { SimulationEventScheduler } from '../core/simulation-events.js';
+export type {
+  SimulationEvent,
+  SimulationEventDirection,
+} from '../core/simulation-events.js';
 export { SimulationClock } from '../core/simulation-clock.js';
 export type {
   SimulationClockMode,

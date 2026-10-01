@@ -30,6 +30,7 @@
 - 批量分析 `runAnalysisBatch()`：有界并发、逐条失败隔离、进度回调与取消返回部分结果；
 - 分析工具 `map.analysis`：距离 / 地表距离 / 面积 / 方位角 / 地形采样 / 通视 / 视域 / 坡度坡向 / CRS 转换 / 点在面内 / 包围盒 / 质心 / 凸包 / 抽稀，算法全部在 `/core`；
 - 回放时间轴 `ReplayTimeline`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片（不含数据源读取）；
+- 仿真事件调度 `SimulationEventScheduler`：按时间维护业务事件表（同 id 改期、取消、区间取值），正向升序与倒放降序都不重复触发；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）、可选标签（LabelCollection，含上限与 `labelCount`）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
@@ -189,6 +190,7 @@ async function disposeMap() {
 | 仿真 / 回放时钟                            | 可用                   | `SimulationClock`：倍率、暂停、倒放、seek/step 与水位线限速，可订阅状态                                                                                                                                                                     |
 | 地图时钟                                   | 可用                   | `map.clock`：读写地图时间轴，`bind(SimulationClock)` 按渲染帧推进并镜像（`drive: false` 只镜像）                                                                                                                                            |
 | 回放时间轴                                 | 可用                   | `ReplayTimeline`：按对象分组、同刻去重、`sampleAt()` 插值、`window()` / `trackAt()` 切片、有界外推                                                                                                                                          |
+| 仿真事件调度                               | 可用                   | `SimulationEventScheduler`：同 id 改期、取消、`between()` 按播放方向取区间（正向升序 / 倒放降序、起点不重复触发）                                                                                                                           |
 | Cesium 公共原生能力                        | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                                                                                                                                            |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形 | 可用                   | `createMap({ basemap, terrain })`、`map.basemap`、`map.camera`（含 `view` / `viewRectangle` 只读快照）、`map.terrain`（含 `ready` / `pending`）                                                                                             |
 | 数据管线核心                               | 可用                   | `DataPipeline`：有界队列、最新值合并、溢出策略、批量读取和统计                                                                                                                                                                              |

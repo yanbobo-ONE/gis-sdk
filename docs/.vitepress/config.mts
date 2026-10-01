@@ -79,6 +79,7 @@ export default defineConfig({
             { text: '位置批量归一化', link: '/guide/position-batch' },
             { text: '仿真 / 回放时钟', link: '/guide/simulation-clock' },
             { text: '回放时间轴', link: '/guide/replay-timeline' },
+            { text: '仿真事件调度', link: '/guide/simulation-events' },
           ],
         },
         {
@@ -134,6 +135,7 @@ export default defineConfig({
             { text: '位置批量归一化', link: '/guide/position-batch' },
             { text: '仿真 / 回放时钟', link: '/guide/simulation-clock' },
             { text: '回放时间轴', link: '/guide/replay-timeline' },
+            { text: '仿真事件调度', link: '/guide/simulation-events' },
             { text: '诊断快照', link: '/guide/diagnostics' },
             { text: '性能基准（计算与渲染）', link: '/guide/performance' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },

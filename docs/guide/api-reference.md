@@ -25,6 +25,7 @@
 | 配置外部服务地址（瓦片、地形、影像、数据）       | [外部接入点](./external-endpoints.md)       | 每个接入点的公开入口、默认行为、鉴权头与自检手段                                            |
 | 量算距离面积、判断点在区内、转换坐标系           | [空间计算与坐标转换](./spatial-analysis.md) | `measure*`、`isPointInPolygon`、`convexHull`、`simplifyPath`、`validatePolygon`、CRS 注册表 |
 | 通视、视域、坡度坡向、凸包、抽稀                 | [分析工具](./analysis.md)                   | `map.analysis.run(tool, input)`、`runAnalysisBatch()` 批量执行                              |
+| 按时间调度仿真事件（正向 / 反向遍历）            | [仿真事件调度](./simulation-events.md)      | `SimulationEventScheduler`：改期、取消、区间取值与倒放顺序                                  |
 | 计算轨道六根数、传播轨道、积分姿态               | [轨道与姿态数学](./orbit-math.md)           | `calculateOrbitalElements`、`propagateTwoBody`、`AttitudeDynamics`                          |
 | 生成 / 解析 CZML，或渲染动态实体                 | [CZML 生成与解析](./czml.md)                | `czmlFromPositions`、`tracksFromCzml`、`type: 'czml'` 图层                                  |
 | 接长连接：重连、心跳与按类型分发                 | [实时链路](./realtime-socket.md)            | `RealtimeSocketClient` 的 `connect()` / `subscribe()` / `stats`                             |
