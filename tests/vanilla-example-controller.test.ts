@@ -9,6 +9,7 @@ import type {
   MapClockController,
   PickingController,
   PickingHit,
+  QualityController,
   SimulationClock,
 } from '../src/entries/core.js';
 import type {
@@ -61,11 +62,24 @@ function createHarness() {
     setVisible: vi.fn(),
     setData: vi.fn(() => Promise.resolve()),
   };
+  // 图层桩按 id 跟踪增删：性能矩阵的清理断言要能真的看见"加上去又收回来"。
+  const trackedLayers: { id: string; type: string; state: string; visible: boolean }[] = [];
   const add = vi.fn(
     (
       spec:
-        GeoJsonLayerSpec | WmsLayerSpec | { readonly type: 'points' } | { readonly type: 'czml' },
+        | GeoJsonLayerSpec
+        | WmsLayerSpec
+        | { readonly id?: string; readonly type: 'points' }
+        | { readonly id?: string; readonly type: 'czml' },
     ) => {
+      if (spec.id) {
+        trackedLayers.push({
+          id: spec.id,
+          type: spec.type,
+          state: 'ready',
+          visible: true,
+        });
+      }
       if (spec.type === 'points') {
         return Promise.resolve(points as unknown as PointsLayerHandle);
       }
@@ -163,6 +177,35 @@ function createHarness() {
   const toWindow = vi.fn((): { x: number; y: number } | undefined => ({ x: 320, y: 200 }));
   const setView = vi.fn();
 
+  // 质量桩：矩阵读的是 SDK 自己的帧采样，桩按测试给的读数逐场景推进窗口。
+  let qualitySample = { fps: 0, frameTimeMs: 0, sampleCount: 0 };
+  let adaptive = true;
+  const quality = {
+    current: { resolutionScale: 1, terrainSse: 2, modelLoadConcurrency: 4 },
+    get snapshot() {
+      return {
+        ...quality.current,
+        fps: qualitySample.fps,
+        frameTimeMs: qualitySample.frameTimeMs,
+        sampleCount: qualitySample.sampleCount,
+        degraded: false,
+        adaptive,
+      };
+    },
+    get adaptive() {
+      return adaptive;
+    },
+    setProfile: vi.fn(),
+    set: vi.fn(),
+    setAdaptive: vi.fn((enabled: boolean) => {
+      adaptive = enabled;
+    }),
+  };
+  const setQualitySample = (sample: { fps: number; frameTimeMs: number; sampleCount: number }) => {
+    qualitySample = sample;
+  };
+  const qualityAdaptive = () => adaptive;
+
   const map = {
     state: 'ready' as const,
     camera: {
@@ -181,15 +224,23 @@ function createHarness() {
     terrain,
     clock: clock as unknown as Pick<MapClockController, 'time' | 'snapshot' | 'bind'>,
     coordinates: { toWindow } as unknown as Pick<CoordinateTransform, 'toWindow'>,
+    quality: quality as unknown as Pick<
+      QualityController,
+      'current' | 'snapshot' | 'set' | 'setProfile' | 'setAdaptive' | 'adaptive'
+    >,
     picking: picking as unknown as Pick<PickingController, 'on' | 'setEnabled'>,
     analysis: { list: vi.fn(() => []), run: analysisRun } as unknown as AnalysisController,
     layers: {
       add,
-      remove: vi.fn(() => Promise.resolve(true)),
-      list: vi.fn(() => [
-        { id: geoJson.id, type: geoJson.type, state: geoJson.state, visible: geoJson.visible },
-        { id: wms.id, type: wms.type, state: wms.state, visible: wms.visible },
-      ]),
+      remove: vi.fn((id: string) => {
+        const index = trackedLayers.findIndex((layer) => layer.id === id);
+        if (index < 0) {
+          return Promise.resolve(false);
+        }
+        trackedLayers.splice(index, 1);
+        return Promise.resolve(true);
+      }),
+      list: vi.fn(() => [...trackedLayers]),
     } as unknown as Pick<LayerManager, 'add' | 'list' | 'remove'>,
     raw: {
       viewer: {
@@ -252,6 +303,8 @@ function createHarness() {
     lineOfSight,
     map,
     points,
+    qualityAdaptive,
+    setQualitySample,
     setView,
     slopeAspect,
     terrainSet,
@@ -437,6 +490,75 @@ describe('Vanilla example controller', () => {
     expect(harness.analysisRun).toHaveBeenCalledTimes(20);
     expect(harness.analysisRun.mock.calls[0]?.[0]).toBe('slope-aspect');
     expect(controller.snapshot().batch).toBe('完成 20 / 失败 0 / 总数 20');
+  });
+
+  it('measures a performance matrix over the scripted scenes and restores the map state', async () => {
+    const harness = createHarness();
+    // 每个场景一次等待 = 一个采样窗口；读数刻意让最重场景最慢。
+    const fpsPerScenario = [60, 58, 44, 21, 52, 48, 60, 39, 21, 22, 20, 23];
+    let scenarioIndex = 0;
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+      waitFrames: () => {
+        const fps = fpsPerScenario[scenarioIndex] ?? 0;
+        scenarioIndex += 1;
+        harness.setQualitySample({ fps, frameTimeMs: 1000 / (fps || 1), sampleCount: 60 });
+        return Promise.resolve();
+      },
+    });
+    await controller.start('map');
+
+    await controller.measurePerformanceMatrix();
+
+    const rows = JSON.parse(controller.snapshot().performanceMatrix ?? '[]') as {
+      scenario: string;
+      fps: number;
+      samples: number;
+    }[];
+    expect(rows).toHaveLength(fpsPerScenario.length);
+    expect(rows.map((row) => row.scenario)).toEqual([
+      '空场景（椭球地形）',
+      '点位 5 000',
+      '点位 20 000',
+      '点位 100 000',
+      '折线 2 000',
+      'CZML 500 实体',
+      'WMS 影像',
+      '雨（环境效果）',
+      '点位 100 000 + 影像 + 雨',
+      '同上（low 档）',
+      '同上（仅分辨率 0.75）',
+      '同上（默认档·复测）',
+    ]);
+    expect(rows.every((row) => row.samples === 60)).toBe(true);
+    expect(controller.snapshot().performance).toBe(
+      '12 场景 · 最低 20 fps（同上（仅分辨率 0.75））· 最高 60 fps（空场景（椭球地形））',
+    );
+
+    // 隔离行只改分辨率缩放：档位与覆盖分开下发，才能判断是哪一项参数造成的差异。
+    expect(harness.map.quality.set).toHaveBeenCalledWith({ resolutionScale: 0.75 });
+
+    // 测量期间关掉自动降档（否则测的是降档后的开销），结束后恢复。
+    expect(harness.map.quality.setAdaptive).toHaveBeenNthCalledWith(1, false);
+    expect(harness.qualityAdaptive()).toBe(true);
+    // 固定机位，读数才跨场景可比。
+    expect(harness.setView).toHaveBeenCalledWith(
+      expect.objectContaining({ longitude: 116.4, latitude: 39.9, height: 900_000 }),
+    );
+    // 重量级场景真的建过图层，且收尾时按前缀清理干净。
+    expect(harness.map.layers.add).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'perf-points-100000', type: 'points' }),
+    );
+    expect(harness.map.layers.add).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'perf-wms', type: 'wms' }),
+    );
+    expect(harness.map.layers.list().some((layer) => layer.id.startsWith('perf-'))).toBe(false);
+    // 环境效果同样恢复晴。
+    expect(harness.environmentClearAll).toHaveBeenCalled();
   });
 
   it('declares terrain at map creation, awaits ready, then falls back to ellipsoid', async () => {

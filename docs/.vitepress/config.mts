@@ -85,7 +85,7 @@ export default defineConfig({
           text: '可靠性与参考',
           items: [
             { text: '诊断快照', link: '/guide/diagnostics' },
-            { text: '纯计算性能基准', link: '/guide/performance' },
+            { text: '性能基准（计算与渲染）', link: '/guide/performance' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: 'TypeScript 类型索引', link: '/api/' },
@@ -135,7 +135,7 @@ export default defineConfig({
             { text: '仿真 / 回放时钟', link: '/guide/simulation-clock' },
             { text: '回放时间轴', link: '/guide/replay-timeline' },
             { text: '诊断快照', link: '/guide/diagnostics' },
-            { text: '纯计算性能基准', link: '/guide/performance' },
+            { text: '性能基准（计算与渲染）', link: '/guide/performance' },
             { text: '错误与原生出口', link: '/guide/errors-and-native' },
             { text: '功能状态与路线图', link: '/guide/capability-status' },
             { text: 'TypeScript 类型索引', link: '/api/' },

@@ -13,6 +13,8 @@ import type {
   MapClockController,
   PickingController,
   PickingHit,
+  QualityController,
+  QualityProfileId,
   TerrainController,
 } from '@yanbobo/gis-sdk/core';
 import type { LayerManager } from '@yanbobo/gis-sdk/layers';
@@ -54,6 +56,13 @@ interface LayerHandleLike extends LayerInfoLike {
   setVisible(visible: boolean): void;
 }
 
+/** 地图就绪后可用的句柄组合：控制器各操作统一从这里取。 */
+interface ReadyHandles {
+  readonly geoJson: GeoJsonHandleLike;
+  readonly map: ExampleMapLike;
+  readonly wms: WmsHandleLike;
+}
+
 interface ExamplePointSpec {
   readonly id: string;
   readonly longitude: number;
@@ -82,12 +91,31 @@ interface ExampleMapLike {
   readonly picking: Pick<PickingController, 'on' | 'setEnabled'>;
   /** 坐标投影：用它把探针实体的位置换算成真实点击坐标。 */
   readonly coordinates: Pick<CoordinateTransform, 'toWindow'>;
+  /** 渲染质量：性能矩阵用它读 SDK 自己的帧采样，并在测量期间冻住自动降档。 */
+  readonly quality: Pick<
+    QualityController,
+    'current' | 'snapshot' | 'set' | 'setProfile' | 'setAdaptive' | 'adaptive'
+  >;
   readonly analysis: AnalysisController;
   readonly layers: Pick<LayerManager, 'add' | 'list' | 'remove'>;
   readonly raw: {
     readonly viewer: {
       readonly dataSources?: { get(index: number): unknown };
       readonly canvas?: HTMLCanvasElement;
+      /**
+       * 瓦片加载进度。
+       *
+       * 性能矩阵用它等场景画完：瓦片在途时渲染反而更便宜（要画的瓦片还少），
+       * 不等它收敛就会把"还没画完"当成稳态读数。
+       */
+      readonly scene?: {
+        readonly globe?: {
+          readonly tilesLoaded: boolean;
+          readonly tileLoadProgressEvent: {
+            addEventListener(listener: (pending: number) => void): () => void;
+          };
+        };
+      };
       flyTo(target: unknown): Promise<boolean>;
     };
   };
@@ -147,6 +175,10 @@ export interface VanillaExampleSnapshot {
    * 未布防或已命中时为 `undefined`。
    */
   readonly entityPickScreen: string | undefined;
+  /** 性能矩阵摘要：`场景数 / 最低帧率 / 最高帧率`；没测过时为 `undefined`。 */
+  readonly performance: string | undefined;
+  /** 性能矩阵原始读数（JSON 数组），供验收脚本与文档取数。 */
+  readonly performanceMatrix: string | undefined;
   /** 批量分析读数：`完成 / 失败 / 总数`；没跑过时为 `undefined`。 */
   readonly batch: string | undefined;
   /** 创建期地形读数：`已安装类型 / pending / ready 结果`；没验过时为 `undefined`。 */
@@ -177,6 +209,13 @@ export interface VanillaExampleController {
    * 而是报告页面坐标，由验收脚本在画布上真实点一次。
    */
   armEntityPickProbe(): Promise<void>;
+  /**
+   * 跑一遍浏览器端性能矩阵：固定机位、关自动降档，逐场景读 SDK 的帧采样读数。
+   *
+   * 读数写进 `performance` / `performanceMatrix`；测量期间标签页必须保持可见，
+   * 否则浏览器会暂停渲染、窗口被重置。
+   */
+  measurePerformanceMatrix(): Promise<void>;
   runBatchAnalysis(): Promise<void>;
   /** 用 `createMap({ terrain })` 重建地图，等 `ready` 兑现后记录读数并切回椭球地形。 */
   createWithTerrain(): Promise<void>;
@@ -242,6 +281,134 @@ function requestFrames(count: number): Promise<void> {
   });
 }
 
+/**
+ * 性能矩阵里的一行读数。
+ *
+ * 帧率与帧耗时都取自 SDK 自己的质量监测（`map.quality.snapshot`），不是探针另起一套
+ * 计时器：这样矩阵反映的就是业务真正能读到的那个数。
+ */
+export interface VanillaPerformanceRow {
+  /** 场景名。 */
+  readonly scenario: string;
+  /** 滑动窗口内的平均帧率。 */
+  readonly fps: number;
+  /** 滑动窗口内的平均帧耗时，单位为毫秒。 */
+  readonly frameTimeMs: number;
+  /** 窗口内的采样帧数；稳定读数应为满窗 60 帧。 */
+  readonly samples: number;
+  /** JS 堆占用（MB）；只有 Chromium 暴露该读数，取不到时为 `undefined`。 */
+  readonly heapMB: number | undefined;
+}
+
+/**
+ * 每个场景等待的渲染帧数。
+ *
+ * 质量监测的滑动窗口是 60 帧，多等 30 帧让窗口整体落在稳态上，避免把建场景那一帧算进去。
+ */
+const PERF_SETTLE_FRAMES = 90;
+
+/** 矩阵使用的固定视角：所有场景从同一机位看同一片区域，读数才可比。 */
+const PERF_CAMERA = { longitude: 116.4, latitude: 39.9, height: 900_000, pitch: -90 } as const;
+
+/** 一个测量场景：搭建图层、可选切档，然后由探针统一等待与读数。 */
+interface PerformanceScenario {
+  readonly name: string;
+  /** 本场景使用的质量档；省略表示沿用当前档。 */
+  readonly profile?: QualityProfileId;
+  /** 只覆盖分辨率缩放做隔离测量；与 `profile` 同时给出时先切档再覆盖。 */
+  readonly resolutionScale?: number;
+  /** 环境效果预设；省略表示晴。 */
+  readonly environment?: VanillaEnvironmentPreset;
+  /** 搭建场景；按图层 id 幂等，重复调用不会重复添加。 */
+  readonly setup: (handles: ReadyHandles) => Promise<void>;
+  /** 保留图层给下一个场景（用于"同一批图层、不同质量档"的成对测量）。 */
+  readonly keepLayers?: boolean;
+}
+
+/** 性能矩阵需要的那部分 Viewer：只用来等瓦片加载收敛。 */
+interface TileLoadingViewer {
+  readonly scene?: {
+    readonly globe?: {
+      readonly tilesLoaded: boolean;
+      readonly tileLoadProgressEvent: {
+        addEventListener(listener: (pending: number) => void): () => void;
+      };
+    };
+  };
+}
+
+/** 点位场景的确定性网格：同一片区域、同一数量，跨次运行可比。 */
+function performancePoints(count: number): ExamplePointSpec[] {
+  const points: ExamplePointSpec[] = [];
+  for (let index = 0; index < count; index += 1) {
+    points.push({
+      id: `perf-pt-${String(index)}`,
+      longitude: 116 + ((index * 37) % 1_000) * 0.0006,
+      latitude: 39.5 + ((index * 61) % 1_000) * 0.0006,
+    });
+  }
+  return points;
+}
+
+/** CZML 场景：500 个带点图形的实体，走数据源渲染路径（与点位图层的批量集合不同）。 */
+function performanceCzml(): readonly Record<string, unknown>[] {
+  const packets: Record<string, unknown>[] = [{ id: 'document', version: '1.0' }];
+  for (let entity = 0; entity < 500; entity += 1) {
+    packets.push({
+      id: `perf-czml-${String(entity)}`,
+      position: {
+        cartographicDegrees: [
+          116 + (entity % 25) * 0.02,
+          39.5 + Math.floor(entity / 25) * 0.02,
+          60_000,
+        ],
+      },
+      point: { pixelSize: 8, color: { rgba: [255, 214, 102, 255] } },
+    });
+  }
+  return packets;
+}
+
+/** 读取 JS 堆占用；`performance.memory` 是非标准读数，且不含 GPU 显存。 */
+function readHeapMB(): number | undefined {
+  const memory = (performance as { readonly memory?: { readonly usedJSHeapSize: number } }).memory;
+  return memory ? Math.round(memory.usedJSHeapSize / 1_048_576) : undefined;
+}
+
+/** 等瓦片加载收敛的上限：服务端不响应时不能让测量卡死。 */
+const PERF_TILE_TIMEOUT_MS = 5_000;
+
+/**
+ * 等场景画完再采样。
+ *
+ * 瓦片在途时画面上要画的瓦片还少、渲染反而更便宜，直接采样会把"还没画完"读成稳态；
+ * 显示不出来（没有 globe 或已经加载完）时立即返回。
+ */
+function waitForTiles(viewer: TileLoadingViewer, timeoutMs: number): Promise<void> {
+  const globe = viewer.scene?.globe;
+  if (!globe || globe.tilesLoaded) {
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = (): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      remove();
+      resolve();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    const remove = globe.tileLoadProgressEvent.addEventListener((pending: number) => {
+      if (pending === 0) {
+        finish();
+      }
+    });
+  });
+}
+
 function isGeoJsonHandle(handle: LayerHandleLike): handle is GeoJsonHandleLike {
   return handle.type === 'geojson' && 'setData' in handle;
 }
@@ -279,6 +446,8 @@ export function createVanillaExampleController(
   let entityPickScreen: string | undefined;
   let pickSubscription: (() => void) | undefined;
   const waitFrames = dependencies.waitFrames ?? requestFrames;
+  let performance: string | undefined;
+  let performanceMatrix: string | undefined;
   let batch: string | undefined;
   let terrain: string | undefined;
   let pointsHandle: PointsHandleLike | undefined;
@@ -303,6 +472,8 @@ export function createVanillaExampleController(
       clock: clockReading,
       entityPick,
       entityPickScreen,
+      performance,
+      performanceMatrix,
       batch,
       terrain,
     };
@@ -316,12 +487,144 @@ export function createVanillaExampleController(
     }
   };
 
-  const requireReady = () => {
+  const requireReady = (): ReadyHandles => {
     if (state !== 'ready' || !map || !geoJson || !wms) {
       throw new Error('The Vanilla example is not ready.');
     }
     return { geoJson, map, wms };
   };
+
+  /** 应用环境预设；性能矩阵与面板按钮共用同一条路径，读数才与手动操作可比。 */
+  const applyEnvironment = (target: ExampleMapLike, preset: VanillaEnvironmentPreset): void => {
+    if (preset === 'clear') {
+      target.environment.clearAll();
+    } else if (preset === 'depthFog') {
+      target.environment.set('depthFog', { density: 0.45, color: '#9fb6c8' });
+    } else if (preset === 'haze') {
+      target.environment.set('haze', { density: 0.0012, maxHeight: 800_000 });
+    } else if (preset === 'rain') {
+      target.environment.set('rain', { intensity: 'moderate', windDirection: 60 });
+    } else {
+      target.environment.set('snow', { intensity: 'light', flakeSize: 0.025 });
+    }
+  };
+
+  /** 移除性能矩阵留下的全部图层；按前缀识别，矩阵中途失败也能清干净。 */
+  const clearPerformanceLayers = async (handles: ReadyHandles): Promise<void> => {
+    for (const info of handles.map.layers.list()) {
+      if (info.id.startsWith('perf-')) {
+        await handles.map.layers.remove(info.id);
+      }
+    }
+  };
+
+  const hasLayer = (handles: ReadyHandles, id: string): boolean =>
+    handles.map.layers.list().some((layer) => layer.id === id);
+
+  const ensurePoints = async (handles: ReadyHandles, count: number): Promise<void> => {
+    const id = `perf-points-${String(count)}`;
+    if (hasLayer(handles, id)) {
+      return;
+    }
+    await handles.map.layers.add({ id, type: 'points', points: performancePoints(count) });
+  };
+
+  const ensurePolylines = async (handles: ReadyHandles): Promise<void> => {
+    if (hasLayer(handles, 'perf-polylines')) {
+      return;
+    }
+    const polylines = Array.from({ length: 2_000 }, (_, index) => {
+      const west = 116 + (index % 40) * 0.01;
+      const south = 39.5 + Math.floor(index / 40) * 0.01;
+      return {
+        id: `perf-line-${String(index)}`,
+        positions: [
+          { longitude: west, latitude: south },
+          { longitude: west + 0.008, latitude: south + 0.004 },
+          { longitude: west + 0.004, latitude: south + 0.008 },
+        ],
+      };
+    });
+    await handles.map.layers.add({ id: 'perf-polylines', type: 'polyline', polylines });
+  };
+
+  const ensureCzml = async (handles: ReadyHandles): Promise<void> => {
+    if (hasLayer(handles, 'perf-czml')) {
+      return;
+    }
+    await handles.map.layers.add({
+      id: 'perf-czml',
+      type: 'czml',
+      data: performanceCzml(),
+    });
+  };
+
+  const ensureWms = async (handles: ReadyHandles): Promise<void> => {
+    if (hasLayer(handles, 'perf-wms')) {
+      return;
+    }
+    await handles.map.layers.add({
+      id: 'perf-wms',
+      type: 'wms',
+      url: dependencies.wmsUrl,
+      layers: 'demo:coverage',
+      parameters: { format: 'image/png', transparent: true },
+    });
+  };
+
+  /** 组合场景：三层同时在场，用于观察叠加开销与降档效果。 */
+  const ensureHeavyScene = async (handles: ReadyHandles): Promise<void> => {
+    await ensurePoints(handles, 100_000);
+    await ensureWms(handles);
+  };
+
+  /**
+   * 浏览器端性能矩阵。
+   *
+   * 每个场景从同一机位测量 SDK 自己的帧采样读数：先冻住自动降档（否则测到的是"降档后"的开销），
+   * 再等满一整个采样窗口。图层按 `perf-` 前缀统一回收。
+   */
+  const PERF_SCENARIOS: readonly PerformanceScenario[] = [
+    { name: '空场景（椭球地形）', setup: () => Promise.resolve() },
+    { name: '点位 5 000', setup: (handles) => ensurePoints(handles, 5_000) },
+    { name: '点位 20 000', setup: (handles) => ensurePoints(handles, 20_000) },
+    { name: '点位 100 000', setup: (handles) => ensurePoints(handles, 100_000) },
+    { name: '折线 2 000', setup: ensurePolylines },
+    { name: 'CZML 500 实体', setup: ensureCzml },
+    { name: 'WMS 影像', setup: ensureWms },
+    { name: '雨（环境效果）', environment: 'rain', setup: () => Promise.resolve() },
+    {
+      name: '点位 100 000 + 影像 + 雨',
+      environment: 'rain',
+      setup: ensureHeavyScene,
+      keepLayers: true,
+    },
+    {
+      name: '同上（low 档）',
+      profile: 'low',
+      environment: 'rain',
+      setup: () => Promise.resolve(),
+      keepLayers: true,
+    },
+    {
+      // 隔离行：low 档与默认档差三项参数，这里只把分辨率缩放降到 0.75，
+      // 用来判断"降档变慢"到底是分辨率造成的，还是别的参数。
+      name: '同上（仅分辨率 0.75）',
+      profile: 'default',
+      resolutionScale: 0.75,
+      environment: 'rain',
+      setup: () => Promise.resolve(),
+      keepLayers: true,
+    },
+    {
+      // 对照行：同一批图层切回默认档再测一次。两次默认档读数的差值就是测量漂移，
+      // 有它才能判断"切档后变快/变慢"是档位效果还是顺序与预热造成的。
+      name: '同上（默认档·复测）',
+      profile: 'default',
+      environment: 'rain',
+      setup: () => Promise.resolve(),
+    },
+  ];
 
   const start = async (
     nextContainer: string | HTMLElement,
@@ -388,6 +691,8 @@ export function createVanillaExampleController(
       clockReading = undefined;
       entityPick = undefined;
       entityPickScreen = undefined;
+      performance = undefined;
+      performanceMatrix = undefined;
       pickSubscription?.();
       pickSubscription = undefined;
       batch = undefined;
@@ -477,17 +782,7 @@ export function createVanillaExampleController(
     },
     setEnvironment(preset) {
       const handles = requireReady();
-      if (preset === 'clear') {
-        handles.map.environment.clearAll();
-      } else if (preset === 'depthFog') {
-        handles.map.environment.set('depthFog', { density: 0.45, color: '#9fb6c8' });
-      } else if (preset === 'haze') {
-        handles.map.environment.set('haze', { density: 0.0012, maxHeight: 800_000 });
-      } else if (preset === 'rain') {
-        handles.map.environment.set('rain', { intensity: 'moderate', windDirection: 60 });
-      } else {
-        handles.map.environment.set('snow', { intensity: 'light', flakeSize: 0.025 });
-      }
+      applyEnvironment(handles.map, preset);
       environment = preset;
       notify();
     },
@@ -717,6 +1012,71 @@ export function createVanillaExampleController(
       }
       const rect = canvas.getBoundingClientRect();
       entityPickScreen = `${String(Math.round(rect.left + screen.x))},${String(Math.round(rect.top + screen.y))}`;
+      notify();
+    },
+    /**
+     * 浏览器端性能矩阵：固定机位、关自动降档，逐场景读 SDK 的帧采样。
+     *
+     * 关闭自动降档是关键——开着它测到的是"降档之后"的开销，会把重场景测得比轻场景还好看。
+     * 结束后图层、环境与质量档都恢复原状，矩阵不在地图上留痕。
+     */
+    async measurePerformanceMatrix() {
+      const handles = requireReady();
+      const quality = handles.map.quality;
+      const previousAdaptive = quality.adaptive;
+      const previousQuality = quality.current;
+      const rows: VanillaPerformanceRow[] = [];
+      quality.setAdaptive(false);
+      handles.map.camera.setView(PERF_CAMERA);
+      notify();
+      try {
+        for (const scenario of PERF_SCENARIOS) {
+          await scenario.setup(handles);
+          applyEnvironment(handles.map, scenario.environment ?? 'clear');
+          if (scenario.profile) {
+            quality.setProfile(scenario.profile);
+          }
+          if (scenario.resolutionScale !== undefined) {
+            quality.set({ resolutionScale: scenario.resolutionScale });
+          }
+          // 先等场景画完（瓦片收敛），再等满采样窗口；两步都做完读数才是稳态。
+          await waitForTiles(handles.map.raw.viewer, PERF_TILE_TIMEOUT_MS);
+          await waitFrames(PERF_SETTLE_FRAMES);
+          const sample = quality.snapshot;
+          rows.push({
+            scenario: scenario.name,
+            fps: Math.round(sample.fps * 10) / 10,
+            frameTimeMs: Math.round(sample.frameTimeMs * 100) / 100,
+            samples: sample.sampleCount,
+            heapMB: readHeapMB(),
+          });
+          if (!scenario.keepLayers) {
+            await clearPerformanceLayers(handles);
+          }
+        }
+      } finally {
+        await clearPerformanceLayers(handles);
+        applyEnvironment(handles.map, 'clear');
+        environment = 'clear';
+        quality.set(previousQuality);
+        quality.setAdaptive(previousAdaptive);
+        notify();
+      }
+
+      let slowest: VanillaPerformanceRow | undefined;
+      let fastest: VanillaPerformanceRow | undefined;
+      for (const row of rows) {
+        if (!slowest || row.fps < slowest.fps) {
+          slowest = row;
+        }
+        if (!fastest || row.fps > fastest.fps) {
+          fastest = row;
+        }
+      }
+      if (slowest && fastest) {
+        performance = `${String(rows.length)} 场景 · 最低 ${String(slowest.fps)} fps（${slowest.scenario}）· 最高 ${String(fastest.fps)} fps（${fastest.scenario}）`;
+        performanceMatrix = JSON.stringify(rows);
+      }
       notify();
     },
     /** 批量分析：20 个点各算一次坡度坡向，带进度读数。 */

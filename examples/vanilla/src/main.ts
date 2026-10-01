@@ -31,6 +31,7 @@ const czmlValue = element('czml-value');
 const clockValue = element('clock-value');
 const entityPickValue = element('entity-pick-value');
 const batchValue = element('batch-value');
+const perfValue = element('perf-value');
 const terrainValue = element('terrain-value');
 
 const controller = createVanillaExampleController({
@@ -61,6 +62,9 @@ controller.subscribe((snapshot) => {
   // 验收脚本据此在画布上真实点击；布防期间才有值。
   entityPickValue.dataset.screen = snapshot.entityPickScreen ?? '';
   batchValue.textContent = snapshot.batch ?? '未运行';
+  perfValue.textContent = snapshot.performance ?? '未测量';
+  // 验收脚本与文档从这里取原始矩阵，不用去解析面板文案。
+  perfValue.dataset.matrix = snapshot.performanceMatrix ?? '';
   terrainValue.textContent = snapshot.terrain ?? '未验证';
   if (snapshot.error) {
     operationMessage.textContent = snapshot.error;
@@ -159,6 +163,10 @@ element('arm-entity-pick').addEventListener('click', () => {
 
 element('run-batch').addEventListener('click', () => {
   void runOperation('批量坡度坡向分析', () => controller.runBatchAnalysis());
+});
+
+element('run-perf-matrix').addEventListener('click', () => {
+  void runOperation('性能矩阵（需保持标签页可见）', () => controller.measurePerformanceMatrix());
 });
 
 element('restart-map').addEventListener('click', () => {
