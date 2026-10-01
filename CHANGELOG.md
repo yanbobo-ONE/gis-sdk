@@ -16,6 +16,7 @@
 - 验收台增加浏览器端性能矩阵探针：固定机位、关自动降档、等瓦片收敛后读 `map.quality` 的帧采样，输出 12 个场景的帧率 / 分位 / 最长帧 / 长帧 / 长任务与两条对照行，一次实测记录与读数口径见[性能基准](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/performance.md)。
 - 增加帧耗时统计：`/core` 新增零依赖的 `FrameStatistics`，`map.quality.snapshot` 新增 `frameTimeP50Ms` / `frameTimeP95Ms` / `frameTimeMaxMs` / `longFrames` / `longFrameRatio` 读数（分位用最近秩口径）；长帧阈值默认 50 毫秒，可用 `createMap({ quality: { longFrameMs } })` 调整，只影响读数、不参与升降档。
 - 增加影像图层的堆叠顺序控制：WMS / TMS / WMTS / 单图影像句柄新增 `stackIndex` 与 `raise` / `lower` / `raiseToTop` / `lowerToBottom`，底图恒在最底层且序号只按业务影像图层计；图元与数据源通道不提供排序（可见性由几何与深度决定）。
+- 增加回放会话 `ReplaySession`（`/core`）：订阅时钟提交时刻快照并**按修订号合并**（连跳只提交最后一次、在途提交可中止），提供播放 / 暂停 / 跳转 / 步进 / 停止 / 换时间轴与区间取数；快照同时给出毫秒与秒两种时间，`apply` 失败不中断时钟（`errorCount` / `onError` / `REPLAY_APPLY_FAILED`），不读数据、不预取、不缓存。
 - 修复渲染循环停止时业务侧无感知：适配器监听引擎渲染错误并转成一次 `map:error`，错误码 `RENDER_LOOP_FAILED`（`module: 'scene'`、`retryable: false`，需重建地图）；验收台单独显示这类致命错误，探针等渲染帧也补了超时（标签页切到后台时不再无限挂起）。
 - 增加仿真事件调度 `SimulationEventScheduler`（`/core`，零 Cesium）：按时间维护业务事件表，同 id 改期（替换而非并列）、取消与区间取值（`between()` 正向升序、倒放降序）；两个方向都是起点不重复触发、终点触发一次，配"上一帧 → 这一帧"的循环不会重复触发。时间单位与 `ReplayTimeline` 一致（秒），不持计时器、不依赖引擎，非法输入抛 `INVALID_SIMULATION_INPUT`。
 - 增加点位导入计划 `planPointImport()`（`/core`）：列映射显式优先（缺的按关键字猜测并在 `preview.guessed` 与 `issues` 标记，显式列名不存在直接抛错）、投影坐标换算到 WGS84（不支持整单抛 `UNSUPPORTED_CRS`，换算越界逐行拒绝，高程不参与换算），输出预览、全量点位与带来源行号的拒绝样本；`previewLimit` 只影响预览，落图层仍由业务决定。

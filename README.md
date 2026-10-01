@@ -29,7 +29,7 @@
 - 实时链路 `RealtimeSocketClient`：连接状态机、有上限退避重连与抖动、心跳存活判断、按类型路由与解码容错；
 - 批量分析 `runAnalysisBatch()`：有界并发、逐条失败隔离、进度回调与取消返回部分结果；
 - 分析工具 `map.analysis`：距离 / 地表距离 / 面积 / 方位角 / 地形采样 / 通视 / 视域 / 坡度坡向 / CRS 转换 / 点在面内 / 包围盒 / 质心 / 凸包 / 抽稀，算法全部在 `/core`；
-- 回放时间轴 `ReplayTimeline`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片（不含数据源读取）；
+- 回放时间轴 `ReplayTimeline` 与会话 `ReplaySession`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片，以及订阅时钟提交快照（连跳只提交最后一次）、停止/步进与区间取数（不含数据源读取）；
 - 仿真事件调度 `SimulationEventScheduler`：按时间维护业务事件表（同 id 改期、取消、区间取值），正向升序与倒放降序都不重复触发；
 - 点位导入计划 `planPointImport()`：列名猜测与标记、投影坐标换算到 WGS84、预览与拒绝样本，落图层由业务决定；
 - 空间闪电 `map.lightning`：程序化闪击（种子可复现）、亮度包络驱动辉光与屏幕闪光、并发有上限；
@@ -195,7 +195,7 @@ async function disposeMap() {
 | CZML 生成、解析与图层                      | 可用                   | `czmlFromPositions()` / `tracksFromCzml()` / `createTrackTimeline()` / `type: 'czml'`：位置采样、姿态与 `model` 报文、轨迹回放桥，以及受管的 CZML 实体图层                                                                                  |
 | 仿真 / 回放时钟                            | 可用                   | `SimulationClock`：倍率、暂停、倒放、seek/step 与水位线限速，可订阅状态                                                                                                                                                                     |
 | 地图时钟                                   | 可用                   | `map.clock`：读写地图时间轴，`bind(SimulationClock)` 按渲染帧推进并镜像（`drive: false` 只镜像）                                                                                                                                            |
-| 回放时间轴                                 | 可用                   | `ReplayTimeline`：按对象分组、同刻去重、`sampleAt()` 插值、`window()` / `trackAt()` 切片、有界外推                                                                                                                                          |
+| 回放时间轴                                 | 可用                   | `ReplayTimeline`：按对象分组、同刻去重、`sampleAt()` 插值、`window()` / `trackAt()` 切片、有界外推；`ReplaySession` 订阅时钟提交快照（连跳只提交最后一次）、`stop()` / `step()` / `load()` / `exportRange()`                                |
 | 仿真事件调度                               | 可用                   | `SimulationEventScheduler`：同 id 改期、取消、`between()` 按播放方向取区间（正向升序 / 倒放降序、起点不重复触发）                                                                                                                           |
 | Cesium 公共原生能力                        | 可用，但由业务负责资源 | `map.raw.viewer`；只调用 Cesium 文档中的公共成员                                                                                                                                                                                            |
 | XYZ 底图、相机、椭球 / Cesium Terrain 地形 | 可用                   | `createMap({ basemap, terrain })`、`map.basemap`、`map.camera`（含 `view` / `viewRectangle` 只读快照）、`map.terrain`（含 `ready` / `pending`）                                                                                             |

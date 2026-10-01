@@ -159,6 +159,7 @@ vi.mock('cesium', () => ({
       return true;
     }
   },
+
   PostProcessStage: class PostProcessStage {
     enabled = true;
     readonly uniforms: Record<string, unknown>;

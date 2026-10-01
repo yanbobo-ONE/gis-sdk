@@ -62,6 +62,8 @@ clock.play();
 
 演示与回放通常用默认的 `drive: true`；推进由业务负责时（例如实时样本驱动）传 `{ drive: false }`，控制器只做镜像。细节见[地图控制](./map-controls.md#地图时钟)。
 
+要按时刻取数据再交给渲染，用[回放时间轴](./replay-timeline.md)的 `ReplaySession`：它订阅这里的时钟，每次时刻变化把快照交给业务；时钟本身照样可以 `map.clock.bind(session.clock)` 接到地图时间轴上。
+
 ## 时间单位
 
 时钟统一使用**毫秒**（与 `RealtimeWaterline`、`normalizePositions` 一致）。CZML 规范使用秒，需要转换时按 `秒 × 1000` 处理，见[CZML 生成与解析](./czml.md)。

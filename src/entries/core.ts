@@ -194,6 +194,13 @@ export type {
   PointImportPlan,
   PointImportPreview,
 } from '../core/point-import.js';
+export { ReplaySession } from '../core/replay-session.js';
+export type {
+  ReplaySessionExport,
+  ReplaySessionOptions,
+  ReplaySessionSnapshot,
+  ReplaySessionStatus,
+} from '../core/replay-session.js';
 export { ReplayTimeline } from '../core/replay-timeline.js';
 export { REALTIME_SOCKET_WILDCARD, RealtimeSocketClient } from '../core/realtime-socket.js';
 export type {
