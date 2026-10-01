@@ -42,6 +42,10 @@ const cesium = vi.hoisted(() => {
       pick: vi.fn(),
       drillPick: vi.fn(() => []),
       globe: { maximumScreenSpaceError: 2, terrainProvider: undefined as unknown },
+      primitives: {
+        add: vi.fn((collection: unknown) => collection),
+        remove: vi.fn(() => true),
+      },
       mode: 3,
       fog: { enabled: false, density: 6e-4 },
       drawingBufferWidth: 800,
@@ -116,12 +120,58 @@ const cesium = vi.hoisted(() => {
 vi.mock('cesium', () => ({
   buildModuleUrl: cesium.buildModuleUrl,
   CesiumTerrainProvider: { fromUrl: cesium.terrainFromUrl },
-  Cartesian3: { fromDegrees: vi.fn() },
+  Cartesian3: {
+    fromDegrees: vi.fn(),
+    fromDegreesArrayHeights: vi.fn((values: unknown) => values),
+  },
   Color: {
     WHITE: { css: 'white' },
     fromCssColorString: vi.fn((value: string) => ({ css: value })),
   },
   ColorBlendMode: { HIGHLIGHT: 'HIGHLIGHT', MIX: 'MIX' },
+  ConstantProperty: class ConstantProperty {
+    constructor(readonly value: unknown) {}
+  },
+  Event: class Event {
+    addEventListener(): () => void {
+      return () => undefined;
+    }
+    raiseEvent(): void {
+      return undefined;
+    }
+  },
+  PolylineCollection: class PolylineCollection {
+    readonly items: unknown[] = [];
+    add(options: unknown): unknown {
+      this.items.push(options);
+      return options;
+    }
+    remove(item: unknown): boolean {
+      const index = this.items.indexOf(item);
+      if (index < 0) {
+        return false;
+      }
+      this.items.splice(index, 1);
+      return true;
+    }
+  },
+  PolylineGlowMaterialProperty: class PolylineGlowMaterialProperty {
+    color: unknown;
+    glowPower: unknown;
+    taperPower: unknown;
+    constructor(options: Record<string, unknown> = {}) {
+      this.color = options.color;
+      this.glowPower = options.glowPower;
+      this.taperPower = options.taperPower;
+    }
+  },
+  PostProcessStage: class PostProcessStage {
+    enabled = true;
+    readonly uniforms: Record<string, unknown>;
+    constructor(options: { readonly uniforms?: Record<string, unknown> } = {}) {
+      this.uniforms = options.uniforms ?? {};
+    }
+  },
   ScreenSpaceEventHandler: class ScreenSpaceEventHandler {
     constructor(readonly canvas: unknown) {}
   },
@@ -458,9 +508,9 @@ describe('CesiumMapAdapter', () => {
     const adapter = new CesiumMapAdapter(createOptions('map-1'));
     const viewer = cesium.Viewer.instances[0];
     // 相机位姿兜底与画质控制器各订阅一次 preUpdate，画质控制器再订阅一次 postRender；
-    // 环境效果控制器订阅一次 preRender（降水动画与相机高度）。
+    // 环境效果控制器与闪电控制器各订阅一次 preRender（降水/闪光动画）。
     expect(viewer?.frameListeners.size).toBe(3);
-    expect(viewer?.preRenderListeners.size).toBe(1);
+    expect(viewer?.preRenderListeners.size).toBe(2);
 
     const position = viewer?.camera.position;
     if (position) {
