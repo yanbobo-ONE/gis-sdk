@@ -2,14 +2,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const cesium = vi.hoisted(() => {
   let sequence = 0;
-  const load = vi.fn((data: unknown) =>
-    Promise.resolve({
-      id: ++sequence,
+  const load = vi.fn((data: unknown) => {
+    const loadId = ++sequence;
+    return Promise.resolve({
+      id: loadId,
       data,
       show: true,
-      entities: { values: [1, 2, 3] },
-    }),
-  );
+      // 实体带加载序号，替换文档后可与上一次的实体区分开。
+      entities: {
+        values: [1, 2, 3].map((index) => ({ id: `sat-${String(loadId)}-${String(index)}` })),
+      },
+    });
+  });
   return {
     CzmlDataSource: { load },
     load,
@@ -23,12 +27,13 @@ const cesium = vi.hoisted(() => {
 vi.mock('cesium', () => ({ CzmlDataSource: cesium.CzmlDataSource }));
 
 import { createCzmlLayer } from '../src/cesium/layers/czml-layer.js';
+import { pickableEntityMarker } from '../src/cesium/layers/pickable-entities.js';
 import type { LayerFactoryContext } from '../src/layers/layer-runtime.js';
 
 interface FakeDataSource {
   readonly id: number;
   show: boolean;
-  readonly entities: { values: unknown[] };
+  readonly entities: { values: { id: string }[] };
 }
 
 function createViewer() {
@@ -88,6 +93,29 @@ describe('createCzmlLayer', () => {
     layer.setVisible(true);
     expect(layer.state).toBe('ready');
     expect(view.items[0]?.show).toBe(true);
+  });
+
+  it('registers loaded entities for picking under the layer id', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+
+    const layer = await createCzmlLayer(
+      view.viewer as never,
+      { id: 'satellites', type: 'czml', data: document },
+      context,
+    );
+
+    expect(pickableEntityMarker(view.items[0]?.entities.values[0])).toEqual({
+      layerId: 'satellites',
+      objectId: 'sat-1-1',
+    });
+
+    // 替换文档后，新文档的实体同样归属该图层。
+    await layer.setData([{ id: 'document', version: '1.0' }, { id: 'sat-9' }]);
+    expect(pickableEntityMarker(view.items[0]?.entities.values[0])).toEqual({
+      layerId: 'satellites',
+      objectId: 'sat-2-1',
+    });
   });
 
   it('fetches a URL before handing data to Cesium', async () => {

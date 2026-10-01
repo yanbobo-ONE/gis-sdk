@@ -25,7 +25,11 @@ const cesium = vi.hoisted(() => {
   const actions = new Map<number, Action>();
   class FakeHandler {
     setInputAction(action: Action, type: number): void {
+      // 与 Cesium 一致：一个动作类型只有一个回调，后注册的覆盖先注册的。
       actions.set(type, action);
+    }
+    getInputAction(type: number): Action | undefined {
+      return actions.get(type);
     }
     removeInputAction(type: number): void {
       actions.delete(type);

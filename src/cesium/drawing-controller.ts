@@ -25,6 +25,7 @@ import { findSnapTarget, resolveSnapOptions } from '../core/drawing-snap.js';
 import type { SnapSegment, SnapVertex } from '../core/drawing-snap.js';
 import { GisError } from '../core/errors.js';
 import type { Unsubscribe } from '../core/event-hub.js';
+import { addInputAction } from './input-actions.js';
 
 interface DrawStyle {
   readonly color: string;
@@ -130,6 +131,8 @@ export class CesiumDrawingController implements MapDrawingController {
     }
   };
   private disposed = false;
+  /** 输入动作的取消订阅：与拾取控制器共用同一个处理器，按类型挂在同一条链上。 */
+  private readonly removeInputActions: Unsubscribe[] = [];
 
   constructor(
     private readonly viewer: Viewer,
@@ -161,48 +164,53 @@ export class CesiumDrawingController implements MapDrawingController {
     );
 
     const handler = viewer.screenSpaceEventHandler;
-    handler.setInputAction((movement: Movement) => {
-      if (this.editGeometry) {
-        // 编辑会话期间左键用于拖动顶点，不再累积绘制顶点。
-        return;
-      }
-      const position = this.pick(movement.position, true);
-      if (position) {
-        this.machine.addVertex(position);
-      }
-    }, ScreenSpaceEventType.LEFT_CLICK);
-    handler.setInputAction((movement: Movement) => {
-      if (this.editGeometry) {
-        if (this.dragging) {
-          const position = this.pick(movement.position, true);
-          if (position) {
-            this.editMachine.move(position);
-          }
+    // 与拾取控制器共用同一个处理器：动作按类型挂到同一条链上，直接 setInputAction 会互相覆盖。
+    this.removeInputActions.push(
+      addInputAction(handler, ScreenSpaceEventType.LEFT_CLICK, (movement) => {
+        const { position } = movement as Movement;
+        if (this.editGeometry) {
+          // 编辑会话期间左键用于拖动顶点，不再累积绘制顶点。
+          return;
         }
-        return;
-      }
-      const position = this.pick(movement.position, true);
-      if (position) {
-        this.machine.previewPositions(position);
-      }
-    }, ScreenSpaceEventType.MOUSE_MOVE);
-    handler.setInputAction((movement: Movement) => {
-      this.beginDrag(movement.position);
-    }, ScreenSpaceEventType.LEFT_DOWN);
-    handler.setInputAction(() => {
-      if (!this.dragging) {
-        return;
-      }
-      this.dragging = false;
-      this.editVertexIndex = undefined;
-      this.editMachine.end();
-    }, ScreenSpaceEventType.LEFT_UP);
-    handler.setInputAction((movement: Movement) => {
-      this.machine.finish(this.pick(movement.position));
-    }, ScreenSpaceEventType.RIGHT_CLICK);
-    handler.setInputAction(() => {
-      this.machine.finish();
-    }, ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+        const picked = this.pick(position, true);
+        if (picked) {
+          this.machine.addVertex(picked);
+        }
+      }),
+      addInputAction(handler, ScreenSpaceEventType.MOUSE_MOVE, (movement) => {
+        const { position } = movement as Movement;
+        if (this.editGeometry) {
+          if (this.dragging) {
+            const picked = this.pick(position, true);
+            if (picked) {
+              this.editMachine.move(picked);
+            }
+          }
+          return;
+        }
+        const picked = this.pick(position, true);
+        if (picked) {
+          this.machine.previewPositions(picked);
+        }
+      }),
+      addInputAction(handler, ScreenSpaceEventType.LEFT_DOWN, (movement) => {
+        this.beginDrag((movement as Movement).position);
+      }),
+      addInputAction(handler, ScreenSpaceEventType.LEFT_UP, () => {
+        if (!this.dragging) {
+          return;
+        }
+        this.dragging = false;
+        this.editVertexIndex = undefined;
+        this.editMachine.end();
+      }),
+      addInputAction(handler, ScreenSpaceEventType.RIGHT_CLICK, (movement) => {
+        this.machine.finish(this.pick((movement as Movement).position));
+      }),
+      addInputAction(handler, ScreenSpaceEventType.LEFT_DOUBLE_CLICK, () => {
+        this.machine.finish();
+      }),
+    );
     this.documentRef?.addEventListener('keydown', this.onKeyDown);
   }
 
@@ -404,13 +412,10 @@ export class CesiumDrawingController implements MapDrawingController {
       set.clear();
     }
     this.documentRef?.removeEventListener('keydown', this.onKeyDown);
-    const handler = this.viewer.screenSpaceEventHandler;
-    handler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
-    handler.removeInputAction(ScreenSpaceEventType.MOUSE_MOVE);
-    handler.removeInputAction(ScreenSpaceEventType.LEFT_DOWN);
-    handler.removeInputAction(ScreenSpaceEventType.LEFT_UP);
-    handler.removeInputAction(ScreenSpaceEventType.RIGHT_CLICK);
-    handler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    for (const remove of this.removeInputActions) {
+      remove();
+    }
+    this.removeInputActions.length = 0;
     this.dragging = false;
     this.editVertexIndex = undefined;
     this.editGeometry = undefined;

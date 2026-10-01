@@ -23,6 +23,9 @@ import type {
   DrawingEventMap,
   DrawingSnapOptions,
   GeoPosition,
+  MapClockController,
+  MapClockSnapshot,
+  MapClockBindOptions,
   MapDrawingController,
   MapSceneMode,
   PickingController,
@@ -47,6 +50,7 @@ import type {
 } from './environment.js';
 import { EventHub } from './event-hub.js';
 import type { QualityController, QualityProfileId, RenderQuality } from './quality.js';
+import type { SimulationClock } from './simulation-clock.js';
 import type { LayerManager } from '../layers/contracts.js';
 
 export class MapRuntime<TRaw> implements GisMap<TRaw> {
@@ -54,6 +58,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly camera: CameraController;
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
+  readonly clock: MapClockController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
   readonly picking: PickingController;
@@ -323,6 +328,34 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       ): Promise<readonly TerrainSample[]> => {
         this.assertReady('terrain.sample');
         return this.adapter.terrain.sample(points, options);
+      },
+    });
+    this.clock = Object.freeze({
+      get snapshot(): MapClockSnapshot {
+        return adapter.clock.snapshot;
+      },
+      get time(): number {
+        return adapter.clock.time;
+      },
+      setTime: (time: number | Date) => {
+        this.assertReady('clock.setTime');
+        adapter.clock.setTime(time);
+      },
+      setRange: (start: number | Date, end: number | Date) => {
+        this.assertReady('clock.setRange');
+        adapter.clock.setRange(start, end);
+      },
+      setMultiplier: (multiplier: number) => {
+        this.assertReady('clock.setMultiplier');
+        adapter.clock.setMultiplier(multiplier);
+      },
+      setAnimating: (animating: boolean) => {
+        this.assertReady('clock.setAnimating');
+        adapter.clock.setAnimating(animating);
+      },
+      bind: (source: SimulationClock, options?: MapClockBindOptions) => {
+        this.assertReady('clock.bind');
+        return adapter.clock.bind(source, options);
       },
     });
   }

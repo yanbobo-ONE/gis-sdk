@@ -8,10 +8,19 @@ const cesium = vi.hoisted(() => {
 
     readonly resize = vi.fn();
     readonly destroy = vi.fn();
-    readonly screenSpaceEventHandler = {
-      setInputAction: vi.fn(),
-      removeInputAction: vi.fn(),
-    };
+    readonly screenSpaceEventHandler = (() => {
+      // 按 Cesium 的覆盖语义保存动作：适配器把拾取与绘制挂在同一条链上，需要能读回与移除。
+      const actions = new Map<unknown, unknown>();
+      return {
+        setInputAction: vi.fn((action: unknown, type: unknown) => {
+          actions.set(type, action);
+        }),
+        getInputAction: vi.fn((type: unknown) => actions.get(type)),
+        removeInputAction: vi.fn((type: unknown) => {
+          actions.delete(type);
+        }),
+      };
+    })();
     readonly camera = {
       cancelFlight: vi.fn(),
       flyTo: vi.fn(),

@@ -1,5 +1,6 @@
 import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { Unsubscribe } from './event-hub.js';
+import type { SimulationClock } from './simulation-clock.js';
 import type { GeoBBox } from '../spatial/types.js';
 
 /** 经纬度位置，单位为度和米。 */
@@ -324,6 +325,66 @@ export interface CameraController {
   flyTo(view: CameraFlight): Promise<void>;
   /** 取消 SDK 发起的当前飞行；没有进行中的飞行时无操作。 */
   cancelFlight(): void;
+}
+
+/** 地图时钟读数，时间统一为毫秒时间戳。 */
+export interface MapClockSnapshot {
+  /** 当前地图时间。 */
+  readonly time: number;
+  /** 时间范围起点；未设置时为 `undefined`。 */
+  readonly startTime: number | undefined;
+  /** 时间范围终点；未设置时为 `undefined`。 */
+  readonly endTime: number | undefined;
+  /** 当前倍率。 */
+  readonly multiplier: number;
+  /** 地图时间是否在推进。 */
+  readonly animating: boolean;
+}
+
+/** 绑定 SDK 时钟时的选项。 */
+export interface MapClockBindOptions {
+  /**
+   * 是否由渲染帧推进源时钟，默认 `true`。
+   *
+   * `true` 时按真实帧间隔调用 `source.advance()`：源时钟处于 `playing` 就自动播放，
+   * 业务不需要写帧循环。`false` 时只做镜像（`source` → 地图时钟），推进由业务负责，
+   * 适合实时样本驱动（`watermark`）的场景。
+   */
+  readonly drive?: boolean;
+}
+
+/**
+ * 地图时钟。
+ *
+ * 时间轴联动到 Cesium 的时钟：CZML 与其它带时间区间的动态实体会按当前地图时间求值，
+ * 因此推进时钟即可播放轨迹。绑定 SDK 的 {@link SimulationClock} 后由它统一决定时间与播放状态。
+ */
+export interface MapClockController {
+  /**
+   * 当前读数。
+   *
+   * 读的是引擎时钟本身，因此绑定时给出的也是绑定生效后的真实状态。
+   */
+  readonly snapshot: MapClockSnapshot;
+  /** 当前地图时间，毫秒时间戳；读不到时抛 `CLOCK_TIME_UNAVAILABLE`。 */
+  readonly time: number;
+  /** 设置当前时间；未绑定 SDK 时钟时生效。 */
+  setTime(time: number | Date): void;
+  /** 设置时间范围；未绑定 SDK 时钟时生效。 */
+  setRange(start: number | Date, end: number | Date): void;
+  /** 设置倍率，必须为正有限数；未绑定 SDK 时钟时生效。 */
+  setMultiplier(multiplier: number): void;
+  /** 开始或停止推进；未绑定 SDK 时钟时生效。 */
+  setAnimating(animating: boolean): void;
+  /**
+   * 用 SDK 时钟驱动地图时钟，返回解除绑定函数。
+   *
+   * 绑定期间每帧把 `source.currentTime` 镜像到地图时钟，地图时间以源时钟为准：控制播放请用
+   * `source.play()` / `pause()` / `seek()` / `setRate()`，此时 `setTime()` 等直接写入会被下一帧覆盖。
+   * 源时钟尚未设置时间基准（`currentTime` 为 `undefined`）时不做任何镜像，直到 `seek()`。
+   * 重复绑定会先解除上一次绑定。
+   */
+  bind(source: SimulationClock, options?: MapClockBindOptions): Unsubscribe;
 }
 
 /** 当前支持的底图类型。 */

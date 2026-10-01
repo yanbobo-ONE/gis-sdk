@@ -9,6 +9,7 @@ const cesium = vi.hoisted(() => {
       data,
       options,
       show: true,
+      entities: { values: [{ id: `f-${String(sequence)}` }] },
     }),
   );
 
@@ -34,10 +35,12 @@ vi.mock('cesium', () => ({
 }));
 
 import { createGeoJsonLayer } from '../src/cesium/layers/geojson-layer.js';
+import { pickableEntityMarker } from '../src/cesium/layers/pickable-entities.js';
 import type { LayerFactoryContext } from '../src/layers/layer-runtime.js';
 
 interface FakeDataSource {
   readonly id: number;
+  readonly entities: { values: { id: string }[] };
   show: boolean;
 }
 
@@ -84,6 +87,29 @@ describe('createGeoJsonLayer', () => {
   beforeEach(() => {
     cesium.reset();
     vi.unstubAllGlobals();
+  });
+
+  it('registers loaded features for picking under the layer id', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+
+    const layer = await createGeoJsonLayer(
+      view.viewer as never,
+      { id: 'targets', type: 'geojson', data: emptyGeoJson() },
+      context,
+    );
+
+    expect(pickableEntityMarker(view.items[0]?.entities.values[0])).toEqual({
+      layerId: 'targets',
+      objectId: 'f-1',
+    });
+
+    // 替换数据后，新实体的归属跟随同一图层。
+    await layer.setData(emptyGeoJson());
+    expect(pickableEntityMarker(view.items[0]?.entities.values[0])).toEqual({
+      layerId: 'targets',
+      objectId: 'f-2',
+    });
   });
 
   it('loads object data with converted stable styles and initial visibility', async () => {

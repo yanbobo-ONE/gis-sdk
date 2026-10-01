@@ -28,6 +28,8 @@ const lineOfSightValue = element('line-of-sight-value');
 const pointsValue = element('points-value');
 const clustersValue = element('clusters-value');
 const czmlValue = element('czml-value');
+const clockValue = element('clock-value');
+const entityPickValue = element('entity-pick-value');
 const batchValue = element('batch-value');
 const terrainValue = element('terrain-value');
 
@@ -54,6 +56,10 @@ controller.subscribe((snapshot) => {
   pointsValue.textContent = snapshot.points ?? '未添加';
   clustersValue.textContent = snapshot.clusters ?? '未聚合';
   czmlValue.textContent = snapshot.czml ?? '未加载';
+  clockValue.textContent = snapshot.clock ?? '未验证';
+  entityPickValue.textContent = snapshot.entityPick ?? '未验证';
+  // 验收脚本据此在画布上真实点击；布防期间才有值。
+  entityPickValue.dataset.screen = snapshot.entityPickScreen ?? '';
   batchValue.textContent = snapshot.batch ?? '未运行';
   terrainValue.textContent = snapshot.terrain ?? '未验证';
   if (snapshot.error) {
@@ -141,6 +147,14 @@ element('cluster-points').addEventListener('click', () => {
 
 element('add-czml').addEventListener('click', () => {
   void runOperation('加载 CZML 轨迹', () => controller.addCzmlLayer());
+});
+
+element('probe-czml-clock').addEventListener('click', () => {
+  void runOperation('时钟探针', () => controller.probeCzmlClock());
+});
+
+element('arm-entity-pick').addEventListener('click', () => {
+  void runOperation('布防实体拾取探针', () => controller.armEntityPickProbe());
 });
 
 element('run-batch').addEventListener('click', () => {

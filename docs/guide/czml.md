@@ -101,7 +101,8 @@ await layer.remove();
 | `setData()`  | 新文档加载成功后才替换旧实体；取消时旧文档继续生效，图层不进入错误态          |
 | 生命周期     | `setVisible()`、`remove()`、`map.destroy()` 统一释放 `DataSource`            |
 | 可观测       | `state`、`errorCount`、`layer.events.on('error')`、`entityCount` 与其它图层一致 |
-| 时钟         | **不联动**：文档里的 `clock` 不会改地图时钟，时间轴编排由业务用 `map.raw.viewer` 自己做 |
+| 拾取         | 实体命中回落到本图层：`layerId` 是图层 id，`objectId` 是文档里的实体 id，见[拾取交互](./picking.md) |
+| 时钟         | **不自动联动**：文档里的 `clock` 不会改地图时钟；需要播放时用 `map.clock.bind(clock)` 显式接上，见[地图时钟](./map-controls.md#地图时钟) |
 
 ## 装进回放时间轴
 
@@ -112,7 +113,7 @@ const track = tracksFromCzml(document)[0];
 const timeline = createTrackTimeline(track);
 
 const clock = new SimulationClock({ mode: 'replay', startTime: 0, endTime: 60 });
-const pose = sampleTrackPose(timeline, track.id, clock.snapshot().currentTime ?? 0);
+const pose = sampleTrackPose(timeline, track.id, clock.snapshot.currentTime ?? 0);
 // pose = { position, attitude } → 交给模型图层 setTransform() 或相机
 ```
 
@@ -127,5 +128,5 @@ const pose = sampleTrackPose(timeline, track.id, clock.snapshot().currentTime ??
 ## 边界
 
 - **最小集之外的属性不解析**：`billboard`、`label`、`path`、`polyline` 等渲染属性原样忽略；业务字段不会由 SDK 生成，需要时在文档上追加；
-- **CZML 图层只管实体生命周期**：文档里的 `clock` 与地图时钟的联动仍属业务编排（实体动画由 Cesium 自己按 `clock` 推进）；直接操作 `viewer.dataSources` 时资源由业务释放；
-- **不做时间轴联动**：CZML 的 `clock` 与地图时钟的联动属于业务编排；把解析出的采样喂给[回放时间轴](./replay-timeline.md)即可。
+- **CZML 图层只管实体生命周期**：文档里的 `clock` 不会被自动应用（实体动画由 Cesium 自己按地图时钟推进）；直接操作 `viewer.dataSources` 时资源由业务释放；
+- **时间轴联动要显式声明**：用 `map.clock.bind(clock)` 把[仿真时钟](./simulation-clock.md)接到地图上，或把解析出的采样喂给[回放时间轴](./replay-timeline.md)。

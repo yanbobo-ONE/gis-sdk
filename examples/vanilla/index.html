@@ -105,6 +105,8 @@
             <button id="cluster-points" type="button">按 48 像素聚合</button>
           </div>
           <button id="add-czml" type="button">加载 CZML 轨迹</button>
+          <button id="probe-czml-clock" type="button">时钟探针（播放 CZML 轨迹）</button>
+          <button id="arm-entity-pick" type="button">实体拾取探针（布防后点画布上的蓝点）</button>
           <button id="run-batch" type="button">批量分析（20 点坡度坡向）</button>
           <dl class="readout">
             <div>
@@ -118,6 +120,14 @@
             <div>
               <dt>CZML</dt>
               <dd id="czml-value">未加载</dd>
+            </div>
+            <div>
+              <dt>地图时钟</dt>
+              <dd id="clock-value">未验证</dd>
+            </div>
+            <div>
+              <dt>实体拾取</dt>
+              <dd id="entity-pick-value">未验证</dd>
             </div>
             <div>
               <dt>批量</dt>

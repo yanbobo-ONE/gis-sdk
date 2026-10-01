@@ -7,6 +7,7 @@ import type {
   CaptureOptions,
   CoordinateTransform,
   FrameCapture,
+  MapClockController,
   MapDrawingController,
   PickingController,
   SceneController,
@@ -56,6 +57,8 @@ export interface GisMap<TRaw = unknown> {
   readonly basemap: BasemapController;
   /** 类型化地形控制器。 */
   readonly terrain: TerrainController;
+  /** 地图时钟：读数、控制与 SDK 时钟联动。 */
+  readonly clock: MapClockController;
   /** 类型化坐标转换。 */
   readonly coordinates: CoordinateTransform;
   /** 类型化渲染质量控制。 */
@@ -110,6 +113,7 @@ export interface MapEngineAdapter<TRaw> {
   readonly camera: CameraController;
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
+  readonly clock: MapClockController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
   readonly picking: PickingController;

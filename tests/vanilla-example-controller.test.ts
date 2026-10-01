@@ -5,6 +5,11 @@ import type {
   AnalysisController,
   AnalysisResultMap,
   CameraController,
+  CoordinateTransform,
+  MapClockController,
+  PickingController,
+  PickingHit,
+  SimulationClock,
 } from '../src/entries/core.js';
 import type {
   CzmlLayerHandle,
@@ -101,6 +106,63 @@ function createHarness() {
     set: terrainSet,
   };
 
+  // 地图时钟桩：按真实语义把源时钟镜像进读数，帧推进由注入的 waitFrames 模拟。
+  let clockTime = 0;
+  let clockAnimating = false;
+  let boundClock: SimulationClock | undefined;
+  const syncClock = () => {
+    if (!boundClock) {
+      return;
+    }
+    const snapshot = boundClock.snapshot;
+    clockTime = snapshot.currentTime ?? clockTime;
+    clockAnimating = snapshot.state === 'playing';
+  };
+  const clock = {
+    get time() {
+      return clockTime;
+    },
+    get snapshot() {
+      return {
+        time: clockTime,
+        startTime: undefined,
+        endTime: undefined,
+        multiplier: 1,
+        animating: clockAnimating,
+      };
+    },
+    bind: vi.fn((source: SimulationClock) => {
+      boundClock = source;
+      syncClock();
+      return () => {
+        boundClock = undefined;
+        clockAnimating = false;
+      };
+    }),
+  };
+  /** 模拟一帧：推进源时钟并镜像，等价于真实适配器在渲染帧里做的事。 */
+  const advanceFrames = (count: number) => {
+    for (let index = 0; index < count; index += 1) {
+      boundClock?.advance(16);
+      syncClock();
+    }
+  };
+
+  const pickListeners = new Set<(event: { readonly hit: PickingHit | undefined }) => void>();
+  const picking = {
+    on: vi.fn(
+      (_kind: string, listener: (event: { readonly hit: PickingHit | undefined }) => void) => {
+        pickListeners.add(listener);
+        return () => {
+          pickListeners.delete(listener);
+        };
+      },
+    ),
+    setEnabled: vi.fn(),
+  };
+  const toWindow = vi.fn((): { x: number; y: number } | undefined => ({ x: 320, y: 200 }));
+  const setView = vi.fn();
+
   const map = {
     state: 'ready' as const,
     camera: {
@@ -113,9 +175,13 @@ function createHarness() {
         roll: 0,
       },
       metersPerPixel: 120,
-    } as unknown as Pick<CameraController, 'view' | 'metersPerPixel'>,
+      setView,
+    } as unknown as Pick<CameraController, 'view' | 'metersPerPixel' | 'setView'>,
     environment: { set: environmentSet, clearAll: environmentClearAll },
     terrain,
+    clock: clock as unknown as Pick<MapClockController, 'time' | 'snapshot' | 'bind'>,
+    coordinates: { toWindow } as unknown as Pick<CoordinateTransform, 'toWindow'>,
+    picking: picking as unknown as Pick<PickingController, 'on' | 'setEnabled'>,
     analysis: { list: vi.fn(() => []), run: analysisRun } as unknown as AnalysisController,
     layers: {
       add,
@@ -128,6 +194,10 @@ function createHarness() {
     raw: {
       viewer: {
         dataSources: { get: vi.fn(() => geoJson) },
+        // 探针要把画布内坐标换成页面坐标，桩给出零偏移的画布。
+        canvas: {
+          getBoundingClientRect: () => ({ left: 0, top: 0 }),
+        } as unknown as HTMLCanvasElement,
         flyTo: vi.fn(() => Promise.resolve(true)),
       },
     },
@@ -160,11 +230,21 @@ function createHarness() {
   const filter = { op: 'eq' as const, property: 'status', value: 'ACTIVE' };
   const createActiveFilter = vi.fn(() => filter);
 
+  /** 触发一次拾取事件，等价于验收脚本在画布上真实点了一下。 */
+  const emitClick = (hit: PickingHit | undefined) => {
+    for (const listener of [...pickListeners]) {
+      listener({ hit });
+    }
+  };
+
   return {
+    advanceFrames,
     analysisRun,
+    clock,
     createActiveFilter,
     createMap,
     czml,
+    emitClick,
     environmentClearAll,
     environmentSet,
     filter,
@@ -172,8 +252,10 @@ function createHarness() {
     lineOfSight,
     map,
     points,
+    setView,
     slopeAspect,
     terrainSet,
+    toWindow,
     wms,
   };
 }
@@ -379,5 +461,94 @@ describe('Vanilla example controller', () => {
     expect(controller.snapshot().terrain).toBe(
       '创建期声明 → cesium-terrain / 加载中 pending=true / 兑现后 pending=false',
     );
+  });
+
+  it('drives the map clock from a simulation clock across rendered frames', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+      // 单测里用假帧替代 requestAnimationFrame：一帧等于 16ms。
+      waitFrames: (count) => {
+        harness.advanceFrames(count);
+        return Promise.resolve();
+      },
+    });
+    await controller.start('map');
+
+    await controller.probeCzmlClock();
+
+    // 6 帧 × 16ms × 8 倍速 = 768ms。
+    expect(controller.snapshot().clock).toBe('推进 768 ms / 源时钟一致 / animating=true / 实体 1');
+    expect(harness.map.layers.add).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'example-czml-clock', type: 'czml' }),
+    );
+    // 绑定在探针结束时解除：地图时钟不再跟随源时钟。
+    expect(harness.clock.bind).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the click point for the entity probe and records the resolved hit', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+      waitFrames: () => Promise.resolve(),
+    });
+    await controller.start('map');
+
+    await controller.armEntityPickProbe();
+
+    // 探针要把实体交到验收脚本手里：先给坐标，命中结果在真实点击后才写入。
+    expect(controller.snapshot().entityPickScreen).toBe('320,200');
+    expect(controller.snapshot().entityPick).toBeUndefined();
+    expect(harness.setView).toHaveBeenCalledWith(
+      expect.objectContaining({ longitude: 116.5, latitude: 39.95 }),
+    );
+
+    harness.emitClick({ layerId: 'example-czml-pick', objectId: 'pick-probe', kind: 'layer' });
+
+    const snapshot = controller.snapshot();
+    expect(snapshot.entityPick).toBe('命中图层 example-czml-pick / 实体 pick-probe');
+    expect(snapshot.entityPickScreen).toBeUndefined();
+  });
+
+  it('reports a probe miss without claiming a managed layer', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+      waitFrames: () => Promise.resolve(),
+    });
+    await controller.start('map');
+    await controller.armEntityPickProbe();
+
+    harness.emitClick({ layerId: undefined, objectId: undefined, kind: 'globe' });
+
+    expect(controller.snapshot().entityPick).toBe('未命中托管图层（kind=globe）');
+  });
+
+  it('rejects the entity probe when the target cannot be projected to the screen', async () => {
+    const harness = createHarness();
+    harness.toWindow.mockReturnValue(undefined);
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+      waitFrames: () => Promise.resolve(),
+    });
+    await controller.start('map');
+
+    await expect(controller.armEntityPickProbe()).rejects.toThrow('无法投影出点击坐标');
   });
 });

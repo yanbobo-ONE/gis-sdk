@@ -99,8 +99,8 @@ export interface CzmlLayerHandle extends LayerHandle {
   /**
    * 替换 CZML 文档：旧实体一直有效，直到新文档加载成功。
    *
-   * 文档里的 `clock` **不会**被 SDK 应用到地图时钟——时间轴联动属于业务编排，
-   * 需要时用 `map.raw.viewer` 自己接。
+   * 文档里的 `clock` **不会**被 SDK 自动应用到地图时钟——时间轴联动属于业务编排。
+   * 需要播放时用 `map.clock`（例如绑定一个 `SimulationClock`），不必直接操作 `map.raw.viewer`。
    */
   setData(data: CzmlSource, options?: OperationOptions): Promise<void>;
 }

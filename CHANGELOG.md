@@ -8,6 +8,11 @@
 - 增加相机分辨率读数 `map.camera.metersPerPixel`：屏幕中心处每像素多少米（二维 / 三维通用，打不到椭球时为 `undefined`），配 `clusterPoints()` 即可按屏幕像素驱动聚合。
 - 增加批量分析执行 `runAnalysisBatch()`：有界并发、逐条失败隔离、结果与输入同序、进度回调与取消返回部分结果。
 - 点位图层支持标签：`points[].label` + `labels` 样式（字体/颜色/描边/偏移/上限），用 `LabelCollection` 批量绘制并新增 `labelCount` 读数，`setData()` 与 `setStyle()` 一并处理标签。
+- 外部服务地址收到创建处并补齐清单：`createMap({ terrain })` 让地形服务地址与底图瓦片地址一样在创建时声明，新增 `map.terrain.ready` / `pending` 读数（初始加载失败保持椭球并经 `ready` 拒绝与 `map:error` 双通道上报，配置非法同步抛 `INVALID_TERRAIN_CONFIG`）；新增[外部接入点](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/external-endpoints.md)总览页，并用源码守卫测试锁住"SDK 不内置任何外部服务地址与资产"的边界。
+- 增加地图时钟 `map.clock`：读写地图时间轴（时间统一为毫秒时间戳），`bind(SimulationClock)` 按渲染帧推进源时钟并逐帧镜像（`drive: false` 时只镜像、推进由业务负责），CZML 与其它带时间区间的动态实体按当前地图时间求值；读不到时钟抛 `CLOCK_TIME_UNAVAILABLE`，参数非法抛 `INVALID_CLOCK_CONFIG`。
+- 增加实体级拾取：CZML 与 GeoJSON 图层在加载后登记实体归属，实体命中以 `kind: 'layer'` 回落所属图层（`objectId` 为文档里的实体 id），`setData()` 替换文档后归属自动跟随新实体。
+- 修复拾取在真实地图上收不到事件：`map.picking` 的输入动作会被随后构造的绘制控制器覆盖（Cesium `setInputAction` 是覆盖语义），现改为按动作类型串成一条链，拾取与绘制同时生效。
+- 修复地图时钟读数丢 1 毫秒：`JulianDate.toDate()` 的小数毫秒截断会让 `map.clock.time` 与源时钟时间戳差 1 毫秒，现按整秒基准加四舍五入的小数毫秒读取。
 
 ## 0.1.0-alpha.10
 

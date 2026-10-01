@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const cesium = vi.hoisted(() => {
-  const actions = new Map<number, (movement: { position?: { x: number; y: number } }) => void>();
+  type Action = (movement: { position?: { x: number; y: number } }) => void;
+  const actions = new Map<number, Action>();
   class FakeHandler {
     constructor(readonly canvas: unknown) {}
-    setInputAction(action: (movement: { position?: unknown }) => void, type: number): void {
+    setInputAction(action: Action, type: number): void {
+      // 与 Cesium 一致：一个动作类型只有一个回调，后注册的覆盖先注册的。
       actions.set(type, action);
+    }
+    getInputAction(type: number): Action | undefined {
+      return actions.get(type);
     }
     removeInputAction(type: number): void {
       actions.delete(type);
@@ -26,6 +31,7 @@ vi.mock('cesium', () => ({
 }));
 
 import { CesiumPickingController, toPickingHit } from '../src/cesium/picking-controller.js';
+import { registerPickableEntities } from '../src/cesium/layers/pickable-entities.js';
 import type { CoordinateTransform, GeoPosition, PickingEvent } from '../src/core/controls.js';
 
 function createViewer() {
@@ -112,6 +118,34 @@ describe('CesiumPickingController', () => {
       kind: 'unknown',
     });
     expect(toPickingHit({})).toEqual({ layerId: undefined, objectId: undefined, kind: 'unknown' });
+  });
+
+  it('resolves entities registered by managed data-source layers', () => {
+    const satellite = { id: 'sat-1' };
+    const anonymous = {};
+    const business = { id: 'business-entity' };
+    registerPickableEntities([satellite, anonymous], 'orbits');
+
+    // 实体图元的 `id` 是实体对象本身。
+    expect(toPickingHit({ id: satellite })).toEqual({
+      layerId: 'orbits',
+      objectId: 'sat-1',
+      kind: 'layer',
+    });
+    // 实体没有字符串 id 时仍然归属图层，只是没有对象 id。
+    expect(toPickingHit({ id: anonymous })).toEqual({
+      layerId: 'orbits',
+      objectId: undefined,
+      kind: 'layer',
+    });
+    // 少数拾取路径直接返回实体。
+    expect(toPickingHit(satellite)).toMatchObject({ layerId: 'orbits', kind: 'layer' });
+    // 业务自己的实体没有登记，仍按原生对象处理。
+    expect(toPickingHit({ id: business })).toEqual({
+      layerId: undefined,
+      objectId: undefined,
+      kind: 'unknown',
+    });
   });
 
   it('emits click events with the marker hit and the picked geo position', () => {

@@ -7,6 +7,7 @@ import type {
   CaptureOptions,
   CoordinateTransform,
   FrameCapture,
+  MapClockController,
   MapDrawingController,
   PickingController,
   SceneController,
@@ -34,6 +35,7 @@ import { ModelAppearanceShaders } from './layers/model-appearance.js';
 import { LoadLimiter } from './load-limiter.js';
 import { CesiumPickingController } from './picking-controller.js';
 import { CesiumQualityController } from './quality-controller.js';
+import { CesiumClockController } from './clock-controller.js';
 import { CesiumTerrainController } from './terrain-controller.js';
 import { CesiumTerrainSampler } from './terrain-sampling.js';
 import type { CesiumRawContext } from './types.js';
@@ -158,6 +160,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   readonly camera: CameraController;
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
+  readonly clock: MapClockController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
   readonly picking: PickingController;
@@ -169,6 +172,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   private readonly cameraRuntime: CesiumCameraController;
   private readonly basemapRuntime: CesiumBasemapController;
   private readonly terrainRuntime: CesiumTerrainController;
+  private readonly clockRuntime: CesiumClockController;
   private readonly qualityRuntime: CesiumQualityController;
   private readonly pickingRuntime: CesiumPickingController;
   private readonly sceneRuntime: CesiumSceneController;
@@ -182,6 +186,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     let cameraRuntime: CesiumCameraController | undefined;
     let basemapRuntime: CesiumBasemapController | undefined;
     let terrainRuntime: CesiumTerrainController | undefined;
+    let clockRuntime: CesiumClockController | undefined;
     let qualityRuntime: CesiumQualityController | undefined;
     let pickingRuntime: CesiumPickingController | undefined;
     let sceneRuntime: CesiumSceneController | undefined;
@@ -205,6 +210,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         new CesiumTerrainSampler(viewerInstance, modelLoad),
         options.terrain,
       );
+      clockRuntime = new CesiumClockController(viewerInstance);
       const coordinates = new CesiumCoordinateTransform(viewerInstance);
       pickingRuntime = new CesiumPickingController(viewerInstance, coordinates);
       sceneRuntime = new CesiumSceneController(viewerInstance.scene);
@@ -232,6 +238,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       this.cameraPoseGuard = cameraPoseGuard;
       this.basemapRuntime = basemapRuntime;
       this.terrainRuntime = terrainRuntime;
+      this.clockRuntime = clockRuntime;
       this.qualityRuntime = qualityRuntime;
       this.pickingRuntime = pickingRuntime;
       this.sceneRuntime = sceneRuntime;
@@ -239,6 +246,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       this.camera = cameraRuntime;
       this.basemap = basemapRuntime;
       this.terrain = terrainRuntime;
+      this.clock = clockRuntime;
       this.coordinates = coordinates;
       this.quality = qualityRuntime;
       this.picking = pickingRuntime;
@@ -254,6 +262,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         camera: () => cameraRuntime?.destroy(),
         basemap: () => basemapRuntime?.destroy(),
         terrain: () => terrainRuntime?.destroy(),
+        clock: () => clockRuntime?.destroy(),
         quality: () => qualityRuntime?.dispose(),
         picking: () => pickingRuntime?.dispose(),
         scene: () => sceneRuntime?.destroy(),
@@ -297,6 +306,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     this.cameraRuntime.destroy();
     this.basemapRuntime.destroy();
     this.terrainRuntime.destroy();
+    this.clockRuntime.destroy();
     this.raw.viewer.destroy();
   }
 }

@@ -5,10 +5,12 @@ import type { MapEngineAdapter, MapEventMap } from '../src/core/contracts.js';
 import type {
   BasemapController,
   CameraController,
+  MapClockController,
   TerrainController,
 } from '../src/core/controls.js';
 import { GisError } from '../src/core/errors.js';
 import { MapRuntime } from '../src/core/map-runtime.js';
+import { SimulationClock } from '../src/core/simulation-clock.js';
 import type { CoordinateTransform, PickingController } from '../src/core/controls.js';
 import type { EnvironmentController } from '../src/core/environment.js';
 import type { QualityController } from '../src/core/quality.js';
@@ -61,6 +63,16 @@ const terrain = {
   set: vi.fn(() => Promise.resolve()),
   type: 'ellipsoid',
 } satisfies TerrainController;
+
+const clock = {
+  snapshot: { time: 0, startTime: undefined, endTime: undefined, multiplier: 1, animating: false },
+  time: 0,
+  setTime: vi.fn(),
+  setRange: vi.fn(),
+  setMultiplier: vi.fn(),
+  setAnimating: vi.fn(),
+  bind: vi.fn(() => () => undefined),
+} satisfies MapClockController;
 
 const coordinates = {
   toWorld: vi.fn((position: { longitude: number; latitude: number; height?: number }) => ({
@@ -124,6 +136,7 @@ function createAdapter(): TestAdapter {
     environment,
     basemap,
     terrain,
+    clock,
     coordinates,
     quality,
     picking,
@@ -187,6 +200,7 @@ describe('MapRuntime', () => {
     expect(map.camera).toBe(map.camera);
     expect(map.basemap).toBe(map.basemap);
     expect(map.terrain).toBe(map.terrain);
+    expect(map.clock).toBe(map.clock);
     expect(map.camera.view).toEqual({
       longitude: 116.39,
       latitude: 39.9,
@@ -200,9 +214,11 @@ describe('MapRuntime', () => {
     map.camera.setView({ longitude: 116.39, latitude: 39.9 });
     map.basemap.set({ type: 'xyz', url: '/tiles/{z}/{x}/{y}.png' });
     await map.terrain.set({ type: 'ellipsoid' });
+    map.clock.setTime(1_000);
     expect((adapter.camera.setView as Mock).mock.calls).toHaveLength(1);
     expect((adapter.basemap.set as Mock).mock.calls).toHaveLength(1);
     expect((adapter.terrain.set as Mock).mock.calls).toHaveLength(1);
+    expect((adapter.clock.setTime as Mock).mock.calls).toHaveLength(1);
 
     await map.destroy();
     expect(() => {
@@ -214,6 +230,21 @@ describe('MapRuntime', () => {
     expect(() => {
       void map.terrain.set({ type: 'ellipsoid' });
     }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'terrain.set' }));
+    expect(() => {
+      map.clock.setTime(2_000);
+    }).toThrow(expect.objectContaining({ code: 'MAP_DISPOSED', operation: 'clock.setTime' }));
+  });
+
+  it('binds the SDK simulation clock through the map clock port', () => {
+    const adapter = createAdapter();
+    const map = new MapRuntime('map-1', adapter);
+    const source = new SimulationClock({ startTime: 0, endTime: 1_000, initialTime: 0 });
+
+    const unbind = map.clock.bind(source, { drive: false });
+
+    expect((adapter.clock.bind as Mock).mock.calls[0]?.[0]).toBe(source);
+    expect((adapter.clock.bind as Mock).mock.calls[0]?.[1]).toEqual({ drive: false });
+    unbind();
   });
 
   it('delegates drawing edit calls and gates them after destroy', async () => {

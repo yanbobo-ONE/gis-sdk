@@ -15,6 +15,7 @@ import type {
 import { LayerHandleRuntime } from '../../layers/layer-handle-runtime.js';
 import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
 import type { EventHub } from '../../core/event-hub.js';
+import { registerPickableEntities } from './pickable-entities.js';
 
 function operationAborted(id: string, operation: string, cause?: unknown): GisError {
   return new GisError(`Layer "${id}" operation was aborted.`, {
@@ -279,6 +280,7 @@ class CesiumGeoJsonLayerHandle implements GeoJsonLayerHandle {
 
       const previous = this.currentDataSource;
       this.currentDataSource = candidate;
+      registerPickableEntities(candidate.entities.values, this.id);
       this.viewer.dataSources.remove(previous, true);
     } catch (cause: unknown) {
       if (added) {
@@ -319,6 +321,7 @@ export async function createGeoJsonLayer(
   const loadOptions = createLoadOptions(spec.style, spec.id, 'add');
   const dataSource = await loadDataSource(spec.id, spec.data, loadOptions, context.signal, 'add');
   dataSource.show = visible;
+  registerPickableEntities(dataSource.entities.values, spec.id);
 
   let added = false;
   let adding: Promise<DataSource> | undefined;

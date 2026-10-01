@@ -17,4 +17,8 @@ npm --prefix .tmp/vanilla-consumer run dev -- --host 127.0.0.1 --port 4175
 
 "创建期声明地形"按钮用 `createMap({ terrain })` 重建地图，指向本地地形 fixture `/__test/terrain/`：该 fixture 只提供 `layer.json` 元数据，访问 `/__test/terrain-state` 能看到 `layerJsonRequests`，用来验证创建期声明的地址真的被请求。瓦片数据不在 fixture 范围内，所以验收流程在 `map.terrain.ready` 兑现、记录读数之后会立刻切回椭球地形，面板上的"创建期地形"一行会写出 `类型 / 加载中 pending / 兑现后 pending` 三个读数。
 
-验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析、相机位姿读取、点位图层与标签（含 `labelCount` 读数与开关）、按 `metersPerPixel` 驱动的点聚合、CZML 轨迹图层、20 点的批量坡度坡向分析，以及创建期地形声明与 `ready` 语义。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。
+"时钟探针"按钮加载一条带点图形的 CZML 轨迹，用 `SimulationClock` 经 `map.clock.bind()` 驱动地图时钟并播放，等待若干真实渲染帧后**断言**地图时间确实推进、推进量与源时钟一致、播放期间 `animating` 为真；任何一条不成立都把错误写进操作提示，而不是记一个看起来正常的读数。
+
+"实体拾取探针"按钮加载一个静态 CZML 实体并把相机对准它，然后把点击坐标报给验收脚本（写进读数行的 `data-screen`）。探针**不自己合成点击**：Cesium 的输入层会调用 `setPointerCapture`，合成的事件会被拦下，所以必须在画布上真实点一次——点完读数会变成 `命中图层 <图层 id> / 实体 <实体 id>`。
+
+验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析、相机位姿读取、点位图层与标签（含 `labelCount` 读数与开关）、按 `metersPerPixel` 驱动的点聚合、CZML 轨迹图层、地图时钟播放与实体级拾取探针、20 点的批量坡度坡向分析，以及创建期地形声明与 `ready` 语义。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。

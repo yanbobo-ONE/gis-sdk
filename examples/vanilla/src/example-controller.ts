@@ -1,9 +1,18 @@
-import { clusterPoints, czmlFromPositions, runAnalysisBatch } from '@yanbobo/gis-sdk/core';
+import {
+  SimulationClock,
+  clusterPoints,
+  czmlFromPositions,
+  runAnalysisBatch,
+} from '@yanbobo/gis-sdk/core';
 import type {
   AnalysisController,
   CameraController,
+  CoordinateTransform,
   EnvironmentController,
   GeoPoint,
+  MapClockController,
+  PickingController,
+  PickingHit,
   TerrainController,
 } from '@yanbobo/gis-sdk/core';
 import type { LayerManager } from '@yanbobo/gis-sdk/layers';
@@ -63,15 +72,22 @@ interface PointsHandleLike extends LayerHandleLike {
 interface ExampleMapLike {
   readonly state: string;
   /** 直接复用 SDK 的相机读数字段：示例同时验证发布包的类型可用。 */
-  readonly camera: Pick<CameraController, 'view' | 'metersPerPixel'>;
+  readonly camera: Pick<CameraController, 'view' | 'metersPerPixel' | 'setView'>;
   readonly environment: Pick<EnvironmentController, 'set' | 'clearAll'>;
   /** 创建期地形的读数与切换：示例验证 `ready` / `pending` / `set` 确实随发布包一起可用。 */
   readonly terrain: Pick<TerrainController, 'type' | 'pending' | 'ready' | 'set'>;
+  /** 地图时钟：示例验证读数、绑定与按帧推进确实随发布包一起可用。 */
+  readonly clock: Pick<MapClockController, 'time' | 'snapshot' | 'bind'>;
+  /** 拾取事件：实体命中探针走的是业务真实订阅的那条通道。 */
+  readonly picking: Pick<PickingController, 'on' | 'setEnabled'>;
+  /** 坐标投影：用它把探针实体的位置换算成真实点击坐标。 */
+  readonly coordinates: Pick<CoordinateTransform, 'toWindow'>;
   readonly analysis: AnalysisController;
   readonly layers: Pick<LayerManager, 'add' | 'list' | 'remove'>;
   readonly raw: {
     readonly viewer: {
       readonly dataSources?: { get(index: number): unknown };
+      readonly canvas?: HTMLCanvasElement;
       flyTo(target: unknown): Promise<boolean>;
     };
   };
@@ -89,6 +105,13 @@ interface ExampleDependencies {
   readonly wmsUrl: string;
   /** 本地地形元数据 fixture 的根地址；验收台用它验证创建期地形真的发出请求。 */
   readonly terrainUrl: string;
+  /**
+   * 等待若干渲染帧。
+   *
+   * 时钟探针要观察"每帧推进"，必须在真实渲染帧上等待：单测注入立即兑现的实现，
+   * 浏览器里默认走 `requestAnimationFrame`。
+   */
+  readonly waitFrames?: (count: number) => Promise<void>;
 }
 
 /** 面板上的环境预设；`clear` 表示清空全部环境效果。 */
@@ -113,6 +136,17 @@ export interface VanillaExampleSnapshot {
   readonly clusters: string | undefined;
   /** CZML 图层读数：实体数；没加载过时为 `undefined`。 */
   readonly czml: string | undefined;
+  /** 地图时钟读数：`推进 ms / 源时钟是否一致 / animating / 实体数`；没验过时为 `undefined`。 */
+  readonly clock: string | undefined;
+  /** 实体拾取读数：命中图层与实体 id；没验过时为 `undefined`。 */
+  readonly entityPick: string | undefined;
+  /**
+   * 等待真实点击的页面坐标 `x,y`。
+   *
+   * 探针实体渲染后由 SDK 的坐标投影算出，验收脚本据此在画布上点下去；
+   * 未布防或已命中时为 `undefined`。
+   */
+  readonly entityPickScreen: string | undefined;
   /** 批量分析读数：`完成 / 失败 / 总数`；没跑过时为 `undefined`。 */
   readonly batch: string | undefined;
   /** 创建期地形读数：`已安装类型 / pending / ready 结果`；没验过时为 `undefined`。 */
@@ -134,6 +168,15 @@ export interface VanillaExampleController {
   togglePointLabels(): void;
   clusterPoints(): void;
   addCzmlLayer(): Promise<void>;
+  /** 用 `SimulationClock` 驱动地图时钟播放 CZML 轨迹，并断言时钟真的随帧推进。 */
+  probeCzmlClock(): Promise<void>;
+  /**
+   * 布防实体拾取探针：加载一个静态 CZML 实体并把相机对准它。
+   *
+   * 探针不自己合成点击——Cesium 的输入层用 `setPointerCapture`，合成事件会被拦下——
+   * 而是报告页面坐标，由验收脚本在画布上真实点一次。
+   */
+  armEntityPickProbe(): Promise<void>;
   runBatchAnalysis(): Promise<void>;
   /** 用 `createMap({ terrain })` 重建地图，等 `ready` 兑现后记录读数并切回椭球地形。 */
   createWithTerrain(): Promise<void>;
@@ -170,6 +213,35 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** 时钟探针的 epoch 与采样：显式给出，便于由它算出 `SimulationClock` 的时间范围。 */
+const CLOCK_PROBE_EPOCH = '2026-09-30T00:00:00Z';
+const CLOCK_PROBE_SAMPLES = 24;
+const CLOCK_PROBE_INTERVAL_SECONDS = 1;
+/** 倍率取 8：几帧就能观察到明显推进，同时不会在探针结束前播完。 */
+const CLOCK_PROBE_RATE = 8;
+/** 等待的渲染帧数：留出足够余量，避免首帧还在建场景时就下结论。 */
+const CLOCK_PROBE_FRAMES = 6;
+
+/** 实体拾取探针的实体 id 与位置；位置显式给出，才能把它投影成点击坐标。 */
+const PICK_PROBE_ENTITY_ID = 'pick-probe';
+const PICK_PROBE_POSITION = { longitude: 116.5, latitude: 39.95, height: 20_000 } as const;
+
+/** 默认按真实渲染帧等待；单测注入替代实现即可脱离浏览器运行。 */
+function requestFrames(count: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let remaining = count;
+    const step = (): void => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
 function isGeoJsonHandle(handle: LayerHandleLike): handle is GeoJsonHandleLike {
   return handle.type === 'geojson' && 'setData' in handle;
 }
@@ -202,6 +274,11 @@ export function createVanillaExampleController(
   let points: string | undefined;
   let clusters: string | undefined;
   let czml: string | undefined;
+  let clockReading: string | undefined;
+  let entityPick: string | undefined;
+  let entityPickScreen: string | undefined;
+  let pickSubscription: (() => void) | undefined;
+  const waitFrames = dependencies.waitFrames ?? requestFrames;
   let batch: string | undefined;
   let terrain: string | undefined;
   let pointsHandle: PointsHandleLike | undefined;
@@ -223,6 +300,9 @@ export function createVanillaExampleController(
       points,
       clusters,
       czml,
+      clock: clockReading,
+      entityPick,
+      entityPickScreen,
       batch,
       terrain,
     };
@@ -305,6 +385,11 @@ export function createVanillaExampleController(
       points = undefined;
       clusters = undefined;
       czml = undefined;
+      clockReading = undefined;
+      entityPick = undefined;
+      entityPickScreen = undefined;
+      pickSubscription?.();
+      pickSubscription = undefined;
       batch = undefined;
       terrain = undefined;
       pointsHandle = undefined;
@@ -328,6 +413,8 @@ export function createVanillaExampleController(
     }
     state = 'destroying';
     notify();
+    pickSubscription?.();
+    pickSubscription = undefined;
     await map.destroy();
     map = undefined;
     geoJson = undefined;
@@ -507,6 +594,129 @@ export function createVanillaExampleController(
         data: document,
       });
       czml = `实体 ${String(handle.entityCount)}（${String(orbit.length)} 个采样点）`;
+      notify();
+    },
+    /**
+     * 时钟探针：用 `SimulationClock` 驱动地图时钟，播放一条带点图形的 CZML 轨迹。
+     *
+     * 断言三件事，任何一条不成立都直接抛错（而不是写进读数里蒙混过去）：
+     * 地图时间帧间真的推进了、推进量与源时钟一致（镜像成立）、播放期间 `animating` 为真。
+     */
+    async probeCzmlClock() {
+      const handles = requireReady();
+      const epochMs = Date.parse(CLOCK_PROBE_EPOCH);
+      const orbit = Array.from({ length: CLOCK_PROBE_SAMPLES }, (_, index) => ({
+        longitude: 116.2 + index * 0.03,
+        latitude: 39.8 + Math.sin(index / 3) * 0.06,
+        height: 60_000,
+      }));
+      const document = czmlFromPositions('clock-track', orbit, {
+        epoch: CLOCK_PROBE_EPOCH,
+        intervalSeconds: CLOCK_PROBE_INTERVAL_SECONDS,
+        name: '时钟探针',
+      });
+      // SDK 只生成位置采样；点图形由业务在文档上追加，实体才可见、可拾取。
+      const visible = document.map((packet, index) =>
+        index === 0
+          ? packet
+          : { ...packet, point: { pixelSize: 14, color: { rgba: [255, 214, 102, 255] } } },
+      );
+      const handle = await handles.map.layers.add({
+        id: 'example-czml-clock',
+        type: 'czml',
+        data: visible,
+      });
+
+      const source = new SimulationClock({
+        mode: 'replay',
+        startTime: epochMs,
+        endTime: epochMs + (CLOCK_PROBE_SAMPLES - 1) * CLOCK_PROBE_INTERVAL_SECONDS * 1000,
+        initialTime: epochMs,
+        rate: CLOCK_PROBE_RATE,
+      });
+      const unbind = handles.map.clock.bind(source);
+      try {
+        source.play();
+        const before = handles.map.clock.time;
+        await waitFrames(CLOCK_PROBE_FRAMES);
+        const after = handles.map.clock.time;
+        const mirroredTime = source.snapshot.currentTime;
+        const animating = handles.map.clock.snapshot.animating;
+
+        if (after <= before) {
+          throw new Error(`地图时钟没有随渲染帧推进：${String(before)} → ${String(after)}`);
+        }
+        if (mirroredTime !== after) {
+          throw new Error(
+            `地图时钟与源时钟不一致：源 ${String(mirroredTime)} / 地图 ${String(after)}`,
+          );
+        }
+        if (!animating) {
+          throw new Error('播放期间地图时钟的 animating 为 false。');
+        }
+        clockReading = `推进 ${String(after - before)} ms / 源时钟一致 / animating=${String(animating)} / 实体 ${String(handle.entityCount)}`;
+      } finally {
+        unbind();
+        source.pause();
+      }
+      notify();
+    },
+    /** 布防实体拾取探针：加载静态实体、对准相机，并把点击坐标报给验收脚本。 */
+    async armEntityPickProbe() {
+      const handles = requireReady();
+      const canvas = handles.map.raw.viewer.canvas;
+      if (!canvas) {
+        throw new Error('验收台拿不到画布，无法准备真实点击。');
+      }
+      const document = [
+        { id: 'document', version: '1.0' },
+        {
+          id: PICK_PROBE_ENTITY_ID,
+          name: '拾取探针',
+          position: {
+            cartographicDegrees: [
+              PICK_PROBE_POSITION.longitude,
+              PICK_PROBE_POSITION.latitude,
+              PICK_PROBE_POSITION.height,
+            ],
+          },
+          point: {
+            pixelSize: 18,
+            color: { rgba: [110, 220, 255, 255] },
+            outlineColor: { rgba: [8, 24, 36, 255] },
+            outlineWidth: 2,
+          },
+        },
+      ];
+      await handles.map.layers.add({ id: 'example-czml-pick', type: 'czml', data: document });
+
+      entityPick = undefined;
+      entityPickScreen = undefined;
+      pickSubscription?.();
+      // 先订阅再投影：布防之后的第一次点击就是探针要观察的那一次。
+      pickSubscription = handles.map.picking.on('click', (event) => {
+        const hit: PickingHit | undefined = event.hit;
+        entityPick =
+          hit?.kind === 'layer'
+            ? `命中图层 ${hit.layerId ?? '(未知图层)'} / 实体 ${hit.objectId ?? '(无 id)'}`
+            : `未命中托管图层（kind=${hit?.kind ?? 'none'}）`;
+        entityPickScreen = undefined;
+        notify();
+      });
+
+      handles.map.camera.setView({
+        longitude: PICK_PROBE_POSITION.longitude,
+        latitude: PICK_PROBE_POSITION.latitude,
+        height: 90_000,
+      });
+      // 等实体真正进入渲染队列，否则投影出来的位置还不是它最终出现的地方。
+      await waitFrames(2);
+      const screen = handles.map.coordinates.toWindow(PICK_PROBE_POSITION);
+      if (!screen) {
+        throw new Error('探针实体不在视口内，无法投影出点击坐标。');
+      }
+      const rect = canvas.getBoundingClientRect();
+      entityPickScreen = `${String(Math.round(rect.left + screen.x))},${String(Math.round(rect.top + screen.y))}`;
       notify();
     },
     /** 批量分析：20 个点各算一次坡度坡向，带进度读数。 */

@@ -51,12 +51,23 @@ clock.advance(realDeltaMs); // 游标最多推进到水位线
 
 迟到的水位线（早于当前上限）会被忽略，避免游标倒退；当前游标超前于新上限时会被拉回，并可通过 `stall('transport-disconnected')` 标记断流。
 
+## 接到地图上
+
+`map.clock.bind(clock)` 把时钟接成地图的时间来源：每个渲染帧按真实帧间隔推进它，并镜像到地图时钟，业务不用自己写帧循环。
+
+```ts
+const unbind = map.clock.bind(clock); // 默认由渲染帧推进源时钟
+clock.play();
+```
+
+演示与回放通常用默认的 `drive: true`；推进由业务负责时（例如实时样本驱动）传 `{ drive: false }`，控制器只做镜像。细节见[地图控制](./map-controls.md#地图时钟)。
+
 ## 时间单位
 
 时钟统一使用**毫秒**（与 `RealtimeWaterline`、`normalizePositions` 一致）。CZML 规范使用秒，需要转换时按 `秒 × 1000` 处理，见[CZML 生成与解析](./czml.md)。
 
 ## 当前边界
 
-- **不做时间窗口切片**：按窗口加载数据属于数据读取层；SDK 未提供 `ReplayTimeline`（参照实现里它与帧解析、缓存策略耦合）；
+- **不做时间窗口切片**：按窗口加载数据属于数据读取层；窗口内的样本查询由[回放时间轴](./replay-timeline.md)负责；
 - **不做数据读取与解析**：时钟只回答"现在是几点、该不该走"，帧从哪里来由业务决定；
-- **不驱动 Cesium 时钟**：没有与 `viewer.clock` 自动联动；需要时用 `map.raw.viewer.clock` 自行设置。
+- **不读 CZML 文档自带的 `clock`**：文档时钟不会被自动应用，时间轴联动由业务用 `map.clock.bind()` 显式声明。

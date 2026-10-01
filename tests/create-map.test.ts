@@ -6,6 +6,7 @@ import type {
   BasemapController,
   CameraController,
   CoordinateTransform,
+  MapClockController,
   PickingController,
   TerrainController,
 } from '../src/core/controls.js';
@@ -65,6 +66,16 @@ const terrain = {
   type: 'ellipsoid',
 } satisfies TerrainController;
 
+const clock = {
+  snapshot: { time: 0, startTime: undefined, endTime: undefined, multiplier: 1, animating: false },
+  time: 0,
+  setTime: vi.fn(),
+  setRange: vi.fn(),
+  setMultiplier: vi.fn(),
+  setAnimating: vi.fn(),
+  bind: vi.fn(() => () => undefined),
+} satisfies MapClockController;
+
 function createFactory() {
   let receivedOptions: NormalizedCreateMapOptions | undefined;
 
@@ -115,6 +126,7 @@ function createFactory() {
     environment,
     basemap,
     terrain,
+    clock,
     coordinates,
     quality,
     picking,

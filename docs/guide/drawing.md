@@ -156,3 +156,4 @@ map.drawing.clearCompleted(); // 全部清除
 - **吸附范围限于 SDK 自己画的图形**：不会吸附到业务图层（GeoJSON / WMS 等）或地形表面；需要跨图层吸附时用 `/core` 的 `findSnapTarget()` 自己拼候选。
 - **不做贴地绘制**：预览与结果都用椭球高（`height` 默认 0）；需要贴地时先把几何交给地形采样（`map.terrain.sample()`）再渲染。
 - **不拦截相机操作**：绘制与编辑期间相机仍可拖动缩放；如需锁定，用 `map.raw.viewer.scene.screenSpaceCameraController.enableInputs = false`。
+- **与拾取共用输入动作**：绘制占用 `LEFT_CLICK` / `MOUSE_MOVE` / `LEFT_DOWN` / `LEFT_UP` / `RIGHT_CLICK` / `LEFT_DOUBLE_CLICK`，与 `map.picking` 的点击、悬停按类型串在同一条链上，两者可以同时收到事件；但业务直接调 Cesium 的 `setInputAction` 会覆盖整条链。

@@ -1,6 +1,6 @@
 # 地图控制
 
-本页说明当前 alpha 包已发布的基础地图控制：相机、一个 XYZ 底图和椭球 / Cesium Terrain 地形。它们都是地图实例的稳定句柄，调用方不需要保存 Cesium Provider 或 Camera 对象。
+本页说明当前 alpha 包已发布的基础地图控制：相机、一个 XYZ 底图、椭球 / Cesium Terrain 地形，以及地图时钟。它们都是地图实例的稳定句柄，调用方不需要保存 Cesium Provider 或 Camera 对象。
 
 ## 初始化 XYZ 底图
 
@@ -192,3 +192,56 @@ for (const sample of samples) {
 相同位置、策略和层级会命中缓存（坐标量化到 1e-5 度，约 1 米），因此对同一区域反复采样只会产生一次请求。切换地形会清空缓存。采样是椭球高，不是正高；需要贴地放置对象时，把 `height` 传回 `map.layers.add()` 或 `setTransform()` 即可。
 
 地图销毁中或销毁后，对以上任一控制器的调用均会抛出 `MAP_DISPOSED`。`destroy()` 会取消进行中的相机飞行、移除 SDK 底图并停止后续地形切换。
+
+## 地图时钟
+
+`map.clock` 读写地图时间轴。CZML 与其它带时间区间的动态实体都按当前地图时间求值，因此推进时钟就能播放轨迹。时间单位统一是**毫秒时间戳**——CZML 文档里的秒要乘 1000。
+
+```ts
+const snapshot = map.clock.snapshot;
+// { time, startTime, endTime, multiplier, animating }
+
+map.clock.setRange(Date.parse('2026-09-30T00:00:00Z'), Date.parse('2026-09-30T06:00:00Z'));
+map.clock.setTime(Date.parse('2026-09-30T01:00:00Z'));
+map.clock.setMultiplier(8);
+map.clock.setAnimating(true);
+```
+
+| 成员                     | 参数                | 运行效果                                  | 可能抛出                 |
+| ------------------------ | ------------------- | ----------------------------------------- | ------------------------ |
+| `snapshot`               | 无（只读）          | 当前读数：时间、范围、倍率、是否推进      | `CLOCK_TIME_UNAVAILABLE` |
+| `time`                   | 无（只读）          | 当前地图时间（毫秒时间戳）                | `CLOCK_TIME_UNAVAILABLE` |
+| `setTime(value)`         | 毫秒时间戳或 `Date` | 跳转到指定时间                            | `INVALID_CLOCK_CONFIG`   |
+| `setRange(start, end)`   | 毫秒时间戳或 `Date` | 设置时间范围，结束不得早于开始            | `INVALID_CLOCK_CONFIG`   |
+| `setMultiplier(value)`   | 正有限数            | 设置倍率                                  | `INVALID_CLOCK_CONFIG`   |
+| `setAnimating(value)`    | `boolean`           | 开始或停止推进                            | `INVALID_CLOCK_CONFIG`   |
+| `bind(source, options?)` | `SimulationClock`   | 用 SDK 时钟驱动地图时钟，返回解除绑定函数 | `INVALID_CLOCK_CONFIG`   |
+
+`setTime()` 等直接写入只在**未绑定** SDK 时钟时生效。绑定期间地图时间以源时钟为准，直接写入会在下一帧被覆盖，控制播放请用源时钟的方法。
+
+### 用仿真时钟驱动
+
+`bind()` 把[仿真 / 回放时钟](./simulation-clock.md)接成地图的时间来源，业务不必自己写帧循环：
+
+```ts
+import { SimulationClock } from '@yanbobo/gis-sdk/core';
+
+const clock = new SimulationClock({
+  startTime: Date.parse('2026-09-30T00:00:00Z'),
+  endTime: Date.parse('2026-09-30T06:00:00Z'),
+  initialTime: Date.parse('2026-09-30T00:00:00Z'),
+  rate: 8,
+});
+
+const unbind = map.clock.bind(clock); // 默认 drive: true
+clock.play();
+clock.seek(Date.parse('2026-09-30T02:00:00Z'));
+
+unbind(); // 之后地图时钟不再跟随源时钟
+```
+
+`drive: true`（默认）时，控制器在每个渲染帧按真实帧间隔调用 `source.advance()`，因此 `play()` / `pause()` / `seek()` / `setRate()` / `setDirection()` 都由源时钟负责，源时钟自己按倍率推进、地图时钟的倍率恒为 1。帧间隔取非负值：挂起恢复或系统时间回拨都不会让时间倒退。
+
+`bind(clock, { drive: false })` 只做镜像、不推进，适合推进由业务负责的场景（例如实时样本驱动，配合 `setWatermark()` 使用）。源时钟还没有时间基准（`currentTime` 为 `undefined`，即尚未 `seek()`）时不做任何镜像，时钟保持原值。重复 `bind()` 会先解除上一次绑定，因此始终只有一个帧回调。
+
+CZML 图层文档里自带的 `clock` 不会被自动应用——时间轴联动属于业务编排，用 `map.clock.bind()` 显式接上即可。

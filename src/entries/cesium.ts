@@ -11,6 +11,9 @@ export type {
 export type {
   CesiumTerrainSpec,
   EllipsoidTerrainSpec,
+  MapClockBindOptions,
+  MapClockController,
+  MapClockSnapshot,
   TerrainSetOptions,
   TerrainSpec,
 } from '../core/controls.js';
