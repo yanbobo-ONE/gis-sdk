@@ -217,6 +217,16 @@ function createHarness() {
   };
   const toWindow = vi.fn((): { x: number; y: number } | undefined => ({ x: 320, y: 200 }));
   const setView = vi.fn();
+  // 地图事件桩：验收台靠 map:error 显示致命错误（例如渲染循环停止）。
+  const mapErrorListeners = new Set<(event: { id: string; error: Error }) => void>();
+  const events = {
+    on: vi.fn((_type: string, listener: (event: { id: string; error: Error }) => void) => {
+      mapErrorListeners.add(listener);
+      return () => {
+        mapErrorListeners.delete(listener);
+      };
+    }),
+  };
 
   // 质量桩：矩阵读的是 SDK 自己的帧采样，桩按测试给的读数逐场景推进窗口。
   // 分位与最长帧默认与平均帧耗时一致，需要时由用例单独给出（模拟单次顿挫）。
@@ -289,6 +299,7 @@ function createHarness() {
     >,
     picking: picking as unknown as Pick<PickingController, 'on' | 'setEnabled'>,
     analysis: { list: vi.fn(() => []), run: analysisRun } as unknown as AnalysisController,
+    events: events as never,
     layers: {
       add,
       remove: vi.fn((id: string) => {
@@ -366,6 +377,12 @@ function createHarness() {
     lineOfSight,
     map,
     points,
+    emitMapError: (error: Error) => {
+      for (const listener of [...mapErrorListeners]) {
+        listener({ id: 'map-1', error });
+      }
+    },
+    mapErrorListenerCount: () => mapErrorListeners.size,
     qualityAdaptive,
     setQualitySample,
     setView,
@@ -675,6 +692,39 @@ describe('Vanilla example controller', () => {
     await expect(controller.probeLayerOrdering()).rejects.toThrow('没有发生移动');
     // 探针失败也要把临时图层收干净。
     expect(harness.map.layers.list().some((layer) => layer.id.startsWith('order-'))).toBe(false);
+  });
+
+  it('surfaces fatal map errors and releases the subscription on destroy', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+    });
+    await controller.start('map');
+
+    expect(controller.snapshot().mapError).toBeUndefined();
+    expect(harness.mapErrorListenerCount()).toBe(1);
+
+    // 渲染循环停止这类错误不会让任何一次操作失败，只有事件会告诉业务。
+    harness.emitMapError(
+      Object.assign(new Error('Rendering stopped after an unrecoverable engine error.'), {
+        code: 'RENDER_LOOP_FAILED',
+      }),
+    );
+    expect(controller.snapshot().mapError).toBe(
+      'RENDER_LOOP_FAILED: Rendering stopped after an unrecoverable engine error.',
+    );
+
+    // 重建地图不会留下上一个实例的订阅。
+    await controller.restart();
+    expect(harness.mapErrorListenerCount()).toBe(1);
+    expect(controller.snapshot().mapError).toBeUndefined();
+
+    await controller.destroy();
+    expect(harness.mapErrorListenerCount()).toBe(0);
   });
 
   it('declares terrain at map creation, awaits ready, then falls back to ellipsoid', async () => {

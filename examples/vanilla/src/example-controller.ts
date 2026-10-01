@@ -11,6 +11,7 @@ import type {
   EnvironmentController,
   GeoPoint,
   MapClockController,
+  MapEventMap,
   PickingController,
   PickingHit,
   QualityController,
@@ -104,6 +105,13 @@ interface ExampleMapLike {
     'current' | 'snapshot' | 'set' | 'setProfile' | 'setAdaptive' | 'adaptive'
   >;
   readonly analysis: AnalysisController;
+  /** 地图事件：验收台用它显示 SDK 上报的致命错误（例如渲染循环停止）。 */
+  readonly events: {
+    on<TKey extends 'map:error'>(
+      type: TKey,
+      listener: (event: MapEventMap[TKey]) => void,
+    ): () => void;
+  };
   readonly layers: Pick<LayerManager, 'add' | 'list' | 'remove'>;
   readonly raw: {
     readonly viewer: {
@@ -188,6 +196,13 @@ export interface VanillaExampleSnapshot {
   readonly performanceMatrix: string | undefined;
   /** 堆叠顺序读数：`换序前 → 换序后`；没验过时为 `undefined`。 */
   readonly layerOrder: string | undefined;
+  /**
+   * SDK 通过 `map:error` 上报的致命错误（例如渲染循环已停止）；没有时为 `undefined`。
+   *
+   * 面板上单独显示它，是因为这类错误不会让任何一次操作失败——只有地图整体不动了，
+   * 不显示出来就只能看到"卡住"。
+   */
+  readonly mapError: string | undefined;
   /** 批量分析读数：`完成 / 失败 / 总数`；没跑过时为 `undefined`。 */
   readonly batch: string | undefined;
   /** 创建期地形读数：`已安装类型 / pending / ready 结果`；没验过时为 `undefined`。 */
@@ -280,14 +295,28 @@ const CLOCK_PROBE_FRAMES = 6;
 const PICK_PROBE_ENTITY_ID = 'pick-probe';
 const PICK_PROBE_POSITION = { longitude: 116.5, latitude: 39.95, height: 20_000 } as const;
 
+/** 等渲染帧的上限：超过它说明渲染被暂停，继续等没有意义。 */
+const FRAME_WAIT_TIMEOUT_MS = 5_000;
+
 /** 默认按真实渲染帧等待；单测注入替代实现即可脱离浏览器运行。 */
 function requestFrames(count: number): Promise<void> {
-  return new Promise<void>((resolve) => {
+  return new Promise<void>((resolve, reject) => {
     let remaining = count;
+    const started = Date.now();
     const step = (): void => {
       remaining -= 1;
       if (remaining <= 0) {
         resolve();
+        return;
+      }
+      // 标签页切到后台时浏览器会暂停 requestAnimationFrame：等下去只会永远挂着，
+      // 连探针的清理逻辑都跑不到。超时就明确失败，让它走正常错误路径。
+      if (Date.now() - started > FRAME_WAIT_TIMEOUT_MS) {
+        reject(
+          new Error(
+            `等待渲染帧超时（${String(FRAME_WAIT_TIMEOUT_MS)} 毫秒）：标签页可能被切到后台。`,
+          ),
+        );
         return;
       }
       requestAnimationFrame(step);
@@ -518,6 +547,8 @@ export function createVanillaExampleController(
   let performance: string | undefined;
   let performanceMatrix: string | undefined;
   let layerOrder: string | undefined;
+  let mapError: string | undefined;
+  let mapErrorSubscription: (() => void) | undefined;
   let batch: string | undefined;
   let terrain: string | undefined;
   let pointsHandle: PointsHandleLike | undefined;
@@ -545,6 +576,7 @@ export function createVanillaExampleController(
       performance,
       performanceMatrix,
       layerOrder,
+      mapError,
       batch,
       terrain,
     };
@@ -707,6 +739,9 @@ export function createVanillaExampleController(
     container = nextContainer;
     state = 'starting';
     currentError = undefined;
+    // 上一个实例的订阅先解掉（重建时不留残余）。
+    mapErrorSubscription?.();
+    mapErrorSubscription = undefined;
     notify();
 
     const nextMap = dependencies.createMap({
@@ -717,6 +752,11 @@ export function createVanillaExampleController(
         : {}),
     });
     map = nextMap;
+    // 致命错误单独显示：它不会让某次操作失败，只会让地图不再动。
+    mapErrorSubscription = nextMap.events.on('map:error', ({ error }) => {
+      mapError = `${error.code}: ${error.message}`;
+      notify();
+    });
     // 同步回调：调用方在这里读到的地形 `pending` 才是"仍在加载"的真实状态，不会被后续 await 掩盖。
     options.onCreated?.(nextMap);
 
@@ -765,6 +805,7 @@ export function createVanillaExampleController(
       performance = undefined;
       performanceMatrix = undefined;
       layerOrder = undefined;
+      mapError = undefined;
       pickSubscription?.();
       pickSubscription = undefined;
       batch = undefined;
@@ -792,6 +833,8 @@ export function createVanillaExampleController(
     notify();
     pickSubscription?.();
     pickSubscription = undefined;
+    mapErrorSubscription?.();
+    mapErrorSubscription = undefined;
     await map.destroy();
     map = undefined;
     geoJson = undefined;

@@ -19,6 +19,7 @@ const layerCount = element('layer-count');
 const dataRevision = element('data-revision');
 const opacityValue = element('opacity-value');
 const operationMessage = element('operation-message');
+const mapErrorMessage = element('map-error-message');
 const geoJsonVisible = element('geojson-visible') as HTMLInputElement;
 const wmsFilterToggle = element('wms-filter') as HTMLInputElement;
 const wmsOpacity = element('wms-opacity') as HTMLInputElement;
@@ -68,6 +69,13 @@ controller.subscribe((snapshot) => {
   perfValue.dataset.matrix = snapshot.performanceMatrix ?? '';
   terrainValue.textContent = snapshot.terrain ?? '未验证';
   layerOrderValue.textContent = snapshot.layerOrder ?? '未验证';
+  // SDK 上报的致命错误单独占一行：它不会让某次操作失败，只会让地图不再动。
+  if (snapshot.mapError) {
+    mapErrorMessage.textContent = `地图错误 ${snapshot.mapError}`;
+    mapErrorMessage.hidden = false;
+  } else {
+    mapErrorMessage.hidden = true;
+  }
   if (snapshot.error) {
     operationMessage.textContent = snapshot.error;
     operationMessage.dataset.kind = 'error';

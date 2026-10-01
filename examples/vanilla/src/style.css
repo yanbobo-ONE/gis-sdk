@@ -283,6 +283,17 @@ button.secondary {
   color: #ff8b7f;
 }
 
+/* SDK 上报的致命错误（例如渲染循环已停止）：与操作结果分开显示，不被后续操作覆盖。 */
+.map-error-message {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ff8b7f;
+  border-radius: 0.5rem;
+  color: #ff8b7f;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 @media (max-width: 760px) {
   body {
     overflow-y: auto;

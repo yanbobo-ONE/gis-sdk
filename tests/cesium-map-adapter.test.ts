@@ -33,6 +33,7 @@ const cesium = vi.hoisted(() => {
     };
     readonly frameListeners = new Set<() => void>();
     readonly preRenderListeners = new Set<() => void>();
+    readonly renderErrorListeners = new Set<(scene: unknown, error: unknown) => void>();
     resolutionScale = 1;
     readonly scene = {
       camera: {
@@ -64,6 +65,13 @@ const cesium = vi.hoisted(() => {
         addEventListener: (listener: () => void) => {
           this.preRenderListeners.add(listener);
           return () => this.preRenderListeners.delete(listener);
+        },
+      },
+      // 渲染循环致命错误的事件源：适配器用它把 RENDER_LOOP_FAILED 报给业务。
+      renderError: {
+        addEventListener: (listener: (scene: unknown, error: unknown) => void) => {
+          this.renderErrorListeners.add(listener);
+          return () => this.renderErrorListeners.delete(listener);
         },
       },
       postRender: {
@@ -355,6 +363,37 @@ describe('CesiumMapAdapter', () => {
     expect(cesium.Viewer.instances[0]?.terrainProvider).toEqual({ kind: 'ellipsoid' });
     expect(reported).toHaveLength(1);
     expect(reported[0]).toMatchObject({ code: 'TERRAIN_LOAD_FAILED', retryable: true });
+  });
+
+  it('reports a stopped render loop once and releases the listener on destroy', async () => {
+    const { CesiumMapAdapter } = await import('../src/cesium/cesium-map-adapter.js');
+    const reported: { code: string; module: string; cause?: unknown }[] = [];
+    const adapter = new CesiumMapAdapter(createOptions('map-1'));
+    adapter.setErrorReporter((error) => reported.push(error));
+
+    const viewer = cesium.Viewer.instances[0] as unknown as {
+      readonly scene: unknown;
+      readonly renderErrorListeners: Set<(scene: unknown, error: unknown) => void>;
+    };
+    expect(viewer.renderErrorListeners.size).toBe(1);
+
+    const cause = new Error('WebGL context lost');
+    for (const listener of [...viewer.renderErrorListeners]) {
+      listener(viewer.scene, cause);
+    }
+
+    // 渲染停了不会让任何一次操作失败，只有这个事件会告诉业务。
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatchObject({ code: 'RENDER_LOOP_FAILED', module: 'scene', cause });
+
+    // Cesium 触发一次就停止渲染，重复上报只会刷屏。
+    for (const listener of [...viewer.renderErrorListeners]) {
+      listener(viewer.scene, cause);
+    }
+    expect(reported).toHaveLength(1);
+
+    await adapter.destroy();
+    expect(viewer.renderErrorListeners.size).toBe(0);
   });
 
   it('locks automatic base URL resolution when the first Viewer is created', async () => {

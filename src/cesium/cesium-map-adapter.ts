@@ -39,6 +39,8 @@ import { CesiumQualityController } from './quality-controller.js';
 import { CesiumClockController } from './clock-controller.js';
 import { CesiumLightningController } from './lightning-controller.js';
 import { registerImageryFloor } from './layers/imagery-stacking.js';
+import { watchRenderErrors } from './render-error-watch.js';
+import type { RenderErrorWatch } from './render-error-watch.js';
 import { CesiumTerrainController } from './terrain-controller.js';
 import { CesiumTerrainSampler } from './terrain-sampling.js';
 import type { CesiumRawContext } from './types.js';
@@ -184,6 +186,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   private readonly drawingRuntime: CesiumDrawingController;
   private readonly environmentRuntime: CesiumEnvironmentController;
   private readonly cameraPoseGuard: CameraPoseGuard;
+  private readonly renderErrorWatch: RenderErrorWatch;
 
   constructor(options: NormalizedCreateMapOptions) {
     const reservation = reserveCesiumBaseUrl(options.cesiumBaseUrl);
@@ -199,6 +202,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     let drawingRuntime: CesiumDrawingController | undefined;
     let environmentRuntime: CesiumEnvironmentController | undefined;
     let cameraPoseGuard: CameraPoseGuard | undefined;
+    let renderErrorWatch: RenderErrorWatch | undefined;
     try {
       viewer = new Viewer(options.container, {
         ...options.widgets,
@@ -208,6 +212,8 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       const viewerInstance = viewer;
       guardDegenerateCameraRotation(viewerInstance.camera);
       cameraPoseGuard = guardCameraPose(viewerInstance.camera, viewerInstance.scene);
+      // 渲染循环挂了要让业务知道，而不是只看到画面不动。
+      renderErrorWatch = watchRenderErrors(viewerInstance.scene);
       cameraRuntime = new CesiumCameraController(viewerInstance.camera, viewerInstance.scene);
       basemapRuntime = new CesiumBasemapController(viewerInstance);
       const modelLoad = new LoadLimiter(options.quality.modelLoadConcurrency);
@@ -248,6 +254,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       this.raw = Object.freeze({ viewer: viewerInstance });
       this.cameraRuntime = cameraRuntime;
       this.cameraPoseGuard = cameraPoseGuard;
+      this.renderErrorWatch = renderErrorWatch;
       this.basemapRuntime = basemapRuntime;
       this.terrainRuntime = terrainRuntime;
       this.clockRuntime = clockRuntime;
@@ -273,6 +280,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     } catch (error: unknown) {
       rethrowAfterCleanup(error, {
         cameraPoseGuard: () => cameraPoseGuard?.dispose(),
+        renderErrorWatch: () => renderErrorWatch?.dispose(),
         camera: () => cameraRuntime?.destroy(),
         basemap: () => basemapRuntime?.destroy(),
         terrain: () => terrainRuntime?.destroy(),
@@ -298,6 +306,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   }
 
   setErrorReporter(reporter: (error: GisError) => void): void {
+    this.renderErrorWatch.setReporter(reporter);
     this.basemapRuntime.setErrorReporter(reporter);
     this.terrainRuntime.setErrorReporter(reporter);
   }
@@ -313,6 +322,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   async destroy(): Promise<void> {
     await this.layerRuntime.destroy();
     this.cameraPoseGuard.dispose();
+    this.renderErrorWatch.dispose();
     this.qualityRuntime.dispose();
     this.pickingRuntime.dispose();
     this.sceneRuntime.destroy();
