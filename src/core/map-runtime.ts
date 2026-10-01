@@ -27,6 +27,9 @@ import type {
   MapClockSnapshot,
   MapClockBindOptions,
   MapDrawingController,
+  MapLightningController,
+  LightningStrikeOptions,
+  LightningStyleOptions,
   MapSceneMode,
   PickingController,
   PickingEvent,
@@ -59,6 +62,7 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
   readonly clock: MapClockController;
+  readonly lightning: MapLightningController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
   readonly picking: PickingController;
@@ -356,6 +360,33 @@ export class MapRuntime<TRaw> implements GisMap<TRaw> {
       bind: (source: SimulationClock, options?: MapClockBindOptions) => {
         this.assertReady('clock.bind');
         return adapter.clock.bind(source, options);
+      },
+    });
+    this.lightning = Object.freeze({
+      get activeCount(): number {
+        return adapter.lightning.activeCount;
+      },
+      get flashLevel(): number {
+        return adapter.lightning.flashLevel;
+      },
+      get maxActive(): number {
+        return adapter.lightning.maxActive;
+      },
+      strike: (options: LightningStrikeOptions) => {
+        this.assertReady('lightning.strike');
+        return adapter.lightning.strike(options);
+      },
+      cancel: (id: string) => {
+        this.assertReady('lightning.cancel');
+        return adapter.lightning.cancel(id);
+      },
+      cancelAll: () => {
+        this.assertReady('lightning.cancelAll');
+        adapter.lightning.cancelAll();
+      },
+      setStyle: (options: LightningStyleOptions) => {
+        this.assertReady('lightning.setStyle');
+        adapter.lightning.setStyle(options);
       },
     });
   }

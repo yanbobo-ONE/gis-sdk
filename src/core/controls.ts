@@ -1,5 +1,6 @@
 import type { DrawGeometry, DrawMode } from './drawing.js';
 import type { Unsubscribe } from './event-hub.js';
+import type { LightningBoltOptions } from './lightning.js';
 import type { SimulationClock } from './simulation-clock.js';
 import type { GeoBBox } from '../spatial/types.js';
 
@@ -385,6 +386,64 @@ export interface MapClockController {
    * 重复绑定会先解除上一次绑定。
    */
   bind(source: SimulationClock, options?: MapClockBindOptions): Unsubscribe;
+}
+
+/** 触发一次闪电的参数。 */
+export interface LightningStrikeOptions extends LightningBoltOptions {
+  /**
+   * 闪击标识；省略时自动编号。
+   *
+   * 同 id 再次触发视为**替换**：先撤掉上一次，再按新参数重新生成，
+   * 避免同一次雷击被重复绘制。
+   */
+  readonly id?: string;
+  /** 闪击时长，单位为毫秒，默认 900。 */
+  readonly durationMs?: number;
+  /** 主峰之后的脉冲次数，0 到 3，默认 2。 */
+  readonly pulses?: number;
+  /** 亮度系数，0 到 1，默认 1；屏幕闪光与折线辉光同时受它影响。 */
+  readonly intensity?: number;
+}
+
+/** 闪电的外观参数；只影响之后渲染的帧，已触发的闪击也会立即换新样式。 */
+export interface LightningStyleOptions {
+  /** 核心颜色（CSS 颜色字符串），默认 `'#eaf6ff'`。 */
+  readonly coreColor?: string;
+  /** 折线宽度，单位为像素，默认 3。 */
+  readonly thickness?: number;
+  /** 是否叠加屏幕闪光（一次全屏后处理提亮），默认 `true`。 */
+  readonly screenFlash?: boolean;
+}
+
+/**
+ * 空间闪电控制器。
+ *
+ * 程序化生成闪击形状（种子随机、可复现），用折线集合渲染主干与分支，随包络推进辉光，
+ * 结束后释放几何。并发有上限：超出时淘汰最早触发的闪击，避免长时间运行堆积资源。
+ *
+ * 只使用 Cesium 公开 API（`PolylineCollection`、`PolylineGlowMaterialProperty`、
+ * `PostProcessStage`），不注册自定义材质、不碰私有字段。
+ */
+export interface MapLightningController {
+  /** 当前在演的闪击数量。 */
+  readonly activeCount: number;
+  /** 当前屏幕闪光亮度，范围 0 到 1；没有闪击时随衰减回到 0。 */
+  readonly flashLevel: number;
+  /** 同时保留的闪击上限，默认 8。 */
+  readonly maxActive: number;
+  /**
+   * 触发一次闪击。
+   *
+   * @returns 本次闪击的 id；同一 id 再次调用会替换上一次。
+   * @throws `INVALID_SPATIAL_INPUT` 参数非法（经纬度/高程非有限、长度非正、顶点预算过小、密度未知）。
+   */
+  strike(options: LightningStrikeOptions): string;
+  /** 撤掉指定闪击；不存在时返回 `false`。 */
+  cancel(id: string): boolean;
+  /** 撤掉全部闪击并清零屏幕闪光。 */
+  cancelAll(): void;
+  /** 更新外观参数。 */
+  setStyle(options: LightningStyleOptions): void;
 }
 
 /** 当前支持的底图类型。 */

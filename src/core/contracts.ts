@@ -9,6 +9,7 @@ import type {
   FrameCapture,
   MapClockController,
   MapDrawingController,
+  MapLightningController,
   PickingController,
   SceneController,
   TerrainController,
@@ -59,6 +60,8 @@ export interface GisMap<TRaw = unknown> {
   readonly terrain: TerrainController;
   /** 地图时钟：读数、控制与 SDK 时钟联动。 */
   readonly clock: MapClockController;
+  /** 空间闪电：程序化闪击的触发、撤销与外观。 */
+  readonly lightning: MapLightningController;
   /** 类型化坐标转换。 */
   readonly coordinates: CoordinateTransform;
   /** 类型化渲染质量控制。 */
@@ -114,6 +117,8 @@ export interface MapEngineAdapter<TRaw> {
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
   readonly clock: MapClockController;
+  /** 空间闪电：程序化闪击的触发、撤销与外观。 */
+  readonly lightning: MapLightningController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
   readonly picking: PickingController;

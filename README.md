@@ -32,6 +32,7 @@
 - 回放时间轴 `ReplayTimeline`：按对象分组、同刻去重、按时刻查询与插值、轨迹窗口切片（不含数据源读取）；
 - 仿真事件调度 `SimulationEventScheduler`：按时间维护业务事件表（同 id 改期、取消、区间取值），正向升序与倒放降序都不重复触发；
 - 点位导入计划 `planPointImport()`：列名猜测与标记、投影坐标换算到 WGS84、预览与拒绝样本，落图层由业务决定；
+- 空间闪电 `map.lightning`：程序化闪击（种子可复现）、亮度包络驱动辉光与屏幕闪光、并发有上限；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）、可选标签（LabelCollection，含上限与 `labelCount`）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
@@ -131,6 +132,7 @@ async function disposeMap() {
 - [导入与包体积](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/imports.md)
 - [地图控制](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/map-controls.md)
 - [外部接入点](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/external-endpoints.md)
+- [空间闪电](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/lightning.md)
 - [实时数据导航](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/data-pipeline.md)
 - [有界数据管线](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/data-pipeline-core.md)
 - [Worker / MessagePort 输入](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/data-pipeline-message-input.md)
@@ -183,6 +185,7 @@ async function disposeMap() {
 | 地形采样                                   | 可用                   | `map.terrain.sample(points, options?)`：分批并发、缓存、取消与错误码                                                                                                                                                                        |
 | 渲染质量                                   | 可用                   | `createMap({ quality })`、`map.quality`：四档预设与按帧率自动升降档，帧读数含平均 / P50 / P95 / 最长帧与长帧计数                                                                                                                            |
 | 环境效果                                   | 可用                   | `map.environment.set('depthFog' \| 'haze' \| 'rain' \| 'snow', options)`：内置参数、降级说明与统一资源释放                                                                                                                                  |
+| 空间闪电                                   | 可用                   | `map.lightning.strike()` / `cancel()` / `cancelAll()` / `setStyle()`；程序化主干与分支（种子可复现）、亮度包络驱动辉光与屏幕闪光、并发上限 8、同 id 替换                                                                                    |
 | 远端失败可观测                             | 可用                   | `layer.events.on('error')`、`layer.errorCount`、`map.basemap.errorCount` 与 `map:error` 上的首个失败                                                                                                                                        |
 | 诊断快照                                   | 可用                   | `map.diagnostics.snapshot()`：一次调用汇总运行状态与错误计数，读不到不抛错                                                                                                                                                                  |
 | Worker 分析执行接口                        | 可用                   | `createAnalysisWorkerClient()` / `createAnalysisWorkerHost()` / `createAnalysisWorkerPool()`：按 id 匹配、取消与超时、错误码跨线程还原、最小在途优先调度                                                                                    |

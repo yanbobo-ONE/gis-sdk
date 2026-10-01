@@ -109,7 +109,7 @@ describe('generateLightningBolt', () => {
     const first = trunk?.points[0];
     expect(first?.longitude).toBeCloseTo(ORIGIN.longitude, 9);
     expect(first?.latitude).toBeCloseTo(ORIGIN.latitude, 9);
-    expect(first?.height).toBeCloseTo(ORIGIN.height ?? 0, 6);
+    expect(first?.height).toBeCloseTo(ORIGIN.height, 6);
     const last = trunk?.points.at(-1);
     expect(last?.longitude).toBeCloseTo(target.longitude, 9);
     expect(last?.latitude).toBeCloseTo(target.latitude, 9);
@@ -137,7 +137,7 @@ describe('generateLightningBolt', () => {
     expect(ground.latitude).toBeCloseTo(ORIGIN.latitude, 4);
     expect(ground.longitude).toBeGreaterThan(ORIGIN.longitude);
     // 高度沿用起点（云底到地面只改水平位置）。
-    expect(end.height).toBeCloseTo(ORIGIN.height ?? 0, 6);
+    expect(end.height).toBeCloseTo(ORIGIN.height, 6);
   });
 
   it('scales branch count with the density profile and keeps branches attached to the trunk', () => {
@@ -147,13 +147,13 @@ describe('generateLightningBolt', () => {
     expect(sparse.paths.filter((path) => path.kind === 'branch')).toHaveLength(2);
     expect(dense.paths.filter((path) => path.kind === 'branch')).toHaveLength(6);
 
-    const trunkPoints = sparse.paths[0]?.points ?? [];
+    const trunkPoints = sparse.paths[0]?.points;
     for (const branch of sparse.paths.slice(1)) {
       expect(branch.points.length).toBeGreaterThanOrEqual(2);
       const root = branch.points[0];
       expect(root).toBeDefined();
       // 分支必须挂在主干节点上：与某个主干顶点的距离为零（段端抖动量恒为 0）。
-      const attached = trunkPoints.some((point) =>
+      const attached = (trunkPoints ?? []).some((point) =>
         root === undefined ? false : measureDistance(point, root).meters < 1e-6,
       );
       expect(attached).toBe(true);
@@ -176,9 +176,11 @@ describe('generateLightningBolt', () => {
   it('supports waypoints and rejects invalid configuration', () => {
     const waypoint = { longitude: 116.395, latitude: 39.909, height: 900 };
     const shape = generateLightningBolt({ origin: ORIGIN, waypoints: [waypoint], seed: 1 });
-    const trunk = shape.paths[0]?.points ?? [];
+    const trunk = shape.paths[0]?.points;
     // 途经点是段的连接点，抖动为 0，因此主干上应有一个顶点与它重合。
-    expect(trunk.some((point) => measureDistance(point, waypoint).meters < 1e-6)).toBe(true);
+    expect((trunk ?? []).some((point) => measureDistance(point, waypoint).meters < 1e-6)).toBe(
+      true,
+    );
 
     expect(() => generateLightningBolt({ origin: ORIGIN, lengthMeters: 0 })).toThrow(
       expect.objectContaining({ code: 'INVALID_SPATIAL_INPUT' }),

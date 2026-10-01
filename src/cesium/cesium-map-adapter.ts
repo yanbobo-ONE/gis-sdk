@@ -9,6 +9,7 @@ import type {
   FrameCapture,
   MapClockController,
   MapDrawingController,
+  MapLightningController,
   PickingController,
   SceneController,
   TerrainController,
@@ -36,6 +37,7 @@ import { LoadLimiter } from './load-limiter.js';
 import { CesiumPickingController } from './picking-controller.js';
 import { CesiumQualityController } from './quality-controller.js';
 import { CesiumClockController } from './clock-controller.js';
+import { CesiumLightningController } from './lightning-controller.js';
 import { registerImageryFloor } from './layers/imagery-stacking.js';
 import { CesiumTerrainController } from './terrain-controller.js';
 import { CesiumTerrainSampler } from './terrain-sampling.js';
@@ -162,6 +164,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   readonly basemap: BasemapController;
   readonly terrain: TerrainController;
   readonly clock: MapClockController;
+  readonly lightning: MapLightningController;
   readonly coordinates: CoordinateTransform;
   readonly quality: QualityController;
   readonly picking: PickingController;
@@ -174,6 +177,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
   private readonly basemapRuntime: CesiumBasemapController;
   private readonly terrainRuntime: CesiumTerrainController;
   private readonly clockRuntime: CesiumClockController;
+  private readonly lightningRuntime: CesiumLightningController;
   private readonly qualityRuntime: CesiumQualityController;
   private readonly pickingRuntime: CesiumPickingController;
   private readonly sceneRuntime: CesiumSceneController;
@@ -188,6 +192,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     let basemapRuntime: CesiumBasemapController | undefined;
     let terrainRuntime: CesiumTerrainController | undefined;
     let clockRuntime: CesiumClockController | undefined;
+    let lightningRuntime: CesiumLightningController | undefined;
     let qualityRuntime: CesiumQualityController | undefined;
     let pickingRuntime: CesiumPickingController | undefined;
     let sceneRuntime: CesiumSceneController | undefined;
@@ -212,6 +217,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         options.terrain,
       );
       clockRuntime = new CesiumClockController(viewerInstance);
+      lightningRuntime = new CesiumLightningController(viewerInstance);
       const coordinates = new CesiumCoordinateTransform(viewerInstance);
       pickingRuntime = new CesiumPickingController(viewerInstance, coordinates);
       sceneRuntime = new CesiumSceneController(viewerInstance.scene);
@@ -245,6 +251,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       this.basemapRuntime = basemapRuntime;
       this.terrainRuntime = terrainRuntime;
       this.clockRuntime = clockRuntime;
+      this.lightningRuntime = lightningRuntime;
       this.qualityRuntime = qualityRuntime;
       this.pickingRuntime = pickingRuntime;
       this.sceneRuntime = sceneRuntime;
@@ -253,6 +260,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
       this.basemap = basemapRuntime;
       this.terrain = terrainRuntime;
       this.clock = clockRuntime;
+      this.lightning = lightningRuntime;
       this.coordinates = coordinates;
       this.quality = qualityRuntime;
       this.picking = pickingRuntime;
@@ -269,6 +277,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
         basemap: () => basemapRuntime?.destroy(),
         terrain: () => terrainRuntime?.destroy(),
         clock: () => clockRuntime?.destroy(),
+        lightning: () => lightningRuntime?.destroy(),
         quality: () => qualityRuntime?.dispose(),
         picking: () => pickingRuntime?.dispose(),
         scene: () => sceneRuntime?.destroy(),
@@ -313,6 +322,7 @@ export class CesiumMapAdapter implements MapEngineAdapter<CesiumRawContext> {
     this.basemapRuntime.destroy();
     this.terrainRuntime.destroy();
     this.clockRuntime.destroy();
+    this.lightningRuntime.destroy();
     this.raw.viewer.destroy();
   }
 }

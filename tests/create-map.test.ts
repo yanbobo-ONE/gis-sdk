@@ -8,6 +8,7 @@ import type {
   CoordinateTransform,
   MapClockController,
   PickingController,
+  MapLightningController,
   TerrainController,
 } from '../src/core/controls.js';
 import type { EnvironmentController } from '../src/core/environment.js';
@@ -57,6 +58,16 @@ const basemap = {
   type: 'none',
   visible: false,
 } satisfies BasemapController;
+
+const lightning = {
+  activeCount: 0,
+  cancel: vi.fn(() => false),
+  cancelAll: vi.fn(),
+  flashLevel: 0,
+  maxActive: 8,
+  setStyle: vi.fn(),
+  strike: vi.fn(() => 'lightning-1'),
+} satisfies MapLightningController;
 
 const terrain = {
   pending: false,
@@ -131,6 +142,7 @@ function createFactory() {
     environment,
     basemap,
     terrain,
+    lightning,
     clock,
     coordinates,
     quality,
