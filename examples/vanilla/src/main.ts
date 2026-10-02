@@ -35,6 +35,7 @@ const entityPickValue = element('entity-pick-value');
 const batchValue = element('batch-value');
 const perfValue = element('perf-value');
 const terrainValue = element('terrain-value');
+const lightningValue = element('lightning-value');
 
 const controller = createVanillaExampleController({
   createMap,
@@ -68,6 +69,7 @@ controller.subscribe((snapshot) => {
   // 验收脚本与文档从这里取原始矩阵，不用去解析面板文案。
   perfValue.dataset.matrix = snapshot.performanceMatrix ?? '';
   terrainValue.textContent = snapshot.terrain ?? '未验证';
+  lightningValue.textContent = snapshot.lightning ?? '未触发';
   layerOrderValue.textContent = snapshot.layerOrder ?? '未验证';
   // SDK 上报的致命错误单独占一行：它不会让某次操作失败，只会让地图不再动。
   if (snapshot.mapError) {
@@ -185,6 +187,10 @@ element('run-perf-matrix').addEventListener('click', () => {
 
 element('restart-map').addEventListener('click', () => {
   void runOperation('地图销毁并重建', () => controller.restart());
+});
+
+element('strike-lightning').addEventListener('click', () => {
+  void runOperation('触发闪电', () => controller.strikeLightning());
 });
 
 element('create-with-terrain').addEventListener('click', () => {

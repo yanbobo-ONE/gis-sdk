@@ -7,6 +7,7 @@ import type {
   CameraController,
   CoordinateTransform,
   MapClockController,
+  MapLightningController,
   PickingController,
   PickingHit,
   QualityController,
@@ -195,6 +196,32 @@ function createHarness() {
       };
     }),
   };
+  // 闪电桩：记录触发的闪击，并把亮度读数按包络峰值给出来。
+  let lightningActive = 0;
+  const lightningStrike = vi.fn((options: { readonly id?: string }) => {
+    lightningActive += 1;
+    return options.id ?? `lightning-${String(lightningActive)}`;
+  });
+  const lightning = {
+    get activeCount() {
+      return lightningActive;
+    },
+    get flashLevel() {
+      return lightningActive > 0 ? 0.97 : 0;
+    },
+    maxActive: 8,
+    strike: lightningStrike,
+    cancelAll: vi.fn(() => {
+      lightningActive = 0;
+    }),
+    setStyle: vi.fn(),
+    /** 面板探针会在包络起来后再读一次，因此这里保留在演状态即可。 */
+    reset: () => {
+      lightningActive = 0;
+      lightningStrike.mockClear();
+    },
+  };
+
   /** 模拟一帧：推进源时钟并镜像，等价于真实适配器在渲染帧里做的事。 */
   const advanceFrames = (count: number) => {
     for (let index = 0; index < count; index += 1) {
@@ -292,6 +319,10 @@ function createHarness() {
     environment: { set: environmentSet, clearAll: environmentClearAll },
     terrain,
     clock: clock as unknown as Pick<MapClockController, 'time' | 'snapshot' | 'bind'>,
+    lightning: lightning as unknown as Pick<
+      MapLightningController,
+      'activeCount' | 'flashLevel' | 'maxActive' | 'strike' | 'cancelAll' | 'setStyle'
+    >,
     coordinates: { toWindow } as unknown as Pick<CoordinateTransform, 'toWindow'>,
     quality: quality as unknown as Pick<
       QualityController,
@@ -374,6 +405,7 @@ function createHarness() {
     },
     geoJson,
     layerOrder: () => [...imageryOrder],
+    lightning,
     lineOfSight,
     map,
     points,
@@ -749,6 +781,25 @@ describe('Vanilla example controller', () => {
     expect(controller.snapshot().terrain).toBe(
       '创建期声明 → cesium-terrain / 加载中 pending=true / 兑现后 pending=false',
     );
+  });
+
+  it('strikes lightning near the current view and reports the SDK readout', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+    });
+    await controller.start('map');
+
+    await controller.strikeLightning();
+
+    expect(harness.lightning.strike).toHaveBeenCalledWith(
+      expect.objectContaining({ branches: 'dense', durationMs: 4_000 }),
+    );
+    expect(controller.snapshot().lightning).toBe('在演 1 条 / 亮度 0.97 / 上限 8');
   });
 
   it('drives the map clock from a simulation clock across rendered frames', async () => {

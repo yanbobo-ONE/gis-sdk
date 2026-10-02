@@ -12,6 +12,7 @@ import type {
   GeoPoint,
   MapClockController,
   MapEventMap,
+  MapLightningController,
   PickingController,
   PickingHit,
   QualityController,
@@ -95,6 +96,11 @@ interface ExampleMapLike {
   readonly terrain: Pick<TerrainController, 'type' | 'pending' | 'ready' | 'set'>;
   /** 地图时钟：示例验证读数、绑定与按帧推进确实随发布包一起可用。 */
   readonly clock: Pick<MapClockController, 'time' | 'snapshot' | 'bind'>;
+  /** 空间闪电：示例验证触发、读数与撤销确实随发布包一起可用。 */
+  readonly lightning: Pick<
+    MapLightningController,
+    'activeCount' | 'flashLevel' | 'maxActive' | 'strike' | 'cancelAll' | 'setStyle'
+  >;
   /** 拾取事件：实体命中探针走的是业务真实订阅的那条通道。 */
   readonly picking: Pick<PickingController, 'on' | 'setEnabled'>;
   /** 坐标投影：用它把探针实体的位置换算成真实点击坐标。 */
@@ -207,6 +213,8 @@ export interface VanillaExampleSnapshot {
   readonly batch: string | undefined;
   /** 创建期地形读数：`已安装类型 / pending / ready 结果`；没验过时为 `undefined`。 */
   readonly terrain: string | undefined;
+  /** 闪电读数：`在演数 / 亮度 / 并发上限`；没验过时为 `undefined`。 */
+  readonly lightning: string | undefined;
   readonly error?: string;
 }
 
@@ -247,6 +255,8 @@ export interface VanillaExampleController {
    */
   probeLayerOrdering(): Promise<void>;
   runBatchAnalysis(): Promise<void>;
+  /** 闪电探针：触发一次闪击，等包络起来后把 SDK 读数写进面板。 */
+  strikeLightning(): Promise<void>;
   /** 用 `createMap({ terrain })` 重建地图，等 `ready` 兑现后记录读数并切回椭球地形。 */
   createWithTerrain(): Promise<void>;
   setWmsFilterEnabled(enabled: boolean): Promise<void>;
@@ -551,6 +561,7 @@ export function createVanillaExampleController(
   let mapErrorSubscription: (() => void) | undefined;
   let batch: string | undefined;
   let terrain: string | undefined;
+  let lightning: string | undefined;
   let pointsHandle: PointsHandleLike | undefined;
   let pointsLabelsEnabled = true;
   let currentError: string | undefined;
@@ -579,6 +590,7 @@ export function createVanillaExampleController(
       mapError,
       batch,
       terrain,
+      lightning,
     };
     return currentError ? { ...value, error: currentError } : value;
   };
@@ -810,6 +822,7 @@ export function createVanillaExampleController(
       pickSubscription = undefined;
       batch = undefined;
       terrain = undefined;
+      lightning = undefined;
       pointsHandle = undefined;
       pointsLabelsEnabled = true;
       const target = nextMap.raw.viewer.dataSources?.get(0) ?? nextGeoJson;
@@ -1271,6 +1284,42 @@ export function createVanillaExampleController(
           await handles.map.layers.remove(id);
         }
       }
+    },
+    /**
+     * 闪电探针：在当前视角附近触发一次闪击，等包络起来后读回 SDK 的读数。
+     *
+     * 断言"触发生效了"：在演数必须为 1，否则说明闪击没登记。
+     */
+    async strikeLightning() {
+      const handles = requireReady();
+      const { longitude, latitude, height } = handles.map.camera.view;
+      // 先摆到侧视角：正对俯视会把竖直的杆压成一条线，侧看才看得清形状。
+      const strikeHeight = Math.max(2_000, Math.min(6_000, height));
+      handles.map.camera.setView({
+        longitude,
+        latitude: latitude - 0.16,
+        height: strikeHeight * 0.8,
+        heading: 0,
+        pitch: -20,
+        roll: 0,
+      });
+      const id = handles.map.lightning.strike({
+        origin: { longitude, latitude, height: strikeHeight },
+        target: { longitude: longitude + 0.002, latitude: latitude, height: 0 },
+        branches: 'dense',
+        durationMs: 4_000,
+        seed: 17,
+      });
+      // 让包络走起来再取读数：触发瞬间亮度还是 0。
+      await new Promise((resolve) => setTimeout(resolve, 560));
+      const activeCount = handles.map.lightning.activeCount;
+      if (activeCount !== 1) {
+        throw new Error(`闪击未登记：activeCount=${String(activeCount)}（id=${id}）`);
+      }
+      lightning = `在演 ${String(activeCount)} 条 / 亮度 ${handles.map.lightning.flashLevel.toFixed(2)} / 上限 ${String(
+        handles.map.lightning.maxActive,
+      )}`;
+      notify();
     },
     /** 批量分析：20 个点各算一次坡度坡向，带进度读数。 */
     async runBatchAnalysis() {
