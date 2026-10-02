@@ -1,4 +1,5 @@
 import type { LoadLimiter } from './load-limiter.js';
+import type { HeatmapRasterizer } from './layers/heatmap-layer.js';
 import type { ModelAppearanceShaders } from './layers/model-appearance.js';
 
 /**
@@ -13,4 +14,10 @@ export interface CesiumLayerServices {
   readonly modelLoad: LoadLimiter;
   /** 模型外观策略到 `CustomShader` 的缓存。 */
   readonly modelAppearance: ModelAppearanceShaders;
+  /**
+   * 热力图栅格化出口；省略时用默认的 canvas 实现。
+   *
+   * 测试注入假实现即可在无 DOM 环境验证热力图图层，不需要真的画布。
+   */
+  readonly heatmapRasterizer?: HeatmapRasterizer;
 }

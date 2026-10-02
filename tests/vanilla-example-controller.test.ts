@@ -16,6 +16,7 @@ import type {
 import type {
   CzmlLayerHandle,
   GeoJsonLayerSpec,
+  HeatmapLayerHandle,
   LayerManager,
   PointsLayerHandle,
   WmsLayerHandle,
@@ -102,13 +103,37 @@ function createHarness() {
       return true;
     }),
   });
+  // 热力图桩：记录 setData 的点数并按真实语义回报 pointCount。
+  const heatmap = {
+    id: 'example-heatmap',
+    type: 'heatmap' as const,
+    state: 'ready' as const,
+    visible: true,
+    setData: vi.fn((next: readonly unknown[]) => {
+      heatmap.pointCount = next.length;
+      return Promise.resolve();
+    }),
+    setStyle: vi.fn(() => Promise.resolve()),
+    setOpacity: vi.fn(),
+    setVisible: vi.fn(),
+    pointCount: 0,
+    opacity: 0.8,
+    raise: vi.fn(() => true),
+    lower: vi.fn(() => true),
+    raiseToTop: vi.fn(() => true),
+    lowerToBottom: vi.fn(() => true),
+    stackIndex: 0,
+    dispose: vi.fn(() => Promise.resolve()),
+  };
+
   const add = vi.fn(
     (
       spec:
         | GeoJsonLayerSpec
         | WmsLayerSpec
         | { readonly id?: string; readonly type: 'points' }
-        | { readonly id?: string; readonly type: 'czml' },
+        | { readonly id?: string; readonly type: 'czml' }
+        | { readonly id?: string; readonly type: 'heatmap'; readonly points?: readonly unknown[] },
     ) => {
       if (spec.id) {
         trackedLayers.push({
@@ -127,6 +152,11 @@ function createHarness() {
       }
       if (spec.type === 'czml') {
         return Promise.resolve(czml as unknown as CzmlLayerHandle);
+      }
+      if (spec.type === 'heatmap') {
+        const points = (spec as { readonly points?: readonly unknown[] }).points ?? [];
+        heatmap.pointCount = points.length;
+        return Promise.resolve(heatmap as unknown as HeatmapLayerHandle);
       }
       return Promise.resolve(spec.type === 'geojson' ? geoJson : wms);
     },
@@ -404,6 +434,7 @@ function createHarness() {
       imageryFrozen = true;
     },
     geoJson,
+    heatmap,
     layerOrder: () => [...imageryOrder],
     lightning,
     lineOfSight,
@@ -800,6 +831,35 @@ describe('Vanilla example controller', () => {
       expect.objectContaining({ branches: 'dense', durationMs: 4_000 }),
     );
     expect(controller.snapshot().lightning).toBe('在演 1 条 / 亮度 0.97 / 上限 8');
+  });
+
+  it('renders a heatmap from weighted points and reports the readout', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+    });
+    await controller.start('map');
+
+    await controller.addHeatmap();
+
+    expect(harness.map.layers.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'heatmap',
+        radiusMeters: 900,
+        resolution: 512,
+        colorRamp: 'thermal',
+      }),
+    );
+    expect(harness.heatmap.pointCount).toBe(2_000);
+    expect(controller.snapshot().heatmap).toBe('点数 2000 / 半径 900 米 / 色带 thermal');
+
+    // 再点一次走 setData 路径（原子替换），不新建图层。
+    await controller.addHeatmap();
+    expect(harness.heatmap.setData).toHaveBeenCalledTimes(1);
   });
 
   it('drives the map clock from a simulation clock across rendered frames', async () => {

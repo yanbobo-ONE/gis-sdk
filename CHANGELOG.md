@@ -5,6 +5,7 @@
 ### Minor Changes
 
 - 增加程序化图形构造（`/core`）：`buildCircle()`（大圆距离采样，两极不压扁）、`buildEllipse()`（局部东-北平面 + 长轴方位角）、`buildStraightArrow()`（箭杆 + 双翼，终点为唯一箭尖）；圆弧按弦高容差采样（默认 10 米容差、512 顶点上限），返回首尾不重复的顶点环；军标几何不在范围。
+- 增加密度热力图图层 `type: 'heatmap'`：输入业务点位（经纬度 + 可选权重），本地按四次核摊成密度网格并着色成带透明度位图贴地，不依赖外部数据集；`setData()` / `setStyle()` 原子替换并继承透明度与堆叠位置，空点位整幅透明，透明度走影像图层 alpha。`/core` 同时导出纯计算的 `buildHeatmapGrid()` 与 `colorizeHeatmap()`。
 
 ## 0.1.0-alpha.11（已发布 2026-10-02）
 
@@ -28,7 +29,6 @@
 - 增加仿真事件调度 `SimulationEventScheduler`（`/core`，零 Cesium）：按时间维护业务事件表，同 id 改期（替换而非并列）、取消与区间取值（`between()` 正向升序、倒放降序）；两个方向都是起点不重复触发、终点触发一次，配"上一帧 → 这一帧"的循环不会重复触发。时间单位与 `ReplayTimeline` 一致（秒），不持计时器、不依赖引擎，非法输入抛 `INVALID_SIMULATION_INPUT`。
 - 增加点位导入计划 `planPointImport()`（`/core`）：列映射显式优先（缺的按关键字猜测并在 `preview.guessed` 与 `issues` 标记，显式列名不存在直接抛错）、投影坐标换算到 WGS84（不支持整单抛 `UNSUPPORTED_CRS`，换算越界逐行拒绝，高程不参与换算），输出预览、全量点位与带来源行号的拒绝样本；`previewLimit` 只影响预览，落图层仍由业务决定。
 - 增加空间闪电 `map.lightning`：`strike()` 触发一次闪击（同 id 替换、并发上限 8 且超出淘汰最早）、`cancel()` / `cancelAll()` 撤销、`setStyle()` 改外观，亮度包络（预闪 → 主峰 → 脉冲 → 余辉）同时驱动折线辉光与屏幕闪光，几何触发时生成一次、逐帧只写材质属性。配套 `/core` 导出 `generateLightningBolt()`（局部 ENU 生成主干与分支、种子可复现）、`lightningEnvelope()`、`LightningFlashChannel`，以及局部 ENU 坐标系 `createLocalFrame()` 与 `geodeticToEcef()` / `ecefToGeodetic()`（零 Cesium）。渲染只用公开 API（PolylineCollection + 内置 PolylineGlow 材质 + PostProcessStage）。
-- 增加密度热力图图层 `type: 'heatmap'`：输入业务点位（经纬度 + 可选权重），本地按四次核摊成密度网格并着色成带透明度位图贴地，不依赖外部数据集；`setData()` / `setStyle()` 原子替换并继承透明度与堆叠位置，空点位整幅透明，透明度走影像图层 alpha。`/core` 同时导出纯计算的 `buildHeatmapGrid()` 与 `colorizeHeatmap()`。
 
 ## 0.1.0-alpha.10
 

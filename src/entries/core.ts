@@ -195,6 +195,16 @@ export type {
   LightningPath,
   LightningShape,
 } from '../core/lightning.js';
+export { buildHeatmapGrid, colorizeHeatmap, heatmapColorRamps } from '../core/heatmap.js';
+export type {
+  HeatmapColorRamp,
+  HeatmapColorRampId,
+  HeatmapColorizeOptions,
+  HeatmapColorStop,
+  HeatmapGrid,
+  HeatmapGridOptions,
+  HeatmapPoint,
+} from '../core/heatmap.js';
 export { planPointImport } from '../core/point-import.js';
 export type {
   ImportedPoint,

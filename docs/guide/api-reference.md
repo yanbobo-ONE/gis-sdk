@@ -12,6 +12,7 @@
 | 抓取当前画面用于导出或缩略图                                  | [画布快照](./capture.md)                      | `map.capture()`、判空重试与超时语义                                                         |
 | 添加、查询、移除或清空图层                                    | [图层管理](./layer-management.md)             | `map.layers.add/get/list/remove/clear`、通用 `LayerHandle`                                  |
 | 加载或替换业务要素数据                                        | [GeoJSON 图层](./geojson-layer.md)            | GeoJSON 对象/URL、样式、`setData`、取消加载                                                 |
+| 把业务点位画成密度热力图                                      | [密度热力图](./heatmap-layer.md)              | `type: 'heatmap'`、`setData()` / `setStyle()`、色带与半径、堆叠顺序                         |
 | 接入 WMS、TMS、WMTS 或单张配准影像                            | [影像图层](./imagery-layers.md)               | 样式、CQL 过滤、透明度、瓦片/单图参数与释放                                                 |
 | 加载城市/倾斜摄影等 3D Tiles                                  | [3D Tiles 图层](./tiles3d-layer.md)           | 加载、显隐、基础 LOD、取消和释放                                                            |
 | 放置单个 glTF / GLB 模型                                      | [静态模型图层](./model-layer.md)              | 位置/朝向、颜色叠加、外观策略、就地变换与并发加载限制                                       |

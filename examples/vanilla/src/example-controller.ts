@@ -19,7 +19,7 @@ import type {
   QualityProfileId,
   TerrainController,
 } from '@yanbobo/gis-sdk/core';
-import type { LayerManager } from '@yanbobo/gis-sdk/layers';
+import type { HeatmapLayerHandle, LayerManager } from '@yanbobo/gis-sdk/layers';
 
 /** 示例用来验证自定义请求头的取值；服务端 fixture 会把它记进 `/__test/wms-state`。 */
 export const EXAMPLE_AUTH_HEADER = 'gis-sdk-example-token';
@@ -215,6 +215,8 @@ export interface VanillaExampleSnapshot {
   readonly terrain: string | undefined;
   /** 闪电读数：`在演数 / 亮度 / 并发上限`；没验过时为 `undefined`。 */
   readonly lightning: string | undefined;
+  /** 热力图读数：`点数 / 半径 / 色带`；没验过时为 `undefined`。 */
+  readonly heatmap: string | undefined;
   readonly error?: string;
 }
 
@@ -257,6 +259,8 @@ export interface VanillaExampleController {
   runBatchAnalysis(): Promise<void>;
   /** 闪电探针：触发一次闪击，等包络起来后把 SDK 读数写进面板。 */
   strikeLightning(): Promise<void>;
+  /** 热力图探针：把一批带权重的点位交给热力图图层，读回点数与样式读数。 */
+  addHeatmap(): Promise<void>;
   /** 用 `createMap({ terrain })` 重建地图，等 `ready` 兑现后记录读数并切回椭球地形。 */
   createWithTerrain(): Promise<void>;
   setWmsFilterEnabled(enabled: boolean): Promise<void>;
@@ -562,6 +566,8 @@ export function createVanillaExampleController(
   let batch: string | undefined;
   let terrain: string | undefined;
   let lightning: string | undefined;
+  let heatmap: string | undefined;
+  let heatmapLayer: HeatmapLayerHandle | undefined;
   let pointsHandle: PointsHandleLike | undefined;
   let pointsLabelsEnabled = true;
   let currentError: string | undefined;
@@ -591,6 +597,7 @@ export function createVanillaExampleController(
       batch,
       terrain,
       lightning,
+      heatmap,
     };
     return currentError ? { ...value, error: currentError } : value;
   };
@@ -823,6 +830,8 @@ export function createVanillaExampleController(
       batch = undefined;
       terrain = undefined;
       lightning = undefined;
+      heatmap = undefined;
+      heatmapLayer = undefined;
       pointsHandle = undefined;
       pointsLabelsEnabled = true;
       const target = nextMap.raw.viewer.dataSources?.get(0) ?? nextGeoJson;
@@ -1319,6 +1328,50 @@ export function createVanillaExampleController(
       lightning = `在演 ${String(activeCount)} 条 / 亮度 ${handles.map.lightning.flashLevel.toFixed(2)} / 上限 ${String(
         handles.map.lightning.maxActive,
       )}`;
+      notify();
+    },
+    /**
+     * 热力图探针：在机场周边铺一批带权重的点位，交给 `type: 'heatmap'` 渲染。
+     *
+     * 断言"真的渲染了"：`pointCount` 必须等于输入点数（空数据会被整幅透明地吃掉）。
+     */
+    async addHeatmap() {
+      const handles = requireReady();
+      const points: { longitude: number; latitude: number; weight: number }[] = [];
+      for (let index = 0; index < 2_000; index += 1) {
+        // 三个高斯团簇，权重随距离衰减，方便肉眼判断核的平滑程度。
+        const cluster = index % 3;
+        const centerLongitude = 116.32 + cluster * 0.07;
+        const centerLatitude = 39.88 + cluster * 0.02;
+        const angle = (index * 137.508 * Math.PI) / 180;
+        const radius = ((index % 40) / 40) * 0.02;
+        points.push({
+          longitude: centerLongitude + Math.cos(angle) * radius,
+          latitude: centerLatitude + Math.sin(angle) * radius * 0.7,
+          weight: 1 + (index % 3),
+        });
+      }
+
+      if (heatmapLayer) {
+        await heatmapLayer.setData(points);
+      } else {
+        heatmapLayer = (await handles.map.layers.add({
+          id: 'example-heatmap',
+          type: 'heatmap',
+          points,
+          radiusMeters: 900,
+          resolution: 512,
+          colorRamp: 'thermal',
+          opacity: 0.8,
+        })) as unknown as HeatmapLayerHandle;
+      }
+
+      if (heatmapLayer.pointCount !== points.length) {
+        throw new Error(
+          `热力图点数不符：期望 ${String(points.length)}，实际 ${String(heatmapLayer.pointCount)}`,
+        );
+      }
+      heatmap = `点数 ${String(heatmapLayer.pointCount)} / 半径 900 米 / 色带 thermal`;
       notify();
     },
     /** 批量分析：20 个点各算一次坡度坡向，带进度读数。 */

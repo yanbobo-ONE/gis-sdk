@@ -4,6 +4,7 @@ import type { CzmlDocumentClock } from '../core/czml.js';
 import type { GeoPosition } from '../core/controls.js';
 import type { EventHub } from '../core/event-hub.js';
 import type { GisError } from '../core/errors.js';
+import type { HeatmapColorRamp } from '../core/heatmap.js';
 
 /** 当前稳定支持的图层类型。 */
 export type LayerType =
@@ -13,6 +14,7 @@ export type LayerType =
   | 'tms'
   | 'wmts'
   | 'single-image'
+  | 'heatmap'
   | 'model'
   | 'points'
   | 'polyline'
@@ -269,6 +271,68 @@ export interface SingleImageLayerSpec extends BaseLayerSpec {
   readonly headers?: Readonly<Record<string, string>>;
 }
 
+/** 热力图输入点位：与 `/core` 的 `HeatmapPoint` 结构一致。 */
+export interface HeatmapLayerPoint {
+  /** 经度，范围 -180 到 180。 */
+  readonly longitude: number;
+  /** 纬度，范围 -90 到 90。 */
+  readonly latitude: number;
+  /** 权重，默认 1；必须是非负有限数。 */
+  readonly weight?: number;
+}
+
+/** 热力图覆盖范围；省略时按点位包围盒外扩一个影响半径，并夹取到 WGS84 范围。 */
+export interface HeatmapLayerBounds {
+  /** 西边界经度。 */
+  readonly west: number;
+  /** 南边界纬度。 */
+  readonly south: number;
+  /** 东边界经度。 */
+  readonly east: number;
+  /** 北边界纬度。 */
+  readonly north: number;
+}
+
+/** 热力图样式；`setStyle()` 可运行时调整，内部会重新栅格化整幅影像。 */
+export interface HeatmapStyleOptions {
+  /** 影响半径，单位为米。 */
+  readonly radiusMeters?: number;
+  /** 长边像素数；短边按范围长宽比缩放。 */
+  readonly resolution?: number;
+  /** 色带：内置标识或自定义色标。 */
+  readonly colorRamp?: HeatmapColorRamp;
+  /** 归一化上限；省略时用当前数据的最大密度。 */
+  readonly maxDensity?: number;
+  /** 覆盖范围；省略时按点位自动推导。 */
+  readonly bounds?: HeatmapLayerBounds;
+}
+
+/**
+ * 密度热力图图层。
+ *
+ * 输入是**业务点位**（经纬度 + 可选权重），SDK 在本地把权重按四次核摊成密度网格、
+ * 着色成带透明度的位图，再作为单张影像贴合到覆盖范围上——因此不依赖任何外部数据集，
+ * 也不需要业务预处理。密度随点位变化时用 `setData()` 原子替换。
+ */
+export interface HeatmapLayerSpec extends BaseLayerSpec, HeatmapStyleOptions {
+  /** 判别热力图图层。 */
+  readonly type: 'heatmap';
+  /** 输入点位；空数组表示"暂时没有数据"，图层整幅透明。 */
+  readonly points: readonly HeatmapLayerPoint[];
+  /** 初始透明度，取值范围为 0 到 1，默认 1。 */
+  readonly opacity?: number;
+}
+
+/** 热力图图层句柄：具备影像图层的透明度与堆叠顺序能力。 */
+export interface HeatmapLayerHandle extends ImageryLayerHandle {
+  /** 当前参与计算的点数。 */
+  readonly pointCount: number;
+  /** 原子替换点位并重新栅格化；空数组会清成整幅透明。 */
+  setData(points: readonly HeatmapLayerPoint[]): Promise<void>;
+  /** 调整影响半径 / 分辨率 / 色带 / 范围，并重新栅格化。 */
+  setStyle(style: HeatmapStyleOptions): Promise<void>;
+}
+
 /** 静态模型的位置，使用 WGS84 经度/纬度度数与相对椭球高度（米）。 */
 export interface ModelPosition {
   /** 经度，范围 -180 到 180。 */
@@ -479,6 +543,7 @@ export type LayerSpec =
   | TmsLayerSpec
   | WmtsLayerSpec
   | SingleImageLayerSpec
+  | HeatmapLayerSpec
   | ModelLayerSpec
   | PointsLayerSpec
   | PolylineLayerSpec

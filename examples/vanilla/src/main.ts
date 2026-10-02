@@ -36,6 +36,7 @@ const batchValue = element('batch-value');
 const perfValue = element('perf-value');
 const terrainValue = element('terrain-value');
 const lightningValue = element('lightning-value');
+const heatmapValue = element('heatmap-value');
 
 const controller = createVanillaExampleController({
   createMap,
@@ -70,6 +71,7 @@ controller.subscribe((snapshot) => {
   perfValue.dataset.matrix = snapshot.performanceMatrix ?? '';
   terrainValue.textContent = snapshot.terrain ?? '未验证';
   lightningValue.textContent = snapshot.lightning ?? '未触发';
+  heatmapValue.textContent = snapshot.heatmap ?? '未添加';
   layerOrderValue.textContent = snapshot.layerOrder ?? '未验证';
   // SDK 上报的致命错误单独占一行：它不会让某次操作失败，只会让地图不再动。
   if (snapshot.mapError) {
@@ -175,6 +177,10 @@ element('probe-czml-clock').addEventListener('click', () => {
 
 element('arm-entity-pick').addEventListener('click', () => {
   void runOperation('布防实体拾取探针', () => controller.armEntityPickProbe());
+});
+
+element('add-heatmap').addEventListener('click', () => {
+  void runOperation('密度热力图', () => controller.addHeatmap());
 });
 
 element('run-batch').addEventListener('click', () => {

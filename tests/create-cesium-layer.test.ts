@@ -5,6 +5,7 @@ const adapters = vi.hoisted(() => ({
   tiles3d: vi.fn(() => Promise.resolve({ id: 'tileset-handle' })),
   singleImage: vi.fn(() => Promise.resolve({ id: 'single-image-handle' })),
   model: vi.fn(() => Promise.resolve({ id: 'model-handle' })),
+  heatmap: vi.fn(() => Promise.resolve({ id: 'heatmap-handle' })),
   tms: vi.fn(() => Promise.resolve({ id: 'tms-handle' })),
   wmts: vi.fn(() => Promise.resolve({ id: 'wmts-handle' })),
   wms: vi.fn(() => Promise.resolve({ id: 'wms-handle' })),
@@ -28,6 +29,10 @@ vi.mock('../src/cesium/layers/single-image-layer.js', () => ({
 
 vi.mock('../src/cesium/layers/model-layer.js', () => ({
   createModelLayer: adapters.model,
+}));
+
+vi.mock('../src/cesium/layers/heatmap-layer.js', () => ({
+  createHeatmapLayer: adapters.heatmap,
 }));
 
 vi.mock('../src/cesium/layers/tiled-imagery-layer.js', () => ({
@@ -89,6 +94,17 @@ describe('createCesiumLayer', () => {
       position: { longitude: 116, latitude: 40 },
     };
 
+    const heatmapSpec = {
+      id: 'density',
+      type: 'heatmap' as const,
+      points: [{ longitude: 116.391, latitude: 39.907 }],
+    };
+
+    await expect(
+      createCesiumLayer(viewer as never, heatmapSpec, context, services),
+    ).resolves.toEqual({
+      id: 'heatmap-handle',
+    });
     await expect(
       createCesiumLayer(viewer as never, geojsonSpec, context, services),
     ).resolves.toEqual({
@@ -125,5 +141,7 @@ describe('createCesiumLayer', () => {
     expect(adapters.wmts).toHaveBeenCalledWith(viewer, wmtsSpec, context);
     expect(adapters.singleImage).toHaveBeenCalledWith(viewer, singleImageSpec, context);
     expect(adapters.model).toHaveBeenCalledWith(viewer, modelSpec, context, services);
+    // 热力图把注入的栅格化出口一起透传（services 没给时由工厂用默认 canvas 实现）。
+    expect(adapters.heatmap).toHaveBeenCalledWith(viewer, heatmapSpec, context, undefined);
   });
 });

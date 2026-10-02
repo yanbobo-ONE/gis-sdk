@@ -33,6 +33,7 @@
 - 仿真事件调度 `SimulationEventScheduler`：按时间维护业务事件表（同 id 改期、取消、区间取值），正向升序与倒放降序都不重复触发；
 - 点位导入计划 `planPointImport()`：列名猜测与标记、投影坐标换算到 WGS84、预览与拒绝样本，落图层由业务决定；
 - 空间闪电 `map.lightning`：程序化闪击（种子可复现）、亮度包络驱动辉光与屏幕闪光、并发有上限；
+- 密度热力图 `type: 'heatmap'`：业务点位（含权重）在本地摊成密度网格并着色，不依赖外部数据集；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）、可选标签（LabelCollection，含上限与 `labelCount`）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
@@ -151,6 +152,7 @@ async function disposeMap() {
 - [仿真 / 回放时钟](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/simulation-clock.md)
 - [点位图层与 CSV 导入](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/points-layer.md)
 - [点位导入计划](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/point-import.md)
+- [密度热力图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/heatmap-layer.md)
 - [折线图层与内置材质](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/polyline-layer.md)
 - [拾取交互](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/picking.md)
 - [绘制](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/drawing.md)
@@ -177,6 +179,7 @@ async function disposeMap() {
 | 3D Tiles                                          | 可用                   | `map.layers.add({ type: '3d-tiles', url, ... })`，支持显隐、基础 LOD 配置与统一资源释放                                                                                                                                                     |
 | 静态模型                                          | 可用                   | `map.layers.add({ type: 'model', url, position, ... })`，支持 `setTransform()`、`setColor()`、`setAppearance()` 与 `headingOffset`，并发上限由 `createMap({ quality })` 控制                                                                |
 | 点位图层、标签与 CSV 导入                         | 可用                   | `map.layers.add({ type: 'points', points, labels })` 支持 `setData()` / `setStyle()` / `labelCount`；`parseCsv()`、`readPointCsv()` 解析点位表                                                                                              |
+| 密度热力图                                        | 可用                   | `map.layers.add({ type: 'heatmap', points, radiusMeters, colorRamp })`；`setData()` / `setStyle()` 原子替换、透明度走图层 alpha、可参与影像叠放排序                                                                                         |
 | 点位导入计划                                      | 可用                   | `planPointImport()`：列名猜测与标记、投影坐标换算到 WGS84、预览与拒绝样本（含来源行号），只产出数据、不碰图层                                                                                                                               |
 | 折线图层                                          | 可用                   | `map.layers.add({ type: 'polyline', polylines })`：五种内置材质（solid/glow/outline/arrow/dash）、`setData()` / `setStyle()`                                                                                                                |
 | 拾取交互                                          | 可用                   | `map.picking.on('click' \| 'hover')`，命中信息含图层与对象 id，CZML / GeoJSON 实体命中回落到所属图层；悬停按帧合并、相机移动期间暂停                                                                                                        |

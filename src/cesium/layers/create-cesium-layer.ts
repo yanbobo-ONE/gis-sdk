@@ -5,6 +5,7 @@ import type { LayerFactoryContext } from '../../layers/layer-runtime.js';
 import type { CesiumLayerServices } from '../layer-services.js';
 import { createCzmlLayer } from './czml-layer.js';
 import { createGeoJsonLayer } from './geojson-layer.js';
+import { createHeatmapLayer } from './heatmap-layer.js';
 import { createModelLayer } from './model-layer.js';
 import { createPointsLayer } from './points-layer.js';
 import { createPolylineLayer } from './polyline-layer.js';
@@ -33,6 +34,8 @@ export function createCesiumLayer(
       return createWmtsLayer(viewer, spec, context);
     case 'single-image':
       return createSingleImageLayer(viewer, spec, context);
+    case 'heatmap':
+      return createHeatmapLayer(viewer, spec, context, services.heatmapRasterizer);
     case 'model':
       return createModelLayer(viewer, spec, context, services);
     case 'points':
