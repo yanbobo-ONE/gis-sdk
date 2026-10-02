@@ -25,4 +25,4 @@ npm --prefix .tmp/vanilla-consumer run dev -- --host 127.0.0.1 --port 4175
 
 SDK 上报的致命错误（例如渲染循环已停止的 `RENDER_LOOP_FAILED`）显示在面板顶部的独立一行，与操作结果分开、不被后续操作覆盖——这类失败不会让任何一次调用失败，只有 `map:error` 事件会告诉业务。
 
-验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析、相机位姿读取、点位图层与标签（含 `labelCount` 读数与开关）、按 `metersPerPixel` 驱动的点聚合、CZML 轨迹图层、地图时钟播放与实体级拾取探针、20 点的批量坡度坡向分析、创建期地形声明与 `ready` 语义，以及浏览器端性能矩阵。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。
+验收面板覆盖：图层增删与数据替换、WMS 透明度与 CQL 过滤、环境效果（晴 / 雾 / 霾 / 雨 / 雪）、两点通视分析、相机位姿读取、点位图层与标签（含 `labelCount` 读数与开关）、按 `metersPerPixel` 驱动的点聚合、CZML 轨迹图层、地图时钟播放与实体级拾取探针、20 点的批量坡度坡向分析、创建期地形声明与 `ready` 语义、空间闪电（侧视角下看主干与分支），以及浏览器端性能矩阵。`vite.config.ts` 里把 `cesium` 指向 Cesium 自带的构建产物，原因见[依赖与打包](../../docs/guide/getting-started.md#依赖与打包)。
