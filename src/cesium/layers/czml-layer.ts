@@ -2,6 +2,8 @@ import { CzmlDataSource } from 'cesium';
 import type { DataSource, Viewer } from 'cesium';
 
 import { GisError } from '../../core/errors.js';
+import type { CzmlDocumentClock, CzmlDocument } from '../../core/czml.js';
+import { readCzmlClock } from '../../core/czml.js';
 import type {
   CzmlLayerHandle,
   CzmlLayerSpec,
@@ -108,15 +110,23 @@ function removeLateDataSource(viewer: Viewer, adding: Promise<DataSource>): void
     .catch(() => undefined);
 }
 
+/** 加载结果：数据源本身，以及文档自带 `clock` 的读数（没写则为 `undefined`）。 */
+interface LoadedCzml {
+  readonly dataSource: CzmlDataSource;
+  readonly clock: CzmlDocumentClock | undefined;
+}
+
 async function loadDataSource(
   id: string,
   source: CzmlSource,
   signal: AbortSignal,
   operation: string,
-): Promise<CzmlDataSource> {
+): Promise<LoadedCzml> {
   try {
     const data = await resolveSource(source, signal);
-    return await raceAbort(CzmlDataSource.load(data), signal);
+    const clock = readCzmlClock(data as CzmlDocument);
+    const dataSource = await raceAbort(CzmlDataSource.load(data), signal);
+    return { dataSource, clock };
   } catch (cause: unknown) {
     if (signal.aborted) {
       throw operationAborted(id, operation, cause);
@@ -139,17 +149,19 @@ class CesiumCzmlLayerHandle implements CzmlLayerHandle {
 
   private readonly lifecycle: LayerHandleRuntime;
   private currentDataSource: CzmlDataSource;
+  private currentClock: CzmlDocumentClock | undefined;
   private updateController: AbortController | undefined;
   private updatePromise: Promise<void> | undefined;
 
   constructor(
     private readonly viewer: Viewer,
     readonly id: string,
-    initialDataSource: CzmlDataSource,
+    initial: LoadedCzml,
     visible: boolean,
     onDisposed: () => void,
   ) {
-    this.currentDataSource = initialDataSource;
+    this.currentDataSource = initial.dataSource;
+    this.currentClock = initial.clock;
     this.lifecycle = new LayerHandleRuntime({
       id,
       type: this.type,
@@ -180,6 +192,10 @@ class CesiumCzmlLayerHandle implements CzmlLayerHandle {
 
   get entityCount(): number {
     return this.currentDataSource.entities.values.length;
+  }
+
+  get clock(): CzmlDocumentClock | undefined {
+    return this.currentClock;
   }
 
   setVisible(visible: boolean): void {
@@ -232,11 +248,12 @@ class CesiumCzmlLayerHandle implements CzmlLayerHandle {
 
   private async replaceData(data: CzmlSource, signal: AbortSignal): Promise<void> {
     const candidate = await loadDataSource(this.id, data, signal, 'setData');
-    candidate.show = this.visible;
+    const { dataSource } = candidate;
+    dataSource.show = this.visible;
     let added = false;
     let adding: Promise<DataSource> | undefined;
     try {
-      adding = this.viewer.dataSources.add(candidate);
+      adding = this.viewer.dataSources.add(dataSource);
       await raceAbort(adding, signal);
       added = true;
       if (signal.aborted) {
@@ -244,12 +261,13 @@ class CesiumCzmlLayerHandle implements CzmlLayerHandle {
       }
 
       const previous = this.currentDataSource;
-      this.currentDataSource = candidate;
-      registerPickableEntities(candidate.entities.values, this.id);
+      this.currentDataSource = dataSource;
+      this.currentClock = candidate.clock;
+      registerPickableEntities(dataSource.entities.values, this.id);
       this.viewer.dataSources.remove(previous, true);
     } catch (cause: unknown) {
       if (added) {
-        this.viewer.dataSources.remove(candidate, true);
+        this.viewer.dataSources.remove(dataSource, true);
       } else if (adding) {
         removeLateDataSource(this.viewer, adding);
       }
@@ -283,7 +301,8 @@ export async function createCzmlLayer(
   context: LayerFactoryContext,
 ): Promise<CzmlLayerHandle> {
   const visible = spec.visible ?? true;
-  const dataSource = await loadDataSource(spec.id, spec.data, context.signal, 'add');
+  const loaded = await loadDataSource(spec.id, spec.data, context.signal, 'add');
+  const dataSource = loaded.dataSource;
   dataSource.show = visible;
   registerPickableEntities(dataSource.entities.values, spec.id);
 
@@ -296,7 +315,7 @@ export async function createCzmlLayer(
     if (context.signal.aborted) {
       throw operationAborted(spec.id, 'add', context.signal.reason);
     }
-    return new CesiumCzmlLayerHandle(viewer, spec.id, dataSource, visible, context.onDisposed);
+    return new CesiumCzmlLayerHandle(viewer, spec.id, loaded, visible, context.onDisposed);
   } catch (cause: unknown) {
     if (added) {
       viewer.dataSources.remove(dataSource, true);

@@ -118,6 +118,39 @@ describe('createCzmlLayer', () => {
     });
   });
 
+  it('exposes the document clock and follows setData', async () => {
+    const view = createViewer();
+    const { context } = createContext();
+    const withClock = [
+      {
+        id: 'document',
+        version: '1.0',
+        clock: {
+          interval: '2026-09-30T00:00:00Z/2026-09-30T06:00:00Z',
+          currentTime: '2026-09-30T01:00:00Z',
+        },
+      },
+      { id: 'sat-1', position: { cartographicDegrees: [0, 116.39, 39.9, 500_000] } },
+    ];
+
+    const layer = await createCzmlLayer(
+      view.viewer as never,
+      { id: 'satellites', type: 'czml', data: withClock },
+      context,
+    );
+
+    // 文档自带 clock 的读数（毫秒时间戳）；SDK 不自动应用它，只把它交出来。
+    expect(layer.clock).toEqual({
+      startTime: Date.parse('2026-09-30T00:00:00Z'),
+      endTime: Date.parse('2026-09-30T06:00:00Z'),
+      currentTime: Date.parse('2026-09-30T01:00:00Z'),
+    });
+
+    // 换成不带 clock 的文档：读数跟着消失，不保留上一份文档的值。
+    await layer.setData(document);
+    expect(layer.clock).toBeUndefined();
+  });
+
   it('fetches a URL before handing data to Cesium', async () => {
     const view = createViewer();
     const { context } = createContext();

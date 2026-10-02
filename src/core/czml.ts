@@ -159,6 +159,60 @@ function toSeconds(value: unknown, epoch: string): number | undefined {
   return undefined;
 }
 
+/** CZML 文档自带的时钟区间；时间统一换算成毫秒时间戳。 */
+export interface CzmlDocumentClock {
+  /** 区间起点，毫秒时间戳。 */
+  readonly startTime: number;
+  /** 区间终点，毫秒时间戳。 */
+  readonly endTime: number;
+  /**
+   * 文档建议的当前时间，毫秒时间戳；文档没写或不是合法 ISO 字符串时为 `undefined`。
+   *
+   * 这里原样给出文档里写的值，不替调用方钳制到区间内——`SimulationClock` 与
+   * `map.clock.setTime()` 各自会在自己的范围内处理。
+   */
+  readonly currentTime: number | undefined;
+}
+
+/**
+ * 读 CZML 文档自带的 `clock`。
+ *
+ * SDK **不会**把文档时钟自动应用到地图时钟：时间轴联动属于业务编排（同一张地图上可能有
+ * 多个文档，谁是主时间轴只有业务知道）。但业务也不必自己去解析 ISO 区间——拿这个读数配
+ * `map.clock.setRange()` / `setTime()` 即可，或直接交给 `SimulationClock`。
+ *
+ * 文档没有 `clock`、区间格式非法、或终点早于起点时返回 `undefined`：这是读数，不抛错。
+ */
+export function readCzmlClock(document: CzmlDocument): CzmlDocumentClock | undefined {
+  if (!isArray(document)) {
+    return undefined;
+  }
+  for (const packet of document as readonly unknown[]) {
+    const record = isRecord(packet) ? packet : undefined;
+    if (record?.id !== 'document') {
+      continue;
+    }
+    const clock = record.clock;
+    if (!isRecord(clock) || typeof clock.interval !== 'string') {
+      return undefined;
+    }
+    const [startRaw, endRaw] = clock.interval.split('/');
+    const startTime = startRaw === undefined ? Number.NaN : Date.parse(startRaw);
+    const endTime = endRaw === undefined ? Number.NaN : Date.parse(endRaw);
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime < startTime) {
+      return undefined;
+    }
+    const currentRaw = clock.currentTime;
+    const parsedCurrent = typeof currentRaw === 'string' ? Date.parse(currentRaw) : Number.NaN;
+    return {
+      startTime,
+      endTime,
+      currentTime: Number.isFinite(parsedCurrent) ? parsedCurrent : undefined,
+    };
+  }
+  return undefined;
+}
+
 function readPosition(
   position: unknown,
   epoch: string,

@@ -1,4 +1,6 @@
 export type { GisMap, MapEventMap, MapState } from '../core/contracts.js';
+export { readCzmlClock } from '../core/czml.js';
+export type { CzmlDocumentClock } from '../core/czml.js';
 export { DataPipeline } from '../core/data-pipeline.js';
 export type {
   DataPipelineCoalesce,

@@ -95,14 +95,32 @@ layer.setVisible(false);
 await layer.remove();
 ```
 
-| 能力        | 语义                                                                                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 加载        | 文档数组直接交给 Cesium；字符串按同源 / CORS 可访问的 URL 拉取 JSON                                                                      |
-| `setData()` | 新文档加载成功后才替换旧实体；取消时旧文档继续生效，图层不进入错误态                                                                     |
-| 生命周期    | `setVisible()`、`remove()`、`map.destroy()` 统一释放 `DataSource`                                                                        |
-| 可观测      | `state`、`errorCount`、`layer.events.on('error')`、`entityCount` 与其它图层一致                                                          |
-| 拾取        | 实体命中回落到本图层：`layerId` 是图层 id，`objectId` 是文档里的实体 id，见[拾取交互](./picking.md)                                      |
-| 时钟        | **不自动联动**：文档里的 `clock` 不会改地图时钟；需要播放时用 `map.clock.bind(clock)` 显式接上，见[地图时钟](./map-controls.md#地图时钟) |
+| 能力        | 语义                                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 加载        | 文档数组直接交给 Cesium；字符串按同源 / CORS 可访问的 URL 拉取 JSON                                                                   |
+| `setData()` | 新文档加载成功后才替换旧实体；取消时旧文档继续生效，图层不进入错误态                                                                  |
+| 生命周期    | `setVisible()`、`remove()`、`map.destroy()` 统一释放 `DataSource`                                                                     |
+| 可观测      | `state`、`errorCount`、`layer.events.on('error')`、`entityCount` 与其它图层一致                                                       |
+| 拾取        | 实体命中回落到本图层：`layerId` 是图层 id，`objectId` 是文档里的实体 id，见[拾取交互](./picking.md)                                   |
+| 时钟        | 文档自带 `clock` 的读数在 `layer.clock`（毫秒时间戳）；**不自动应用**到地图时钟——同一张地图上可能有多个文档，谁是主时间轴只有业务知道 |
+
+### 把文档时钟接到地图上
+
+`layer.clock` 把文档里的 ISO 区间解析好交给业务，省掉自己解析 CZML 的步骤；要不要用、怎么用由业务决定：
+
+```ts
+const layer = await map.layers.add({ id: 'orbits', type: 'czml', data: document });
+
+const clock = layer.clock;
+if (clock) {
+  map.clock.setRange(clock.startTime, clock.endTime);
+  map.clock.setTime(clock.currentTime ?? clock.startTime);
+  map.clock.setAnimating(true);
+}
+```
+
+要让 `SimulationClock` 决定播放状态（倍率、暂停、seek），把上面的范围喂给它再 `map.clock.bind()` 即可——见[仿真 / 回放时钟](./simulation-clock.md#接到地图上)；要按时刻取数据再渲染，接[回放时间轴](./replay-timeline.md#把时间轴接成会话replaysession)。
+文档没有 `clock`、区间格式非法或终点早于起点时 `layer.clock` 为 `undefined`（读数不抛错）；`setData()` 换文档后读数跟着换。
 
 ## 装进回放时间轴
 

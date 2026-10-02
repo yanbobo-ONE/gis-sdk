@@ -1,5 +1,6 @@
 import type { GeoJSON } from 'geojson';
 
+import type { CzmlDocumentClock } from '../core/czml.js';
 import type { GeoPosition } from '../core/controls.js';
 import type { EventHub } from '../core/event-hub.js';
 import type { GisError } from '../core/errors.js';
@@ -96,6 +97,14 @@ export interface CzmlLayerHandle extends LayerHandle {
    * 用于验收与断言（"文档是否真的解析出了实体"），也可以在面板上做读数。
    */
   readonly entityCount: number;
+  /**
+   * 当前文档自带 `clock` 的读数（毫秒时间戳）；文档没写或格式非法时为 `undefined`。
+   *
+   * SDK 不会自动把它应用到地图时钟——同一张地图上可能有多个文档，谁是主时间轴只有业务知道
+   * （见 `setData` 的说明）。这个读数让业务不必自己解析 ISO 区间：直接
+   * `map.clock.setRange(clock.startTime, clock.endTime)` 即可，文档建议的起点在 `currentTime`。
+   */
+  readonly clock: CzmlDocumentClock | undefined;
   /**
    * 替换 CZML 文档：旧实体一直有效，直到新文档加载成功。
    *

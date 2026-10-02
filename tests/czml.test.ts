@@ -4,6 +4,7 @@ import {
   czmlFromPositions,
   czmlFromSamples,
   positionsFromCzml,
+  readCzmlClock,
   tracksFromCzml,
 } from '../src/core/czml.js';
 
@@ -330,5 +331,54 @@ describe('CZML model packet and attitude samples', () => {
         availability: [],
       },
     ]);
+  });
+
+  it('reads the document clock it generated, and tolerates missing or broken clocks', () => {
+    const document = czmlFromPositions(
+      'a',
+      [
+        { longitude: 1, latitude: 2 },
+        { longitude: 3, latitude: 4 },
+      ],
+      { epoch: '2026-09-30T00:00:00Z', intervalSeconds: 5 },
+    );
+
+    // 生成的文档把区间与建议当前时间写在 document 包里；读数原样给出毫秒时间戳。
+    expect(readCzmlClock(document)).toEqual({
+      startTime: Date.parse('2026-09-30T00:00:00Z'),
+      endTime: Date.parse('2026-09-30T00:00:05Z'),
+      currentTime: Date.parse('2026-09-30T00:00:00Z'),
+    });
+
+    // 单采样点是静态文档：不写 clock，读数自然是 undefined。
+    expect(readCzmlClock(czmlFromPositions('a', [{ longitude: 1, latitude: 2 }]))).toBeUndefined();
+
+    // 没有 clock、区间非法、终点早于起点：一律 undefined，不抛错（这是读数）。
+    expect(readCzmlClock([{ id: 'document', version: '1.0' }])).toBeUndefined();
+    expect(
+      readCzmlClock([{ id: 'document', clock: { interval: 'not-a-time/also-bad' } }]),
+    ).toBeUndefined();
+    expect(
+      readCzmlClock([
+        { id: 'document', clock: { interval: '2026-09-30T06:00:00Z/2026-09-30T00:00:00Z' } },
+      ]),
+    ).toBeUndefined();
+
+    // 区间合法但 currentTime 不是合法 ISO：区间照给，当前时间是 undefined。
+    expect(
+      readCzmlClock([
+        {
+          id: 'document',
+          clock: { interval: '2026-09-30T00:00:00Z/2026-09-30T06:00:00Z', currentTime: 'nope' },
+        },
+      ]),
+    ).toEqual({
+      startTime: Date.parse('2026-09-30T00:00:00Z'),
+      endTime: Date.parse('2026-09-30T06:00:00Z'),
+      currentTime: undefined,
+    });
+
+    // JS 调用方传进来的不是包数组。
+    expect(readCzmlClock(undefined as never)).toBeUndefined();
   });
 });
