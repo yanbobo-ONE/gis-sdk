@@ -57,6 +57,47 @@ const machine = new DrawingStateMachine(
 );
 ```
 
+## 程序化构造图形
+
+圆、椭圆与直线箭头不用逐点拖，直接由控制点算出来（`/core`，零 Cesium）：
+
+```ts
+import { buildCircle, buildEllipse, buildStraightArrow } from '@yanbobo/gis-sdk/core';
+
+const circle = buildCircle({ center: { longitude: 116.39, latitude: 39.9 }, radiusMeters: 50_000 });
+const ellipse = buildEllipse({
+  center: { longitude: 116.39, latitude: 39.9 },
+  semiMajorMeters: 80_000,
+  semiMinorMeters: 30_000,
+  rotationDegrees: 90, // 长轴指向正东
+});
+const arrow = buildStraightArrow({
+  from: { longitude: 116.39, latitude: 39.9 },
+  to: { longitude: 116.9, latitude: 39.9 },
+});
+
+// 结果是顶点环（首尾不重复）；多边形渲染时自己补上闭合点即可
+await map.layers.add({
+  id: 'coverage',
+  type: 'polyline',
+  polylines: [{ id: 'circle', positions: [...circle, circle[0]] }],
+});
+```
+
+| 函数                   | 控制点                       | 说明                                                                    |
+| ---------------------- | ---------------------------- | ----------------------------------------------------------------------- |
+| `buildCircle()`        | 圆心 + 半径                  | 顶点按**大圆距离**落在半径上，靠近两极也不会被经度压扁                  |
+| `buildEllipse()`       | 圆心 + 长短半轴 + 长轴方位角 | 在圆心的局部东-北平面上构造，`rotationDegrees` 是长轴方位角（0 为正北） |
+| `buildStraightArrow()` | 起点 + 终点                  | 箭杆 + 双翼箭头，终点是唯一箭尖；尾宽与头宽省略时按全长推导             |
+
+三个函数都返回**顶点环**（首尾不重复），可以直接喂给点位 / 折线 / 绘制（多边形补一个闭合点）。
+
+圆弧类形状按**弦高容差**采样：`toleranceMeters`（默认 10 米）越小越接近真圆，半径越大自动加密，但不会超过 `maxSamples`（默认 512）——所以可以放心用大半径，顶点数不会随半径线性膨胀。
+
+参数非法时抛 `INVALID_SPATIAL_INPUT`（半径为负、短半轴大于长半轴、起终点重合、采样口径非法），坐标非法时抛 `INVALID_COORDINATES`，不会静默产出退化图形。
+
+**边界**：只提供通用几何（圆 / 椭圆 / 直线箭头）。军标（战术箭头、队形、钳击箭头这类）依赖具体标准与业务语义，SDK 不定义；序列化（存成什么格式、带哪些业务字段）同样留给业务。
+
 ## 完成后的顶点编辑
 
 完成的几何还可以再进入一次**编辑会话**，拖动顶点或整体移动点：

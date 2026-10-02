@@ -79,6 +79,18 @@ validatePolygon(polygon, { requireClosed: true }); // 问题列表，空数组�
 
 三者都是零依赖实现：凸包是安德鲁单调链，抽稀是 Ramer–Douglas–Peucker（距离用 `nearestPointOnPath()` 的米制口径，高纬度不会过抽），多边形校验含包围盒扫描的自交检测。需要依赖几何引擎的缓冲区与叠加分析仍按 `docs/research/spatial-analysis-plan.md` §3.3 的三选一推进，尚未引入。
 
+程序化图形（圆 / 椭圆 / 直线箭头）也在这里，返回可直接交给图层的顶点环：
+
+```ts
+import { buildCircle, buildEllipse, buildStraightArrow } from '@yanbobo/gis-sdk/core';
+
+buildCircle({ center, radiusMeters: 50_000 });
+buildEllipse({ center, semiMajorMeters: 80_000, semiMinorMeters: 30_000, rotationDegrees: 90 });
+buildStraightArrow({ from, to });
+```
+
+圆按**大圆距离**采样（靠近两极不会被经度压扁），椭圆在圆心的局部东-北平面上构造，圆弧类形状按**弦高容差**决定采样点数（`toleranceMeters` 默认 10 米、`maxSamples` 默认 512），因此大半径不会带来线性增长的顶点数。参数非法抛 `INVALID_SPATIAL_INPUT`。用法与边界见[绘制与顶点编辑](./drawing.md#程序化构造图形)；**军标几何不在范围内**（依赖具体标准与业务语义，SDK 不定义）。
+
 ## 空间判断
 
 ```ts

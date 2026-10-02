@@ -129,6 +129,13 @@ export {
 export { clusterPoints } from '../spatial/cluster.js';
 export type { ClusterOptions, PointCluster } from '../spatial/cluster.js';
 export { convexHull } from '../spatial/hull.js';
+export { buildCircle, buildEllipse, buildStraightArrow } from '../spatial/plot-geometry.js';
+export type {
+  CircleGeometryOptions,
+  EllipseGeometryOptions,
+  PlotSamplingOptions,
+  StraightArrowOptions,
+} from '../spatial/plot-geometry.js';
 export {
   DEFAULT_SNAP_PIXEL_TOLERANCE,
   MAX_SNAP_PIXEL_TOLERANCE,
