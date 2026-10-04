@@ -3,7 +3,7 @@ import {
   clusterPoints,
   czmlFromPositions,
   runAnalysisBatch,
-} from "@yanbobo/gis-sdk/core";
+} from '@yanbobo/gis-sdk/core';
 import type {
   AnalysisController,
   CameraController,
@@ -18,13 +18,13 @@ import type {
   QualityController,
   QualityProfileId,
   TerrainController,
-} from "@yanbobo/gis-sdk/core";
-import type { HeatmapLayerHandle, LayerManager } from "@yanbobo/gis-sdk/layers";
+} from '@yanbobo/gis-sdk/core';
+import type { HeatmapLayerHandle, LayerManager } from '@yanbobo/gis-sdk/layers';
 
 /** 示例用来验证自定义请求头的取值；服务端 fixture 会把它记进 `/__test/wms-state`。 */
-export const EXAMPLE_AUTH_HEADER = "gis-sdk-example-token";
+export const EXAMPLE_AUTH_HEADER = 'gis-sdk-example-token';
 
-type ExampleState = "idle" | "starting" | "ready" | "destroying" | "error";
+type ExampleState = 'idle' | 'starting' | 'ready' | 'destroying' | 'error';
 
 interface LayerInfoLike {
   readonly id: string;
@@ -35,7 +35,7 @@ interface LayerInfoLike {
 
 interface GeoJsonHandleLike {
   readonly id: string;
-  readonly type: "geojson";
+  readonly type: 'geojson';
   readonly state: string;
   readonly visible: boolean;
   setVisible(visible: boolean): void;
@@ -44,7 +44,7 @@ interface GeoJsonHandleLike {
 
 interface WmsHandleLike {
   readonly id: string;
-  readonly type: "wms";
+  readonly type: 'wms';
   readonly state: string;
   readonly visible: boolean;
   readonly opacity: number;
@@ -80,7 +80,7 @@ interface ExamplePointSpec {
 }
 
 interface PointsHandleLike extends LayerHandleLike {
-  readonly type: "points";
+  readonly type: 'points';
   readonly count: number;
   readonly labelCount: number;
   setData(points: readonly ExamplePointSpec[]): Promise<void>;
@@ -90,46 +90,35 @@ interface PointsHandleLike extends LayerHandleLike {
 interface ExampleMapLike {
   readonly state: string;
   /** 直接复用 SDK 的相机读数字段：示例同时验证发布包的类型可用。 */
-  readonly camera: Pick<
-    CameraController,
-    "view" | "metersPerPixel" | "setView"
-  >;
-  readonly environment: Pick<EnvironmentController, "set" | "clearAll">;
+  readonly camera: Pick<CameraController, 'view' | 'metersPerPixel' | 'setView'>;
+  readonly environment: Pick<EnvironmentController, 'set' | 'clearAll'>;
   /** 创建期地形的读数与切换：示例验证 `ready` / `pending` / `set` 确实随发布包一起可用。 */
-  readonly terrain: Pick<
-    TerrainController,
-    "type" | "pending" | "ready" | "set"
-  >;
+  readonly terrain: Pick<TerrainController, 'type' | 'pending' | 'ready' | 'set'>;
   /** 地图时钟：示例验证读数、绑定与按帧推进确实随发布包一起可用。 */
-  readonly clock: Pick<MapClockController, "time" | "snapshot" | "bind">;
+  readonly clock: Pick<MapClockController, 'time' | 'snapshot' | 'bind'>;
   /** 空间闪电：示例验证触发、读数与撤销确实随发布包一起可用。 */
   readonly lightning: Pick<
     MapLightningController,
-    | "activeCount"
-    | "flashLevel"
-    | "maxActive"
-    | "strike"
-    | "cancelAll"
-    | "setStyle"
+    'activeCount' | 'flashLevel' | 'maxActive' | 'strike' | 'cancelAll' | 'setStyle'
   >;
   /** 拾取事件：实体命中探针走的是业务真实订阅的那条通道。 */
-  readonly picking: Pick<PickingController, "on" | "setEnabled">;
+  readonly picking: Pick<PickingController, 'on' | 'setEnabled'>;
   /** 坐标投影：用它把探针实体的位置换算成真实点击坐标。 */
-  readonly coordinates: Pick<CoordinateTransform, "toWindow">;
+  readonly coordinates: Pick<CoordinateTransform, 'toWindow'>;
   /** 渲染质量：性能矩阵用它读 SDK 自己的帧采样，并在测量期间冻住自动降档。 */
   readonly quality: Pick<
     QualityController,
-    "current" | "snapshot" | "set" | "setProfile" | "setAdaptive" | "adaptive"
+    'current' | 'snapshot' | 'set' | 'setProfile' | 'setAdaptive' | 'adaptive'
   >;
   readonly analysis: AnalysisController;
   /** 地图事件：验收台用它显示 SDK 上报的致命错误（例如渲染循环停止）。 */
   readonly events: {
-    on<TKey extends "map:error">(
+    on<TKey extends 'map:error'>(
       type: TKey,
       listener: (event: MapEventMap[TKey]) => void,
     ): () => void;
   };
-  readonly layers: Pick<LayerManager, "add" | "list" | "remove">;
+  readonly layers: Pick<LayerManager, 'add' | 'list' | 'remove'>;
   readonly raw: {
     readonly viewer: {
       readonly dataSources?: { get(index: number): unknown };
@@ -158,10 +147,7 @@ interface ExampleDependencies {
   readonly createMap: (options: {
     readonly container: string | HTMLElement;
     readonly cesiumBaseUrl: string;
-    readonly terrain?: {
-      readonly type: "cesium-terrain";
-      readonly url: string;
-    };
+    readonly terrain?: { readonly type: 'cesium-terrain'; readonly url: string };
   }) => ExampleMapLike;
   readonly createActiveFilter: () => unknown;
   readonly geoJsonUrl: string;
@@ -178,8 +164,7 @@ interface ExampleDependencies {
 }
 
 /** 面板上的环境预设；`clear` 表示清空全部环境效果。 */
-export type VanillaEnvironmentPreset =
-  "clear" | "depthFog" | "haze" | "rain" | "snow";
+export type VanillaEnvironmentPreset = 'clear' | 'depthFog' | 'haze' | 'rain' | 'snow';
 
 export interface VanillaExampleSnapshot {
   readonly state: ExampleState;
@@ -285,18 +270,18 @@ export interface VanillaExampleController {
 }
 
 const replacementGeoJson = {
-  type: "FeatureCollection",
+  type: 'FeatureCollection',
   features: [
     {
-      type: "Feature",
-      properties: { name: "Updated command point", status: "ACTIVE" },
-      geometry: { type: "Point", coordinates: [116.397, 39.908] },
+      type: 'Feature',
+      properties: { name: 'Updated command point', status: 'ACTIVE' },
+      geometry: { type: 'Point', coordinates: [116.397, 39.908] },
     },
     {
-      type: "Feature",
-      properties: { name: "Updated route", status: "ACTIVE" },
+      type: 'Feature',
+      properties: { name: 'Updated route', status: 'ACTIVE' },
       geometry: {
-        type: "LineString",
+        type: 'LineString',
         coordinates: [
           [116.1, 39.72],
           [116.42, 39.94],
@@ -312,7 +297,7 @@ function errorMessage(error: unknown): string {
 }
 
 /** 时钟探针的 epoch 与采样：显式给出，便于由它算出 `SimulationClock` 的时间范围。 */
-const CLOCK_PROBE_EPOCH = "2026-09-30T00:00:00Z";
+const CLOCK_PROBE_EPOCH = '2026-09-30T00:00:00Z';
 const CLOCK_PROBE_SAMPLES = 24;
 const CLOCK_PROBE_INTERVAL_SECONDS = 1;
 /** 倍率取 8：几帧就能观察到明显推进，同时不会在探针结束前播完。 */
@@ -321,12 +306,8 @@ const CLOCK_PROBE_RATE = 8;
 const CLOCK_PROBE_FRAMES = 6;
 
 /** 实体拾取探针的实体 id 与位置；位置显式给出，才能把它投影成点击坐标。 */
-const PICK_PROBE_ENTITY_ID = "pick-probe";
-const PICK_PROBE_POSITION = {
-  longitude: 116.5,
-  latitude: 39.95,
-  height: 20_000,
-} as const;
+const PICK_PROBE_ENTITY_ID = 'pick-probe';
+const PICK_PROBE_POSITION = { longitude: 116.5, latitude: 39.95, height: 20_000 } as const;
 
 /** 等渲染帧的上限：超过它说明渲染被暂停，继续等没有意义。 */
 const FRAME_WAIT_TIMEOUT_MS = 5_000;
@@ -411,12 +392,7 @@ export interface VanillaPerformanceRow {
 const PERF_SETTLE_FRAMES = 90;
 
 /** 矩阵使用的固定视角：所有场景从同一机位看同一片区域，读数才可比。 */
-const PERF_CAMERA = {
-  longitude: 116.4,
-  latitude: 39.9,
-  height: 900_000,
-  pitch: -90,
-} as const;
+const PERF_CAMERA = { longitude: 116.4, latitude: 39.9, height: 900_000, pitch: -90 } as const;
 
 /** 一个测量场景：搭建图层、可选切档，然后由探针统一等待与读数。 */
 interface PerformanceScenario {
@@ -460,9 +436,7 @@ function performancePoints(count: number): ExamplePointSpec[] {
 
 /** CZML 场景：500 个带点图形的实体，走数据源渲染路径（与点位图层的批量集合不同）。 */
 function performanceCzml(): readonly Record<string, unknown>[] {
-  const packets: Record<string, unknown>[] = [
-    { id: "document", version: "1.0" },
-  ];
+  const packets: Record<string, unknown>[] = [{ id: 'document', version: '1.0' }];
   for (let entity = 0; entity < 500; entity += 1) {
     packets.push({
       id: `perf-czml-${String(entity)}`,
@@ -481,9 +455,7 @@ function performanceCzml(): readonly Record<string, unknown>[] {
 
 /** 读取 JS 堆占用；`performance.memory` 是非标准读数，且不含 GPU 显存。 */
 function readHeapMB(): number | undefined {
-  const memory = (
-    performance as { readonly memory?: { readonly usedJSHeapSize: number } }
-  ).memory;
+  const memory = (performance as { readonly memory?: { readonly usedJSHeapSize: number } }).memory;
   return memory ? Math.round(memory.usedJSHeapSize / 1_048_576) : undefined;
 }
 
@@ -508,25 +480,16 @@ interface LongTaskCounter {
  */
 function createLongTaskCounter(): LongTaskCounter {
   const supportedTypes = (
-    PerformanceObserver as unknown as {
-      supportedEntryTypes?: readonly string[];
-    }
+    PerformanceObserver as unknown as { supportedEntryTypes?: readonly string[] }
   ).supportedEntryTypes;
-  if (
-    typeof PerformanceObserver !== "function" ||
-    !supportedTypes?.includes("longtask")
-  ) {
-    return {
-      reset: () => undefined,
-      count: () => undefined,
-      disconnect: () => undefined,
-    };
+  if (typeof PerformanceObserver !== 'function' || !supportedTypes?.includes('longtask')) {
+    return { reset: () => undefined, count: () => undefined, disconnect: () => undefined };
   }
   let total = 0;
   const observer = new PerformanceObserver((list) => {
     total += list.getEntries().length;
   });
-  observer.observe({ entryTypes: ["longtask"] });
+  observer.observe({ entryTypes: ['longtask'] });
   return {
     reset: () => {
       total = 0;
@@ -544,10 +507,7 @@ function createLongTaskCounter(): LongTaskCounter {
  * 瓦片在途时画面上要画的瓦片还少、渲染反而更便宜，直接采样会把"还没画完"读成稳态；
  * 显示不出来（没有 globe 或已经加载完）时立即返回。
  */
-function waitForTiles(
-  viewer: TileLoadingViewer,
-  timeoutMs: number,
-): Promise<void> {
+function waitForTiles(viewer: TileLoadingViewer, timeoutMs: number): Promise<void> {
   const globe = viewer.scene?.globe;
   if (!globe || globe.tilesLoaded) {
     return Promise.resolve();
@@ -564,27 +524,25 @@ function waitForTiles(
       resolve();
     };
     const timer = setTimeout(finish, timeoutMs);
-    const remove = globe.tileLoadProgressEvent.addEventListener(
-      (pending: number) => {
-        if (pending === 0) {
-          finish();
-        }
-      },
-    );
+    const remove = globe.tileLoadProgressEvent.addEventListener((pending: number) => {
+      if (pending === 0) {
+        finish();
+      }
+    });
   });
 }
 
 function isGeoJsonHandle(handle: LayerHandleLike): handle is GeoJsonHandleLike {
-  return handle.type === "geojson" && "setData" in handle;
+  return handle.type === 'geojson' && 'setData' in handle;
 }
 
 function isWmsHandle(handle: LayerHandleLike): handle is WmsHandleLike {
   return (
-    handle.type === "wms" &&
-    "opacity" in handle &&
-    "setOpacity" in handle &&
-    "setFilter" in handle &&
-    "reload" in handle
+    handle.type === 'wms' &&
+    'opacity' in handle &&
+    'setOpacity' in handle &&
+    'setFilter' in handle &&
+    'reload' in handle
   );
 }
 
@@ -595,12 +553,12 @@ export function createVanillaExampleController(
   let map: ExampleMapLike | undefined;
   let geoJson: GeoJsonHandleLike | undefined;
   let wms: WmsHandleLike | undefined;
-  let state: ExampleState = "idle";
+  let state: ExampleState = 'idle';
   let geoJsonVisible = true;
   let wmsOpacity = 0.72;
   let wmsFilterEnabled = false;
   let dataRevision = 0;
-  let environment: VanillaEnvironmentPreset = "clear";
+  let environment: VanillaEnvironmentPreset = 'clear';
   let lineOfSight: string | undefined;
   let camera: string | undefined;
   let points: string | undefined;
@@ -663,39 +621,31 @@ export function createVanillaExampleController(
   };
 
   const requireReady = (): ReadyHandles => {
-    if (state !== "ready" || !map || !geoJson || !wms) {
-      throw new Error("The Vanilla example is not ready.");
+    if (state !== 'ready' || !map || !geoJson || !wms) {
+      throw new Error('The Vanilla example is not ready.');
     }
     return { geoJson, map, wms };
   };
 
   /** 应用环境预设；性能矩阵与面板按钮共用同一条路径，读数才与手动操作可比。 */
-  const applyEnvironment = (
-    target: ExampleMapLike,
-    preset: VanillaEnvironmentPreset,
-  ): void => {
-    if (preset === "clear") {
+  const applyEnvironment = (target: ExampleMapLike, preset: VanillaEnvironmentPreset): void => {
+    if (preset === 'clear') {
       target.environment.clearAll();
-    } else if (preset === "depthFog") {
-      target.environment.set("depthFog", { density: 0.45, color: "#9fb6c8" });
-    } else if (preset === "haze") {
-      target.environment.set("haze", { density: 0.0012, maxHeight: 800_000 });
-    } else if (preset === "rain") {
-      target.environment.set("rain", {
-        intensity: "moderate",
-        windDirection: 60,
-      });
+    } else if (preset === 'depthFog') {
+      target.environment.set('depthFog', { density: 0.45, color: '#9fb6c8' });
+    } else if (preset === 'haze') {
+      target.environment.set('haze', { density: 0.0012, maxHeight: 800_000 });
+    } else if (preset === 'rain') {
+      target.environment.set('rain', { intensity: 'moderate', windDirection: 60 });
     } else {
-      target.environment.set("snow", { intensity: "light", flakeSize: 0.025 });
+      target.environment.set('snow', { intensity: 'light', flakeSize: 0.025 });
     }
   };
 
   /** 移除性能矩阵留下的全部图层；按前缀识别，矩阵中途失败也能清干净。 */
-  const clearPerformanceLayers = async (
-    handles: ReadyHandles,
-  ): Promise<void> => {
+  const clearPerformanceLayers = async (handles: ReadyHandles): Promise<void> => {
     for (const info of handles.map.layers.list()) {
-      if (info.id.startsWith("perf-")) {
+      if (info.id.startsWith('perf-')) {
         await handles.map.layers.remove(info.id);
       }
     }
@@ -704,23 +654,16 @@ export function createVanillaExampleController(
   const hasLayer = (handles: ReadyHandles, id: string): boolean =>
     handles.map.layers.list().some((layer) => layer.id === id);
 
-  const ensurePoints = async (
-    handles: ReadyHandles,
-    count: number,
-  ): Promise<void> => {
+  const ensurePoints = async (handles: ReadyHandles, count: number): Promise<void> => {
     const id = `perf-points-${String(count)}`;
     if (hasLayer(handles, id)) {
       return;
     }
-    await handles.map.layers.add({
-      id,
-      type: "points",
-      points: performancePoints(count),
-    });
+    await handles.map.layers.add({ id, type: 'points', points: performancePoints(count) });
   };
 
   const ensurePolylines = async (handles: ReadyHandles): Promise<void> => {
-    if (hasLayer(handles, "perf-polylines")) {
+    if (hasLayer(handles, 'perf-polylines')) {
       return;
     }
     const polylines = Array.from({ length: 2_000 }, (_, index) => {
@@ -735,34 +678,30 @@ export function createVanillaExampleController(
         ],
       };
     });
-    await handles.map.layers.add({
-      id: "perf-polylines",
-      type: "polyline",
-      polylines,
-    });
+    await handles.map.layers.add({ id: 'perf-polylines', type: 'polyline', polylines });
   };
 
   const ensureCzml = async (handles: ReadyHandles): Promise<void> => {
-    if (hasLayer(handles, "perf-czml")) {
+    if (hasLayer(handles, 'perf-czml')) {
       return;
     }
     await handles.map.layers.add({
-      id: "perf-czml",
-      type: "czml",
+      id: 'perf-czml',
+      type: 'czml',
       data: performanceCzml(),
     });
   };
 
   const ensureWms = async (handles: ReadyHandles): Promise<void> => {
-    if (hasLayer(handles, "perf-wms")) {
+    if (hasLayer(handles, 'perf-wms')) {
       return;
     }
     await handles.map.layers.add({
-      id: "perf-wms",
-      type: "wms",
+      id: 'perf-wms',
+      type: 'wms',
       url: dependencies.wmsUrl,
-      layers: "demo:coverage",
-      parameters: { format: "image/png", transparent: true },
+      layers: 'demo:coverage',
+      parameters: { format: 'image/png', transparent: true },
     });
   };
 
@@ -779,66 +718,56 @@ export function createVanillaExampleController(
    * 再等满一整个采样窗口。图层按 `perf-` 前缀统一回收。
    */
   const PERF_SCENARIOS: readonly PerformanceScenario[] = [
-    { name: "空场景（椭球地形）", setup: () => Promise.resolve() },
-    { name: "点位 5 000", setup: (handles) => ensurePoints(handles, 5_000) },
-    { name: "点位 20 000", setup: (handles) => ensurePoints(handles, 20_000) },
+    { name: '空场景（椭球地形）', setup: () => Promise.resolve() },
+    { name: '点位 5 000', setup: (handles) => ensurePoints(handles, 5_000) },
+    { name: '点位 20 000', setup: (handles) => ensurePoints(handles, 20_000) },
+    { name: '点位 100 000', setup: (handles) => ensurePoints(handles, 100_000) },
+    { name: '折线 2 000', setup: ensurePolylines },
+    { name: 'CZML 500 实体', setup: ensureCzml },
+    { name: 'WMS 影像', setup: ensureWms },
+    { name: '雨（环境效果）', environment: 'rain', setup: () => Promise.resolve() },
     {
-      name: "点位 100 000",
-      setup: (handles) => ensurePoints(handles, 100_000),
-    },
-    { name: "折线 2 000", setup: ensurePolylines },
-    { name: "CZML 500 实体", setup: ensureCzml },
-    { name: "WMS 影像", setup: ensureWms },
-    {
-      name: "雨（环境效果）",
-      environment: "rain",
-      setup: () => Promise.resolve(),
-    },
-    {
-      name: "点位 100 000 + 影像 + 雨",
-      environment: "rain",
+      name: '点位 100 000 + 影像 + 雨',
+      environment: 'rain',
       setup: ensureHeavyScene,
       keepLayers: true,
     },
     {
-      name: "同上（low 档）",
-      profile: "low",
-      environment: "rain",
+      name: '同上（low 档）',
+      profile: 'low',
+      environment: 'rain',
       setup: () => Promise.resolve(),
       keepLayers: true,
     },
     {
       // 隔离行：low 档与默认档差三项参数，这里只把分辨率缩放降到 0.75，
       // 用来判断"降档变慢"到底是分辨率造成的，还是别的参数。
-      name: "同上（仅分辨率 0.75）",
-      profile: "default",
+      name: '同上（仅分辨率 0.75）',
+      profile: 'default',
       resolutionScale: 0.75,
-      environment: "rain",
+      environment: 'rain',
       setup: () => Promise.resolve(),
       keepLayers: true,
     },
     {
       // 对照行：同一批图层切回默认档再测一次。两次默认档读数的差值就是测量漂移，
       // 有它才能判断"切档后变快/变慢"是档位效果还是顺序与预热造成的。
-      name: "同上（默认档·复测）",
-      profile: "default",
-      environment: "rain",
+      name: '同上（默认档·复测）',
+      profile: 'default',
+      environment: 'rain',
       setup: () => Promise.resolve(),
     },
   ];
 
   const start = async (
     nextContainer: string | HTMLElement,
-    options: {
-      terrain?: boolean;
-      onCreated?: (created: ExampleMapLike) => void;
-    } = {},
+    options: { terrain?: boolean; onCreated?: (created: ExampleMapLike) => void } = {},
   ) => {
-    if (state === "ready" || state === "starting") {
+    if (state === 'ready' || state === 'starting') {
       return;
     }
     container = nextContainer;
-    state = "starting";
+    state = 'starting';
     currentError = undefined;
     // 上一个实例的订阅先解掉（重建时不留残余）。
     mapErrorSubscription?.();
@@ -847,14 +776,14 @@ export function createVanillaExampleController(
 
     const nextMap = dependencies.createMap({
       container: nextContainer,
-      cesiumBaseUrl: "/cesium/",
+      cesiumBaseUrl: '/cesium/',
       ...(options.terrain
-        ? { terrain: { type: "cesium-terrain", url: dependencies.terrainUrl } }
+        ? { terrain: { type: 'cesium-terrain', url: dependencies.terrainUrl } }
         : {}),
     });
     map = nextMap;
     // 致命错误单独显示：它不会让某次操作失败，只会让地图不再动。
-    mapErrorSubscription = nextMap.events.on("map:error", ({ error }) => {
+    mapErrorSubscription = nextMap.events.on('map:error', ({ error }) => {
       mapError = `${error.code}: ${error.message}`;
       notify();
     });
@@ -863,29 +792,29 @@ export function createVanillaExampleController(
 
     try {
       const nextGeoJson = await nextMap.layers.add({
-        id: "example-geojson",
-        type: "geojson",
+        id: 'example-geojson',
+        type: 'geojson',
         data: dependencies.geoJsonUrl,
         style: {
-          marker: { color: "#35d7a0", size: 15 },
-          stroke: "#4ee2bd",
+          marker: { color: '#35d7a0', size: 15 },
+          stroke: '#4ee2bd',
           strokeWidth: 3,
-          fill: "#22a88455",
+          fill: '#22a88455',
         },
       });
       const nextWms = await nextMap.layers.add({
-        id: "example-wms",
-        type: "wms",
+        id: 'example-wms',
+        type: 'wms',
         url: dependencies.wmsUrl,
-        layers: "demo:coverage",
+        layers: 'demo:coverage',
         opacity: 0.72,
-        parameters: { format: "image/png", transparent: true },
+        parameters: { format: 'image/png', transparent: true },
         // 自定义请求头：示例用它验证鉴权头真的随瓦片请求发出（本地 fixture 会记录）。
-        headers: { "X-Example-Auth": EXAMPLE_AUTH_HEADER },
+        headers: { 'X-Example-Auth': EXAMPLE_AUTH_HEADER },
       });
 
       if (!isGeoJsonHandle(nextGeoJson) || !isWmsHandle(nextWms)) {
-        throw new Error("The example received unexpected layer handles.");
+        throw new Error('The example received unexpected layer handles.');
       }
 
       geoJson = nextGeoJson;
@@ -894,7 +823,7 @@ export function createVanillaExampleController(
       wmsOpacity = nextWms.opacity;
       wmsFilterEnabled = false;
       dataRevision = 0;
-      environment = "clear";
+      environment = 'clear';
       lineOfSight = undefined;
       camera = undefined;
       points = undefined;
@@ -918,11 +847,11 @@ export function createVanillaExampleController(
       pointsLabelsEnabled = true;
       const target = nextMap.raw.viewer.dataSources?.get(0) ?? nextGeoJson;
       await nextMap.raw.viewer.flyTo(target);
-      state = "ready";
+      state = 'ready';
       notify();
     } catch (error: unknown) {
       currentError = errorMessage(error);
-      state = "error";
+      state = 'error';
       await nextMap.destroy().catch(() => undefined);
       notify();
       throw error;
@@ -930,10 +859,10 @@ export function createVanillaExampleController(
   };
 
   const destroy = async () => {
-    if (!map || state === "idle") {
+    if (!map || state === 'idle') {
       return;
     }
-    state = "destroying";
+    state = 'destroying';
     notify();
     pickSubscription?.();
     pickSubscription = undefined;
@@ -943,7 +872,7 @@ export function createVanillaExampleController(
     map = undefined;
     geoJson = undefined;
     wms = undefined;
-    state = "idle";
+    state = 'idle';
     notify();
   };
 
@@ -951,7 +880,7 @@ export function createVanillaExampleController(
     start,
     async restart() {
       if (!container) {
-        throw new Error("The Vanilla example has not been started.");
+        throw new Error('The Vanilla example has not been started.');
       }
       const restartContainer = container;
       await destroy();
@@ -964,7 +893,7 @@ export function createVanillaExampleController(
      */
     async createWithTerrain() {
       if (!container) {
-        throw new Error("The Vanilla example has not been started.");
+        throw new Error('The Vanilla example has not been started.');
       }
       const restartContainer = container;
       let pendingWhileLoading = false;
@@ -978,7 +907,7 @@ export function createVanillaExampleController(
       const target = requireReady().map.terrain;
       await target.ready;
       terrain = `创建期声明 → ${target.type} / 加载中 pending=${String(pendingWhileLoading)} / 兑现后 pending=${String(target.pending)}`;
-      await requireReady().map.terrain.set({ type: "ellipsoid" });
+      await requireReady().map.terrain.set({ type: 'ellipsoid' });
       notify();
     },
     async replaceGeoJson() {
@@ -986,8 +915,7 @@ export function createVanillaExampleController(
       await handles.geoJson.setData(replacementGeoJson);
       dataRevision += 1;
       notify();
-      const target =
-        handles.map.raw.viewer.dataSources?.get(0) ?? handles.geoJson;
+      const target = handles.map.raw.viewer.dataSources?.get(0) ?? handles.geoJson;
       await handles.map.raw.viewer.flyTo(target);
     },
     setGeoJsonVisible(visible) {
@@ -1008,7 +936,7 @@ export function createVanillaExampleController(
     },
     async runLineOfSight() {
       const handles = requireReady();
-      const result = await handles.map.analysis.run("line-of-sight", {
+      const result = await handles.map.analysis.run('line-of-sight', {
         from: { longitude: 116.3, latitude: 39.85, height: 600 },
         to: { longitude: 116.52, latitude: 40.02, height: 600 },
         samples: 32,
@@ -1042,8 +970,8 @@ export function createVanillaExampleController(
         pointsHandle = undefined;
       }
       const handle = await handles.map.layers.add({
-        id: "example-points",
-        type: "points",
+        id: 'example-points',
+        type: 'points',
         points: generated,
         labels: { enabled: pointsLabelsEnabled, maxLabels: 200 },
       });
@@ -1055,7 +983,7 @@ export function createVanillaExampleController(
     togglePointLabels() {
       const handle = pointsHandle;
       if (!handle) {
-        throw new Error("请先添加点位图层。");
+        throw new Error('请先添加点位图层。');
       }
       pointsLabelsEnabled = !pointsLabelsEnabled;
       handle.setStyle({ labels: { enabled: pointsLabelsEnabled } });
@@ -1067,7 +995,7 @@ export function createVanillaExampleController(
       const handles = requireReady();
       const perPixel = handles.map.camera.metersPerPixel;
       if (perPixel === undefined) {
-        throw new Error("当前视角算不出每像素米数（相机未看向地表）。");
+        throw new Error('当前视角算不出每像素米数（相机未看向地表）。');
       }
       const source: GeoPoint[] = [];
       for (let index = 0; index < 2_000; index += 1) {
@@ -1079,8 +1007,8 @@ export function createVanillaExampleController(
       const grouped = clusterPoints(source, { cellSizeMeters: perPixel * 48 });
       // 渲染：簇心作为点、大小随计数（这里用图层默认大小，业务可自行按 count 分档）。
       void handles.map.layers.add({
-        id: "example-clusters",
-        type: "points",
+        id: 'example-clusters',
+        type: 'points',
         points: grouped.map((cluster) => ({
           id: cluster.id,
           longitude: cluster.center.longitude,
@@ -1098,14 +1026,14 @@ export function createVanillaExampleController(
         latitude: 20 + Math.sin(index / 5) * 8,
         height: 400_000 + index * 1_000,
       }));
-      const document = czmlFromPositions("example-track", orbit, {
+      const document = czmlFromPositions('example-track', orbit, {
         intervalSeconds: 5,
-        name: "示例轨迹",
-        model: { url: "https://example.com/placeholder.glb" },
+        name: '示例轨迹',
+        model: { url: 'https://example.com/placeholder.glb' },
       });
       const handle = await handles.map.layers.add({
-        id: "example-czml",
-        type: "czml",
+        id: 'example-czml',
+        type: 'czml',
         data: document,
       });
       czml = `实体 ${String(handle.entityCount)}（${String(orbit.length)} 个采样点）`;
@@ -1125,32 +1053,27 @@ export function createVanillaExampleController(
         latitude: 39.8 + Math.sin(index / 3) * 0.06,
         height: 60_000,
       }));
-      const document = czmlFromPositions("clock-track", orbit, {
+      const document = czmlFromPositions('clock-track', orbit, {
         epoch: CLOCK_PROBE_EPOCH,
         intervalSeconds: CLOCK_PROBE_INTERVAL_SECONDS,
-        name: "时钟探针",
+        name: '时钟探针',
       });
       // SDK 只生成位置采样；点图形由业务在文档上追加，实体才可见、可拾取。
       const visible = document.map((packet, index) =>
         index === 0
           ? packet
-          : {
-              ...packet,
-              point: { pixelSize: 14, color: { rgba: [255, 214, 102, 255] } },
-            },
+          : { ...packet, point: { pixelSize: 14, color: { rgba: [255, 214, 102, 255] } } },
       );
       const handle = await handles.map.layers.add({
-        id: "example-czml-clock",
-        type: "czml",
+        id: 'example-czml-clock',
+        type: 'czml',
         data: visible,
       });
 
       const source = new SimulationClock({
-        mode: "replay",
+        mode: 'replay',
         startTime: epochMs,
-        endTime:
-          epochMs +
-          (CLOCK_PROBE_SAMPLES - 1) * CLOCK_PROBE_INTERVAL_SECONDS * 1000,
+        endTime: epochMs + (CLOCK_PROBE_SAMPLES - 1) * CLOCK_PROBE_INTERVAL_SECONDS * 1000,
         initialTime: epochMs,
         rate: CLOCK_PROBE_RATE,
       });
@@ -1164,9 +1087,7 @@ export function createVanillaExampleController(
         const animating = handles.map.clock.snapshot.animating;
 
         if (after <= before) {
-          throw new Error(
-            `地图时钟没有随渲染帧推进：${String(before)} → ${String(after)}`,
-          );
+          throw new Error(`地图时钟没有随渲染帧推进：${String(before)} → ${String(after)}`);
         }
         if (mirroredTime !== after) {
           throw new Error(
@@ -1174,7 +1095,7 @@ export function createVanillaExampleController(
           );
         }
         if (!animating) {
-          throw new Error("播放期间地图时钟的 animating 为 false。");
+          throw new Error('播放期间地图时钟的 animating 为 false。');
         }
         clockReading = `推进 ${String(after - before)} ms / 源时钟一致 / animating=${String(animating)} / 实体 ${String(handle.entityCount)}`;
       } finally {
@@ -1188,13 +1109,13 @@ export function createVanillaExampleController(
       const handles = requireReady();
       const canvas = handles.map.raw.viewer.canvas;
       if (!canvas) {
-        throw new Error("验收台拿不到画布，无法准备真实点击。");
+        throw new Error('验收台拿不到画布，无法准备真实点击。');
       }
       const document = [
-        { id: "document", version: "1.0" },
+        { id: 'document', version: '1.0' },
         {
           id: PICK_PROBE_ENTITY_ID,
-          name: "拾取探针",
+          name: '拾取探针',
           position: {
             cartographicDegrees: [
               PICK_PROBE_POSITION.longitude,
@@ -1210,22 +1131,18 @@ export function createVanillaExampleController(
           },
         },
       ];
-      await handles.map.layers.add({
-        id: "example-czml-pick",
-        type: "czml",
-        data: document,
-      });
+      await handles.map.layers.add({ id: 'example-czml-pick', type: 'czml', data: document });
 
       entityPick = undefined;
       entityPickScreen = undefined;
       pickSubscription?.();
       // 先订阅再投影：布防之后的第一次点击就是探针要观察的那一次。
-      pickSubscription = handles.map.picking.on("click", (event) => {
+      pickSubscription = handles.map.picking.on('click', (event) => {
         const hit: PickingHit | undefined = event.hit;
         entityPick =
-          hit?.kind === "layer"
-            ? `命中图层 ${hit.layerId ?? "(未知图层)"} / 实体 ${hit.objectId ?? "(无 id)"}`
-            : `未命中托管图层（kind=${hit?.kind ?? "none"}）`;
+          hit?.kind === 'layer'
+            ? `命中图层 ${hit.layerId ?? '(未知图层)'} / 实体 ${hit.objectId ?? '(无 id)'}`
+            : `未命中托管图层（kind=${hit?.kind ?? 'none'}）`;
         entityPickScreen = undefined;
         notify();
       });
@@ -1239,7 +1156,7 @@ export function createVanillaExampleController(
       await waitFrames(2);
       const screen = handles.map.coordinates.toWindow(PICK_PROBE_POSITION);
       if (!screen) {
-        throw new Error("探针实体不在视口内，无法投影出点击坐标。");
+        throw new Error('探针实体不在视口内，无法投影出点击坐标。');
       }
       const rect = canvas.getBoundingClientRect();
       entityPickScreen = `${String(Math.round(rect.left + screen.x))},${String(Math.round(rect.top + screen.y))}`;
@@ -1264,7 +1181,7 @@ export function createVanillaExampleController(
       try {
         for (const scenario of PERF_SCENARIOS) {
           await scenario.setup(handles);
-          applyEnvironment(handles.map, scenario.environment ?? "clear");
+          applyEnvironment(handles.map, scenario.environment ?? 'clear');
           if (scenario.profile) {
             quality.setProfile(scenario.profile);
           }
@@ -1295,8 +1212,8 @@ export function createVanillaExampleController(
         }
       } finally {
         await clearPerformanceLayers(handles);
-        applyEnvironment(handles.map, "clear");
-        environment = "clear";
+        applyEnvironment(handles.map, 'clear');
+        environment = 'clear';
         longTasks.disconnect();
         quality.set(previousQuality);
         quality.setAdaptive(previousAdaptive);
@@ -1332,30 +1249,30 @@ export function createVanillaExampleController(
     async probeLayerOrdering() {
       const handles = requireReady();
       const spec = {
-        type: "wms" as const,
+        type: 'wms' as const,
         url: dependencies.wmsUrl,
-        layers: "demo:coverage",
-        parameters: { format: "image/png", transparent: true },
+        layers: 'demo:coverage',
+        parameters: { format: 'image/png', transparent: true },
       };
       const added: string[] = [];
       try {
         const lower = (await handles.map.layers.add({
           ...spec,
-          id: "order-lower",
+          id: 'order-lower',
           opacity: 0.4,
         })) as unknown as ImageryStackingLike;
-        added.push("order-lower");
+        added.push('order-lower');
         const upper = (await handles.map.layers.add({
           ...spec,
-          id: "order-upper",
+          id: 'order-upper',
           opacity: 0.8,
         })) as unknown as ImageryStackingLike;
-        added.push("order-upper");
+        added.push('order-upper');
 
         const beforeLower = lower.stackIndex;
         const beforeUpper = upper.stackIndex;
         if (beforeLower === undefined || beforeUpper === undefined) {
-          throw new Error("新增的影像图层不在影像集合里，顺序读数为空。");
+          throw new Error('新增的影像图层不在影像集合里，顺序读数为空。');
         }
         // 后加的在上：两者相邻，且 upper 比 lower 高一层。
         if (beforeUpper !== beforeLower + 1) {
@@ -1365,7 +1282,7 @@ export function createVanillaExampleController(
         }
 
         if (!lower.raiseToTop()) {
-          throw new Error("把下层影像图层提到最上时没有发生移动。");
+          throw new Error('把下层影像图层提到最上时没有发生移动。');
         }
 
         const afterLower = lower.stackIndex;
@@ -1377,7 +1294,7 @@ export function createVanillaExampleController(
         }
         // 已经在最上层：再提一次返回 false（幂等无副作用）。
         if (lower.raiseToTop()) {
-          throw new Error("把已在最上的影像图层再提一次仍然报告移动。");
+          throw new Error('把已在最上的影像图层再提一次仍然报告移动。');
         }
 
         layerOrder = `下 ${String(beforeLower)}/上 ${String(beforeUpper)} → 换序后 下 ${String(afterLower)}/上 ${String(afterUpper)}`;
@@ -1409,7 +1326,7 @@ export function createVanillaExampleController(
       const id = handles.map.lightning.strike({
         origin: { longitude, latitude, height: strikeHeight },
         target: { longitude: longitude + 0.002, latitude: latitude, height: 0 },
-        branches: "dense",
+        branches: 'dense',
         durationMs: 4_000,
         seed: 17,
       });
@@ -1417,9 +1334,7 @@ export function createVanillaExampleController(
       await new Promise((resolve) => setTimeout(resolve, 560));
       const activeCount = handles.map.lightning.activeCount;
       if (activeCount !== 1) {
-        throw new Error(
-          `闪击未登记：activeCount=${String(activeCount)}（id=${id}）`,
-        );
+        throw new Error(`闪击未登记：activeCount=${String(activeCount)}（id=${id}）`);
       }
       lightning = `在演 ${String(activeCount)} 条 / 亮度 ${handles.map.lightning.flashLevel.toFixed(2)} / 上限 ${String(
         handles.map.lightning.maxActive,
@@ -1433,8 +1348,7 @@ export function createVanillaExampleController(
      */
     async addHeatmap() {
       const handles = requireReady();
-      const points: { longitude: number; latitude: number; weight: number }[] =
-        [];
+      const points: { longitude: number; latitude: number; weight: number }[] = [];
       for (let index = 0; index < 2_000; index += 1) {
         // 三个高斯团簇，权重随距离衰减，方便肉眼判断核的平滑程度。
         const cluster = index % 3;
@@ -1453,12 +1367,12 @@ export function createVanillaExampleController(
         await heatmapLayer.setData(points);
       } else {
         heatmapLayer = (await handles.map.layers.add({
-          id: "example-heatmap",
-          type: "heatmap",
+          id: 'example-heatmap',
+          type: 'heatmap',
           points,
           radiusMeters: 900,
           resolution: 512,
-          colorRamp: "thermal",
+          colorRamp: 'thermal',
           opacity: 0.8,
         })) as unknown as HeatmapLayerHandle;
       }
@@ -1476,16 +1390,13 @@ export function createVanillaExampleController(
       const handles = requireReady();
       const centers: GeoPoint[] = [];
       for (let index = 0; index < 20; index += 1) {
-        centers.push({
-          longitude: 116.3 + index * 0.005,
-          latitude: 39.9 + index * 0.002,
-        });
+        centers.push({ longitude: 116.3 + index * 0.005, latitude: 39.9 + index * 0.002 });
       }
       const outcome = await runAnalysisBatch(
         handles.map.analysis,
         centers.map((center, index) => ({
           id: `cell-${String(index)}`,
-          tool: "slope-aspect" as const,
+          tool: 'slope-aspect' as const,
           input: { center, radiusMeters: 200 },
         })),
         { concurrency: 4 },
@@ -1496,9 +1407,7 @@ export function createVanillaExampleController(
     },
     async setWmsFilterEnabled(enabled) {
       const handles = requireReady();
-      await handles.wms.setFilter(
-        enabled ? dependencies.createActiveFilter() : undefined,
-      );
+      await handles.wms.setFilter(enabled ? dependencies.createActiveFilter() : undefined);
       wmsFilterEnabled = enabled;
       notify();
     },
