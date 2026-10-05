@@ -21,6 +21,7 @@ import type {
   GeoJsonLayerSpec,
   HeatmapLayerHandle,
   LayerManager,
+  WindFieldLayerHandle,
   PointsLayerHandle,
   WmsLayerHandle,
   WmsLayerSpec,
@@ -129,6 +130,24 @@ function createHarness() {
     dispose: vi.fn(() => Promise.resolve()),
   };
 
+  // 风场桩：记录 setData 并用注入的时钟在读取时给一个平均风速。
+  const wind = {
+    id: 'example-wind',
+    type: 'wind-field' as const,
+    state: 'ready' as const,
+    visible: true,
+    particleCount: 0,
+    averageSpeed: 0 as number | undefined,
+    setData: vi.fn(() => Promise.resolve()),
+    setStyle: vi.fn(() => Promise.resolve()),
+    setVisible: vi.fn(),
+    dispose: vi.fn(() => Promise.resolve()),
+    errorCount: 0,
+  };
+  // 风场桩在 add 时写回的"当前平均风速"；失败路径的用例把它设成 undefined，
+  // 模拟图层加上了但一帧都没推进（例如一直不可见）。
+  let windAverageSpeed: number | undefined = 12.5;
+
   const add = vi.fn(
     (
       spec:
@@ -136,7 +155,13 @@ function createHarness() {
         | WmsLayerSpec
         | { readonly id?: string; readonly type: 'points' }
         | { readonly id?: string; readonly type: 'czml' }
-        | { readonly id?: string; readonly type: 'heatmap'; readonly points?: readonly unknown[] },
+        | { readonly id?: string; readonly type: 'heatmap'; readonly points?: readonly unknown[] }
+        | {
+            readonly id?: string;
+            readonly type: 'wind-field';
+            readonly field: unknown;
+            readonly particles?: number;
+          },
     ) => {
       if (spec.id) {
         trackedLayers.push({
@@ -155,6 +180,12 @@ function createHarness() {
       }
       if (spec.type === 'czml') {
         return Promise.resolve(czml as unknown as CzmlLayerHandle);
+      }
+      if (spec.type === 'wind-field') {
+        const particles = (spec as { readonly particles?: number }).particles ?? 0;
+        wind.particleCount = particles;
+        wind.averageSpeed = windAverageSpeed;
+        return Promise.resolve(wind as unknown as WindFieldLayerHandle);
       }
       if (spec.type === 'heatmap') {
         const points = (spec as { readonly points?: readonly unknown[] }).points ?? [];
@@ -439,6 +470,10 @@ function createHarness() {
     geoJson,
     heatmap,
     layerOrder: () => [...imageryOrder],
+    wind,
+    setWindAverageSpeed: (value: number | undefined) => {
+      windAverageSpeed = value;
+    },
     lightning,
     lineOfSight,
     map,
@@ -900,6 +935,50 @@ describe('Vanilla example controller', () => {
     // 再点一次走 setData 路径（原子替换），不新建图层。
     await controller.addHeatmap();
     expect(harness.heatmap.setData).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a synthetic wind field and reports particles plus average speed', async () => {
+    const harness = createHarness();
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+      // 探针读到平均风速前要等两帧；测试环境没有真实渲染帧，直接兑现。
+      waitFrames: () => Promise.resolve(),
+    });
+    await controller.start('map');
+
+    await controller.addWindField();
+
+    expect(harness.map.layers.add).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'wind-field', particles: 3_000 }),
+    );
+    expect(harness.wind.particleCount).toBe(3_000);
+    expect(controller.snapshot().wind).toBe('粒子 3000 / 平均风速 12.5 米每秒');
+
+    // 再点一次走 setData 路径（原子替换），不新建图层。
+    await controller.addWindField();
+    expect(harness.wind.setData).toHaveBeenCalledTimes(1);
+    expect(controller.snapshot().wind).toBe('粒子 3000 / 平均风速 12.5 米每秒');
+  });
+
+  it('rejects the wind probe when the layer never advances', async () => {
+    const harness = createHarness();
+    harness.setWindAverageSpeed(undefined);
+    const controller = createVanillaExampleController({
+      createMap: harness.createMap,
+      createActiveFilter: harness.createActiveFilter,
+      geoJsonUrl: '/data/operations.geojson',
+      wmsUrl: '/wms',
+      terrainUrl: '/__test/terrain/',
+      waitFrames: () => Promise.resolve(),
+    });
+    await controller.start('map');
+
+    // 图层加上了但读数一直是空：不能悄悄记成"平均风速 0"，要明确失败。
+    await expect(controller.addWindField()).rejects.toThrow('风场没有在跑');
   });
 
   it('drives the map clock from a simulation clock across rendered frames', async () => {

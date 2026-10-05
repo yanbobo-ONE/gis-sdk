@@ -5,6 +5,7 @@ import type { GeoPosition } from '../core/controls.js';
 import type { EventHub } from '../core/event-hub.js';
 import type { GisError } from '../core/errors.js';
 import type { HeatmapColorRamp } from '../core/heatmap.js';
+import type { WindFieldInput } from '../core/wind-field.js';
 
 /** 当前稳定支持的图层类型。 */
 export type LayerType =
@@ -15,6 +16,7 @@ export type LayerType =
   | 'wmts'
   | 'single-image'
   | 'heatmap'
+  | 'wind-field'
   | 'model'
   | 'points'
   | 'polyline'
@@ -333,6 +335,65 @@ export interface HeatmapLayerHandle extends ImageryLayerHandle {
   setStyle(style: HeatmapStyleOptions): Promise<void>;
 }
 
+/** 风场样式；`setStyle()` 可运行时调整。 */
+export interface WindFieldStyleOptions {
+  /** 粒子数量（每颗粒子一条折线）；上限 20000。 */
+  readonly particles?: number;
+  /** 时间缩放：大于 1 让粒子跑得更快，便于观察。 */
+  readonly speedScale?: number;
+  /** 粒子生命时长，单位为秒；到期的粒子在范围内重掷。 */
+  readonly lifetimeSeconds?: number;
+  /** 粒子所在高度，单位为米；省略时取高度轴中点。 */
+  readonly heightMeters?: number;
+  /** 每帧推进的时间，单位为秒，默认取真实帧间隔（上限 0.2 秒）。 */
+  readonly stepSeconds?: number;
+  /** 拖尾线宽（像素）。 */
+  readonly width?: number;
+  /**
+   * 按风速分档的颜色，从低到高 2 到 6 个（CSS 颜色字符串）。
+   *
+   * 默认 `['#38bdf8', '#7dd3fc', '#e0f2fe']`；档位按 `maxSpeed` 均分。
+   */
+  readonly colors?: readonly string[];
+  /** 整体透明度，0 到 1，默认 1。 */
+  readonly opacity?: number;
+  /**
+   * 初始播撒与重掷的随机种子，默认 1。
+   *
+   * 同种子得到同一批初始位置，便于复现问题与截图；重掷按"种子 + 帧序号"推进，
+   * 因此每帧重掷的位置不同但仍可复现。
+   */
+  readonly seed?: number;
+}
+
+/**
+ * 三维风场图层。
+ *
+ * 业务提供 U/V/W 采样网格（`WindFieldInput`，与参照实现同一套轴语义），SDK 负责粒子平流
+ * 与渲染：每颗粒子每帧按当前位置采样风场、用一阶欧拉法推进，并用两点折线画拖尾。
+ *
+ * 只使用 Cesium 公开 API（`PolylineCollection`、`Cartesian3.fromDegrees` 的 result 参数、
+ * 内置折线材质），不需要自定义 shader 或私有字段；只做水平/垂直平流，不做真实流体求解。
+ */
+export interface WindFieldLayerSpec extends BaseLayerSpec, WindFieldStyleOptions {
+  /** 判别风场图层。 */
+  readonly type: 'wind-field';
+  /** 风场数据。 */
+  readonly field: WindFieldInput;
+}
+
+/** 风场图层句柄。 */
+export interface WindFieldLayerHandle extends LayerHandle {
+  /** 当前粒子数。 */
+  readonly particleCount: number;
+  /** 当前帧的平均风速读数（米/秒）；没有在跑的粒子时为 `undefined`。 */
+  readonly averageSpeed: number | undefined;
+  /** 原子替换风场数据并重新播撒粒子。 */
+  setData(field: WindFieldInput): Promise<void>;
+  /** 调整粒子数 / 速度缩放 / 颜色等并立即生效。 */
+  setStyle(style: WindFieldStyleOptions): Promise<void>;
+}
+
 /** 静态模型的位置，使用 WGS84 经度/纬度度数与相对椭球高度（米）。 */
 export interface ModelPosition {
   /** 经度，范围 -180 到 180。 */
@@ -544,6 +605,7 @@ export type LayerSpec =
   | WmtsLayerSpec
   | SingleImageLayerSpec
   | HeatmapLayerSpec
+  | WindFieldLayerSpec
   | ModelLayerSpec
   | PointsLayerSpec
   | PolylineLayerSpec

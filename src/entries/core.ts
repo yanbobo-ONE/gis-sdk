@@ -205,6 +205,24 @@ export type {
   HeatmapGridOptions,
   HeatmapPoint,
 } from '../core/heatmap.js';
+export {
+  advectWindParticles,
+  buildWindField,
+  createWindParticles,
+  MAX_WIND_PARTICLES,
+  sampleWind,
+  windFieldBounds,
+} from '../core/wind-field.js';
+export type {
+  WindAdvectOptions,
+  WindField,
+  WindFieldAxes,
+  WindFieldAxis,
+  WindFieldInput,
+  WindParticle,
+  WindParticleOptions,
+  WindSample,
+} from '../core/wind-field.js';
 export { planPointImport } from '../core/point-import.js';
 export type {
   ImportedPoint,

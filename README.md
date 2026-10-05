@@ -34,6 +34,7 @@
 - 点位导入计划 `planPointImport()`：列名猜测与标记、投影坐标换算到 WGS84、预览与拒绝样本，落图层由业务决定；
 - 空间闪电 `map.lightning`：程序化闪击（种子可复现）、亮度包络驱动辉光与屏幕闪光、并发有上限；
 - 密度热力图 `type: 'heatmap'`：业务点位（含权重）在本地摊成密度网格并着色，不依赖外部数据集；
+- 三维风场 `type: 'wind-field'`：业务提供 U/V/W 网格，SDK 做粒子平流与拖尾渲染（公开 API）；
 - 点位图层（PointPrimitive 批量渲染，单层 20 万点）、可选标签（LabelCollection，含上限与 `labelCount`）与 CSV 点位导入解析；
 - 折线图层（PolylineCollection 批量渲染，五种内置材质、逐条样式覆盖与拾取标记）；
 - 环境效果 `map.environment`：深度雾、基础雾（接管官方 Fog 并可恢复）与雨 / 雪，参数全在 SDK 侧且不依赖外部纹理资产；
@@ -153,6 +154,7 @@ async function disposeMap() {
 - [点位图层与 CSV 导入](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/points-layer.md)
 - [点位导入计划](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/point-import.md)
 - [密度热力图](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/heatmap-layer.md)
+- [三维风场](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/wind-field-layer.md)
 - [折线图层与内置材质](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/polyline-layer.md)
 - [拾取交互](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/picking.md)
 - [绘制](https://github.com/yanbobo-ONE/gis-sdk/blob/main/docs/guide/drawing.md)

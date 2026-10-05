@@ -19,7 +19,11 @@ import type {
   QualityProfileId,
   TerrainController,
 } from '@yanbobo/gis-sdk/core';
-import type { HeatmapLayerHandle, LayerManager } from '@yanbobo/gis-sdk/layers';
+import type {
+  HeatmapLayerHandle,
+  LayerManager,
+  WindFieldLayerHandle,
+} from '@yanbobo/gis-sdk/layers';
 
 /** 示例用来验证自定义请求头的取值；服务端 fixture 会把它记进 `/__test/wms-state`。 */
 export const EXAMPLE_AUTH_HEADER = 'gis-sdk-example-token';
@@ -217,6 +221,8 @@ export interface VanillaExampleSnapshot {
   readonly lightning: string | undefined;
   /** 热力图读数：`点数 / 半径 / 色带`；没验过时为 `undefined`。 */
   readonly heatmap: string | undefined;
+  /** 风场读数：`粒子数 / 平均风速`；没验过时为 `undefined`。 */
+  readonly wind: string | undefined;
   readonly error?: string;
 }
 
@@ -261,6 +267,8 @@ export interface VanillaExampleController {
   strikeLightning(): Promise<void>;
   /** 热力图探针：把一批带权重的点位交给热力图图层，读回点数与样式读数。 */
   addHeatmap(): Promise<void>;
+  /** 风场探针：造一块合成 U/V/W 网格交给风场图层，读回粒子数与平均风速。 */
+  addWindField(): Promise<void>;
   /** 用 `createMap({ terrain })` 重建地图，等 `ready` 兑现后记录读数并切回椭球地形。 */
   createWithTerrain(): Promise<void>;
   setWmsFilterEnabled(enabled: boolean): Promise<void>;
@@ -579,6 +587,8 @@ export function createVanillaExampleController(
   let lightning: string | undefined;
   let heatmap: string | undefined;
   let heatmapLayer: HeatmapLayerHandle | undefined;
+  let wind: string | undefined;
+  let windLayer: WindFieldLayerHandle | undefined;
   let pointsHandle: PointsHandleLike | undefined;
   let pointsLabelsEnabled = true;
   let currentError: string | undefined;
@@ -609,6 +619,7 @@ export function createVanillaExampleController(
       terrain,
       lightning,
       heatmap,
+      wind,
     };
     return currentError ? { ...value, error: currentError } : value;
   };
@@ -843,6 +854,8 @@ export function createVanillaExampleController(
       lightning = undefined;
       heatmap = undefined;
       heatmapLayer = undefined;
+      wind = undefined;
+      windLayer = undefined;
       pointsHandle = undefined;
       pointsLabelsEnabled = true;
       const target = nextMap.raw.viewer.dataSources?.get(0) ?? nextGeoJson;
@@ -1383,6 +1396,62 @@ export function createVanillaExampleController(
         );
       }
       heatmap = `点数 ${String(heatmapLayer.pointCount)} / 半径 900 米 / 色带 thermal`;
+      notify();
+    },
+    /**
+     * 风场探针：造一块环绕的合成风（中心气旋 + 西风带），交给 `type: 'wind-field'`。
+     *
+     * 断言"真的在跑"：粒子数与输入一致，且帧推进后平均风速大于 0。
+     */
+    async addWindField() {
+      const handles = requireReady();
+      const axes = {
+        lon: { start: 116.15, step: 0.01, count: 31 },
+        lat: { start: 39.85, step: 0.01, count: 21 },
+        height: { start: 500, step: 1_000, count: 2 },
+      };
+      const count = axes.lon.count * axes.lat.count * axes.height.count;
+      const u = new Float32Array(count);
+      const v = new Float32Array(count);
+      for (let z = 0; z < axes.height.count; z += 1) {
+        for (let y = 0; y < axes.lat.count; y += 1) {
+          for (let x = 0; x < axes.lon.count; x += 1) {
+            const index = (z * axes.lat.count + y) * axes.lon.count + x;
+            // 中心在 (116.3, 39.95) 的绕转风 + 随高度增强。
+            const cx = axes.lon.start + x * axes.lon.step - 116.3;
+            const cy = axes.lat.start + y * axes.lat.step - 39.95;
+            const speed = 6 + z * 4;
+            u[index] = -cy * 1_200 * (1 + z * 0.5) + speed * 0.3;
+            v[index] = cx * 1_200 * (1 + z * 0.5);
+          }
+        }
+      }
+
+      if (windLayer) {
+        await windLayer.setData({ axes, u, v });
+      } else {
+        windLayer = (await handles.map.layers.add({
+          id: 'example-wind',
+          type: 'wind-field',
+          field: { axes, u, v },
+          particles: 3_000,
+          speedScale: 1,
+          lifetimeSeconds: 10,
+          colors: ['#38bdf8', '#a5f3fc', '#f0f9ff'],
+        })) as unknown as WindFieldLayerHandle;
+      }
+
+      if (windLayer.particleCount !== 3_000) {
+        throw new Error(`风场粒子数不符：${String(windLayer.particleCount)}`);
+      }
+      // `averageSpeed` 由帧推进（preRender）刷新，添加完立刻读只会拿到 undefined；
+      // 等两帧再读，读数才能证明"粒子真的动弹了"（后台标签页会以超时错误失败）。
+      await waitFrames(2);
+      const averageSpeed = windLayer.averageSpeed;
+      if (averageSpeed === undefined || !(averageSpeed > 0)) {
+        throw new Error(`风场没有在跑：平均风速 ${String(averageSpeed)}`);
+      }
+      wind = `粒子 ${String(windLayer.particleCount)} / 平均风速 ${averageSpeed.toFixed(1)} 米每秒`;
       notify();
     },
     /** 批量分析：20 个点各算一次坡度坡向，带进度读数。 */

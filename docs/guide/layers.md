@@ -9,6 +9,7 @@
 | 渲染 CZML 动态实体         | [CZML 生成与解析](./czml.md)        | `type: 'czml'`、`setData()`、`entityCount` |
 | 接入 WMS、TMS 或 WMTS 服务 | [影像图层](./imagery-layers.md)     | `type: 'wms' \| 'tms' \| 'wmts'`           |
 | 把点位画成密度热力图       | [密度热力图](./heatmap-layer.md)    | `type: 'heatmap'`、`setData()`、色带与半径 |
+| 用风场网格画粒子流         | [三维风场](./wind-field-layer.md)   | `type: 'wind-field'`、U/V/W 网格与平流     |
 | 加载城市模型、倾斜摄影等   | [3D Tiles 图层](./tiles3d-layer.md) | `type: '3d-tiles'`                         |
 | 放置单个 glTF / GLB 模型   | [静态模型图层](./model-layer.md)    | `type: 'model'`                            |
 | 批量渲染点位与 CSV 导入    | [点位图层](./points-layer.md)       | `type: 'points'`、`parseCsv()`             |

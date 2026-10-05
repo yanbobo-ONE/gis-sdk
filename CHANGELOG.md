@@ -6,6 +6,7 @@
 
 - 增加程序化图形构造（`/core`）：`buildCircle()`（大圆距离采样，两极不压扁）、`buildEllipse()`（局部东-北平面 + 长轴方位角）、`buildStraightArrow()`（箭杆 + 双翼，终点为唯一箭尖）；圆弧按弦高容差采样（默认 10 米容差、512 顶点上限），返回首尾不重复的顶点环；军标几何不在范围。
 - 增加密度热力图图层 `type: 'heatmap'`：输入业务点位（经纬度 + 可选权重），本地按四次核摊成密度网格并着色成带透明度位图贴地，不依赖外部数据集；`setData()` / `setStyle()` 原子替换并继承透明度与堆叠位置，空点位整幅透明，透明度走影像图层 alpha。`/core` 同时导出纯计算的 `buildHeatmapGrid()` 与 `colorizeHeatmap()`。
+- 增加三维风场图层 `type: 'wind-field'`：业务提供 U/V/W 采样网格（`axes` 轴定义与 `(z × lat.count + y) × lon.count + x` 索引顺序），SDK 做三线性采样（超出网格不外推）与粒子平流渲染——一阶欧拉推进、两点折线拖尾、按风速分档配色、到期/出界重掷（重掷帧不画线避免瞬移）、隐藏即停；`/core` 同时导出纯计算的 `buildWindField()` / `sampleWind()` / `createWindParticles()` / `advectWindParticles()`（零 Cesium、确定性）。只用公开 API。
 
 ## 0.1.0-alpha.11（已发布 2026-10-02）
 

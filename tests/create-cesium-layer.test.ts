@@ -6,6 +6,7 @@ const adapters = vi.hoisted(() => ({
   singleImage: vi.fn(() => Promise.resolve({ id: 'single-image-handle' })),
   model: vi.fn(() => Promise.resolve({ id: 'model-handle' })),
   heatmap: vi.fn(() => Promise.resolve({ id: 'heatmap-handle' })),
+  wind: vi.fn(() => Promise.resolve({ id: 'wind-handle' })),
   tms: vi.fn(() => Promise.resolve({ id: 'tms-handle' })),
   wmts: vi.fn(() => Promise.resolve({ id: 'wmts-handle' })),
   wms: vi.fn(() => Promise.resolve({ id: 'wms-handle' })),
@@ -33,6 +34,10 @@ vi.mock('../src/cesium/layers/model-layer.js', () => ({
 
 vi.mock('../src/cesium/layers/heatmap-layer.js', () => ({
   createHeatmapLayer: adapters.heatmap,
+}));
+
+vi.mock('../src/cesium/layers/wind-field-layer.js', () => ({
+  createWindFieldLayer: adapters.wind,
 }));
 
 vi.mock('../src/cesium/layers/tiled-imagery-layer.js', () => ({
@@ -94,6 +99,20 @@ describe('createCesiumLayer', () => {
       position: { longitude: 116, latitude: 40 },
     };
 
+    const windSpec = {
+      id: 'wind',
+      type: 'wind-field' as const,
+      field: {
+        axes: {
+          lon: { start: 116, step: 1, count: 2 },
+          lat: { start: 39, step: 1, count: 2 },
+          height: { start: 0, step: 1, count: 2 },
+        },
+        u: new Float32Array(8),
+        v: new Float32Array(8),
+      },
+    };
+
     const heatmapSpec = {
       id: 'density',
       type: 'heatmap' as const,
@@ -104,6 +123,9 @@ describe('createCesiumLayer', () => {
       createCesiumLayer(viewer as never, heatmapSpec, context, services),
     ).resolves.toEqual({
       id: 'heatmap-handle',
+    });
+    await expect(createCesiumLayer(viewer as never, windSpec, context, services)).resolves.toEqual({
+      id: 'wind-handle',
     });
     await expect(
       createCesiumLayer(viewer as never, geojsonSpec, context, services),
@@ -143,5 +165,6 @@ describe('createCesiumLayer', () => {
     expect(adapters.model).toHaveBeenCalledWith(viewer, modelSpec, context, services);
     // 热力图把注入的栅格化出口一起透传（services 没给时由工厂用默认 canvas 实现）。
     expect(adapters.heatmap).toHaveBeenCalledWith(viewer, heatmapSpec, context, undefined);
+    expect(adapters.wind).toHaveBeenCalledWith(viewer, windSpec, context);
   });
 });

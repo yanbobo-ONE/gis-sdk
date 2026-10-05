@@ -11,6 +11,7 @@ import { createPointsLayer } from './points-layer.js';
 import { createPolylineLayer } from './polyline-layer.js';
 import { createSingleImageLayer } from './single-image-layer.js';
 import { createTiles3dLayer } from './tileset-layer.js';
+import { createWindFieldLayer } from './wind-field-layer.js';
 import { createTmsLayer, createWmtsLayer } from './tiled-imagery-layer.js';
 import { createWmsLayer } from './wms-layer.js';
 
@@ -36,6 +37,8 @@ export function createCesiumLayer(
       return createSingleImageLayer(viewer, spec, context);
     case 'heatmap':
       return createHeatmapLayer(viewer, spec, context, services.heatmapRasterizer);
+    case 'wind-field':
+      return createWindFieldLayer(viewer, spec, context);
     case 'model':
       return createModelLayer(viewer, spec, context, services);
     case 'points':
